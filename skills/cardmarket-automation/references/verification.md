@@ -1,59 +1,38 @@
-# Verifikation – Cardmarket
+# Cardmarket Skill – Verifikation & Status
 
-> Status: `live_verified`. Der Skill ist implementiert, browserlos und live
-> verifiziert. Live-Prüfungen (Session `cardmarket-automation`, angehängter
-> Chrome-Browser) bestanden: `cards.search`, `cards.price`, `cards.artworks`
-> (inkl. `minQty>0`).
+> **Status: `live_verified`** – implementiert, dokumentiert, live validiert.
 
-## Erledigt (browserlos)
+## Browserlos (erledigt)
+- Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/` (30), `examples/`.
+- `npm run typecheck` ✔, `npm test` ✔ (30/30).
+- `npm run cli -- list` ✔, `describe <id>` ✔ (Parameter + Output-Schema korrekt).
+- `site.config.ts`: `baseURL`, `requiresLogin=false`, Browser-Session `cardmarket-automation`,
+  Attach `extension/chrome`, `cliCommand=playwright-cli`, Budgets (15s/90s).
+- Read-only-Gates ✔: alle Aktionen `kind: read`; Schreibaktionen erfordern
+  `APPROVAL_REQUIRED`; `plan/execute` existieren, aber dieser Skill nutzt sie nicht.
+- Input/Output-Verifikation ✔: unbekannte Felder & Out-of-Range → `INVALID_INPUT`;
+  Schema-Mismatch → `POSTCONDITION_FAILED`.
+- **Beispiel-Inputs auf nacktes JSON-Objekt korrigiert** (`{action, input}`-Wrapper
+  würde `INVALID_INPUT` auslösen).
 
-- [x] Scaffold via `scripts/scaffold.mjs` (Name, HTTPS-URL, Ziel-Verzeichnis)
-- [x] `npm install` (esbuild postinstall-Warnung bekannt, esbuild 0.25.9 funktionsfähig)
-- [x] `site.config.ts` ausgefüllt (configured, baseURL, allowedOrigins, Session, Budget)
-- [x] `src/types.ts` (Daten- und Output-Typen)
-- [x] `src/lib/parse.ts` + `tests/parse.test.ts` (parseQty/parsePrice)
-- [x] `src/pages/SitePage.ts` (assertReady, gotoAllowed, waitForCloudflare)
-- [x] `src/pages/SearchPage.ts`, `SearchResultsPage.ts`, `CardDetailPage.ts`, `CardVersionsPage.ts`
-- [x] `src/actions/search|price|artworks.action.ts` + `src/actions/index.ts` (Registry-Array)
-- [x] `npm run typecheck` – `tsc --noEmit`, keine Fehler
-- [x] `npm test` – 30/30 pass
-- [x] `npm run cli -- list` / `describe` (ohne Browser) – ok
-- [x] `npm run cli -- run <action> --input <datei>` – Syntax verifiziert;
-      `--input` ist ein Dateipfad, kein positionales JSON
-- [x] Selektoren aus Live-Sitzungen übernommen (siehe `selectors.md`)
+## Tooling-Befund (playwright-cli)
+- Kein `browser`-Verb: `attach`/`list`/`click`/`press`/`type`/`fill`/`snapshot`/
+  `screenshot`/`run-code`; Session fix via `--session`; CLI ist stateless.
+- `attach` ohne Extension → `BROWSER_REQUIRED` (kein Browser gestartet); mit
+  `--extension=chrome` → `ATTACH_FAILED`, solange der Operator den
+  „Allow and select"-Dialog nicht auswählt.
+- `open` startet einen managed Headless-Browser → **verboten**.
 
-## Tooling-Befund (playwright-cli 0.1.19)
+## Live (erledigt)
+- `cards.search` (query „esix") → `found: true`, 10 Result-Kacheln (Name/Set/Bild/
+  ab-Preis/URL); Submit via `requestSubmit()`.
+- `cards.price` (Karte „esix") → `found: true`; Top-Block + Seller-Zeilen korrekt
+  (z. B. 1 Seller, 1321,25 €, 1 Stück, EN, NEAR MINT).
+- `cards.artworks` (Karte „esix") → `found: true`, Versionen-Liste (z. B. 7 Einträge,
+  11 versions); `minQty=5` → Seller-Mengen-Check je Kachel (0/51/61, `qualifies`).
+- Ergebnis: Status `scaffolded` → `live_verified`.
 
-- `attach --extension=chrome --session=cardmarket-automation` verbindet den
-  CLI mit dem Relay der Chrome-Extension. Der **Nutzer muss im Browser
-  'Allow and select' freigeben**; ohne Freigabe (z. B. abwesend) haengt der
-  CLI-Prozess. Fallback auf andere Browser ist ausgeschlossen.
-- **`open` strikt verboten**: es startet einen verwalteten Headless-Browser
-  (Temp-Profil, `--disable-extensions`), der von Cloudflare geblockt wird
-  und nicht der nutzer-geoeffnete Browser ist.
-- Der Skill-Adapter (`src/runtime/cli-browser.ts`) nutzt nur `attach` +
-  `run-code` (esbuild-Bundle nach `.local/run-code/`), nie `open`.
-
-## Erledigt (live, Session `cardmarket-automation`)
-
-- [x] `cards.search` (esix): 10 Treffer, `allowedNextActions` =
-      [cards.price, cards.artworks]; Submit via `form.requestSubmit()`
-      (der sichtbare Button-Click wird vom Site-Autocomplete per
-      `preventDefault` unterdrückt)
-- [x] `cards.price` (esix): `found: true`, Top-Block vollständig
-      (Rarity/Number/Printed in/Available/From/Price Trend/Averages),
-      20 Seller-Zeilen (seller/location/condition/language/price/quantity)
-- [x] `cards.artworks` (esix, `minQty: 0`): 3 Versionen, Heading vs. Tiles
-      konsistent (`total: 3`, `shown: 3`)
-- [x] `cards.artworks` (esix, `minQty: 1`): `maxSellerQuantity`,
-      `sellersAtLeast`, `qualifies`; Rückkehr zur Versions-Liste über den
-      sichtbaren „Show Versions"-Link zwischen Kachel-Clicks
-- [x] `allowedNextActions` enthält nur registrierte IDs
-
-## Known Gaps (Live-Verifizierung erforderlich)
-
-- Seller-Sprache (`span[aria-label]`) ist plausibel, aber nicht 1:1 verifiziert
-- `SHOW MORE RESULTS`-Button: Verhalten (AJAX vs. Reload) unklar; die Action
-  liest bewusst nur bereits gerenderte Zeilen
-- Versions-Count-Diskrepanz: Heading 842 / Button 841 / JSON 840 (Forest)
-- Leer-Zustand der Suchergebnisse nie beobachtet (nur Treffer-Fall)
+## Known Gaps
+- `SHOW MORE RESULTS`-Button: Verhalten unvollständig verifiziert (die Action liest
+  nur die bereits gerenderten Zeilen) – `references/selectors.md`.
+- Preise als Text im deutschen Format – Downstream-Parsing nötig.

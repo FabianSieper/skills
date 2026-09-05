@@ -5,59 +5,47 @@ description: Registrierte, read-only Playwright-Aktionen für Cardmarket (Karten
 
 # Cardmarket-Automatisierung (Skill)
 
-> **Browser-Kontrakt:** Der Operator hat seinen Browser (Chrome) bereits
-> geöffnet. Dieser Skill hängt ausschließlich an diesen Browser an
-> (fest benannte Session, `playwright-cli attach --extension=chrome`) und
-> **startet, ersetzt oder schließt nie einen Browser**. Fehlender oder
-> nicht anhängbarer Browser ist ein harter Stopp
-> (`BROWSER_REQUIRED` / `ATTACH_FAILED`) – kein Managed-Fallback.
+> **Browser-Kontrakt:** Der Operator hat seinen Browser (Chrome) bereits geöffnet.
+> Dieser Skill hängt nur an diesen an (Session `cardmarket-automation`,
+> `playwright-cli attach --extension=chrome`) und **startet/ersetzt/schließt nie einen
+> Browser**. Browser fehlt → harter Stopp (`BROWSER_REQUIRED` / `ATTACH_FAILED`).
 >
-> **Status:** `live_verified` – Aktionen sind implementiert, dokumentiert
-> und live validiert (siehe `references/verification.md`). Keine Aktion
-> ohne Bestätigung in einen Plan aufnehmen.
+> **Status:** `live_verified` – implementiert, dokumentiert, live validiert
+> (`references/verification.md`). Keine Aktion ohne Bestätigung in einen Plan.
 
-## Was der Skill kann
+## Aktionen (read-only, öffentlich, kein Login)
 
-Read-only-Aktionen auf `https://www.cardmarket.com` (öffentlich, kein Login):
+| ID | Was sie tut | Parameter |
+|---|---|---|
+| `cards.search` | Kartensuche → Kacheln (Set, ab-Preis, Detail-URL) | `query`, `limit=20` |
+| `cards.price` | Karte → Detailseite: Top-Block (Rarity, Bestand, Trend) + Seller-Angebote | `name`, `sellers=50` |
+| `cards.artworks` | Versionen/Artworks auflisten; optional Seller-Mengen-Check je Kachel | `name`, `minQty=0`, `limit=40` |
 
-| Action-ID | Was sie tut |
-|---|---|
-| `cards.search` | Sucht Karten (Name/Begriff) und liefert Result-Kacheln mit Set, ab-Preis und Detail-URL |
-| `cards.price` | Sucht die Karte (Name), öffnet das erste Suchergebnis über die Such-UI und liefert Top-Block (Rarity, Verfügbarkeit, Preistrend) plus Seller-Angebote |
-| `cards.artworks` | Listet alle Druckvarianten/Artworks einer Karte (Set, Version, Verfügbarkeit, ab-Preis, Bild, URL); optional Seller-Mengen-Check |
+Alle starten auf der Startseite und navigieren nur über sichtbare UI-Elemente
+(Suche, Ergebnis-Kachel, „Show Versions") – kein Direct-Goto/Deep-Link.
+Typischer Flow: `cards.search → cards.price → cards.artworks`.
 
-Details (Parameter, Output-Schema, Validierung): `references/actions.md`.
-
-## Typischer Flow
-
-```
-cards.search  →  cards.price  →  cards.artworks
-```
-
-1. `cards.search` mit `query` → Result-Kacheln
-2. `cards.price` mit `name` (und optional `sellers`)
-3. `cards.artworks` mit `name` (und optional `minQty` / `limit`)
-
-Alle Aktionen starten auf der Startseite (`www.cardmarket.com`) und navigieren
-nur über sichtbare UI-Elemente (Suche, Ergebnis-Kachel, „Show Versions") –
-kein Deep-Link / kein Direct-Goto auf Teil-URLs.
+Details (Parameter, Output-Schema, Selektoren): `references/actions.md`, `references/selectors.md`.
 
 ## Aktionen aufrufen
 
 ```bash
-# Alle registrierten Aktionen (listet die verfügbaren Action-IDs)
-npm run cli -- list
-
-# Eine Aktion aufrufen (JSON-Input über --filename, kein Inline-JS)
-npm run cli -- run cards.search --filename /pfad/zum/input.json
+npm run cli -- list                          # registrierte Action-IDs
+npm run cli -- describe cards.price          # Parameter + Output-Schema einer Action
+npm run cli -- run cards.search --input f.json   # JSON-Input = Dateipfad (kein Inline-JS)
+npm run cli -- doctor                        # Browser anhaftbar? (Browser-Check)
 ```
 
-Der Agent wählt **ausschließlich** eine registrierte Action-ID plus
-Validierung des JSON-Inputs – nie freien JavaScript-Code,
-kein `run-code` mit eigenen Selectors, keine Snapshot-Referenzen.
+`--input` erwartet die Parameter als **nacktes JSON-Objekt** (nicht in
+`{action, input}` eingewickelt) – sonst `INVALID_INPUT`:
+```json
+{ "query": "Forest", "limit": 20 }
+```
+Beispiel-Inputs: `examples/input.json` (search), `examples/input-price.json` (price),
+`examples/input-artworks.json` (artworks).
 
-Beispiel-Inputs: `examples/input.json`, `examples/input-price.json`,
-`examples/input-artworks.json`.
+Der Agent wählt **ausschließlich** eine registrierte Action-ID + validiert den Input –
+nie freien JS-Code, kein `run-code` mit eigenen Selektoren.
 
 ## Fehler- und Stoppregeln
 
@@ -66,24 +54,21 @@ Beispiel-Inputs: `examples/input.json`, `examples/input-price.json`,
 | Browser fehlt / nicht anhängbar | `BROWSER_REQUIRED` / `ATTACH_FAILED` – **harter Stopp**, kein Browserstart |
 | Cloudflare-Persistenz > 90 s | `HUMAN_REQUIRED` – Operator löst die Challenge manuell in Chrome |
 | Kein Treffer / keine Versionen | `found: false` mit leeren Listen (kein Fehler) |
-| Unknown Action-ID | `UNKNOWN_ACTION` – Skill zurück an `website-automation-builder` |
-| UI-Drift / ambiguer Selektor | `UI_DRIFT` / `AMBIGUOUS_SELECTOR` – Skill zurück an Builder, nicht mit `.first()`/`.nth()`/force "reparieren" |
-| Ungültiger Input | `INVALID_INPUT` – Parameter korrigieren und erneut versuchen |
+| Unknown Action-ID | `UNKNOWN_ACTION` |
+| UI-Drift / ambiguer Selektor | `UI_DRIFT` / `AMBIGUOUS_SELECTOR` – an Builder, nie `.first()`/`.nth()`/force |
+| Ungültiger Input | `INVALID_INPUT` – Parameter korrigieren |
 
 ## Verifikation
 
-- Browserlos: `npm run typecheck`, `npm test`, `npm run cli -- list`,
-  `npm run cli -- describe <id>`
-- Live (verifiziert, Checkliste in `references/verification.md`):
-  `cards.search` (esix, 10 Treffer), `cards.price` (esix, Top-Block +
-  Seller), `cards.artworks` (esix, Versionen + `minQty`); Submit via
-  `form.requestSubmit()`, `allowedNextActions` registriert
+- Browserlos: `npm run typecheck`, `npm test`, `npm run cli -- list` / `describe`
+- Live (Checkliste `references/verification.md`): `cards.search`, `cards.price`,
+  `cards.artworks` (inkl. `minQty`); Submit via `form.requestSubmit()`
 
 ## Referenzen
 
-- `references/actions.md` – Parameter, Output-Schema, Parameterdetails je Action
-- `references/flows.md` – Standard- und Alternativ-Flows, Abbruchverhalten
-- `references/selectors.md` – alle verifizierten Selektoren und Strategie-Hinweise
-- `references/verification.md` – Verifikationsstatus und verifizierte Live-Checks
-- `references/build-state.json` – maschinenlesbarer Build-Status
-- `examples/` – Beispiel-Inputs für `run`
+- `references/actions.md` – Parameter + Output-Schema je Action
+- `references/flows.md` – Standard-/Alternativ-Flows, Abbruch
+- `references/selectors.md` – verifizierte Selektoren + Strategie
+- `references/verification.md` – Status + Live-Checks + Known Gaps
+- `references/build-state.json` – maschinenlesbarer Status
+- `examples/` – Beispiel-Inputs für `run --input`
