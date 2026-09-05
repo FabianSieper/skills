@@ -27,6 +27,26 @@ export type SellerOffer = {
   quantity: string;
 };
 
+/** Seller-filter value types (card detail page filter form). */
+export type FilterCondition = 'any' | 'poor' | 'played' | 'light-played' | 'good' | 'excellent' | 'near-mint' | 'mint';
+export type FilterLanguage = 'any' | 'english' | 'french' | 'german' | 'spanish' | 'italian' | 's-chinese' | 'japanese' | 'portuguese' | 'russian' | 't-chinese';
+export type FilterYesNo = 'any' | 'yes' | 'no';
+export type FilterSellerType = 'any' | 'private' | 'professional' | 'powerseller';
+
+/** Resolved (fully defaulted) seller filter applied before reading seller rows. */
+export type ResolvedSellerFilter = {
+  condition: FilterCondition;
+  language: FilterLanguage;
+  location: string;
+  foil: FilterYesNo;
+  signed: FilterYesNo;
+  altered: FilterYesNo;
+  sellerType: FilterSellerType;
+};
+
+/** Partial seller filter (any subset; defaults fill the rest). */
+export type SellerFilter = Partial<ResolvedSellerFilter>;
+
 /** One result tile from a card search (a.galleryBox). */
 export type SearchCard = {
   name: string;
@@ -66,6 +86,7 @@ export type PriceOutput = {
   found: boolean;
   card: string;
   url: string;
+  filter: ResolvedSellerFilter;
   info: CardInfo;
   sellerCount: number;
   sellers: SellerOffer[];

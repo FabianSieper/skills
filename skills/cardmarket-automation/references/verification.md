@@ -46,6 +46,21 @@
   `npm test` ✔ (30/30).
 - **Status bleibt** `live_verified` (erneut validiert, 2026-09-05).
 
+## 2026-09-05: `cards.price` Seller-Filter
+- **Feature:** Detailseite wendet vor dem Auslesen den Seller-Filter an
+  (Default `excellent`, `english`, `germany`), klickt „Filter", wartet auf Reload
+  und liest erst dann Top-Block + Seller-Zeilen.
+- **Browserlos:** `npm run typecheck` ✔, `npm test` ✔ (36/36, inkl.
+  `tests/seller-filters.test.ts`).
+- **Live (Session `cardmarket-automation`):**
+  - `Spellskite` Default → URL `?sellerCountry=7&language=1&minCondition=3`,
+    5 Seller (alle Germany/English, min. Excellent).
+  - `Spellskite` + `language=any` → URL `?sellerCountry=7&minCondition=3`,
+    5 Seller (alle Germany, verschiedene Sprachen).
+  - `Spellskite` + `location=any`, `condition=mint`, `language=german`
+    → URL `?language=3&minCondition=1`, 0 Seller (keine passenden German-Mint-Angebote).
+- **Status bleibt** `live_verified` (Seller-Filter validiert, 2026-09-05).
+
 ## Known Gaps
 - `SHOW MORE RESULTS`-Button: Verhalten unvollständig verifiziert (die Action liest
   nur die bereits gerenderten Zeilen) – `references/selectors.md`.

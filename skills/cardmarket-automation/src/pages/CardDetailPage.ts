@@ -3,7 +3,8 @@ import { config } from '../../site.config.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { uniqueVisible, clickUnique } from '../runtime/guards.ts';
 import { SitePage } from './SitePage.ts';
-import type { CardInfo, SellerOffer } from '../types.ts';
+import type { CardInfo, ResolvedSellerFilter, SellerOffer } from '../types.ts';
+import { buildFilterTargets, type FilterTargets } from './seller-filters.ts';
 import { resolveHref } from '../lib/url.ts';
 
 /**
@@ -126,5 +127,103 @@ export class CardDetailPage extends SitePage {
     await clickUnique(link, 'versions-link');
     await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
     await this.waitForCloudflare();
+  }
+
+  private get filterForm() {
+    return this.page.locator('form[action*="Product_Filter_FilterProduct"]');
+  }
+
+  async applySellerFilters(filter: ResolvedSellerFilter): Promise<boolean> {
+    await this.assertReady();
+    if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
+    const targets = buildFilterTargets(filter);
+    if (targets.sellerCountry) {
+      const missing = await this.page.evaluate((value: string) => {
+        const form = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
+        return !form?.querySelector(`input[name="sellerCountry[${value}]"]`);
+      }, targets.sellerCountry);
+      if (missing) {
+        const expand = this.page.locator(
+          'form button:has-text("VIEW MORE COUNTRIES"), form a:has-text("VIEW MORE COUNTRIES")',
+        );
+        const count = await expand.count();
+        if (count === 0) throw new AutomationError('UI_DRIFT', 'country-expand');
+        if (count > 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'country-expand');
+        await expand.click({ timeout: 15_000 });
+        await this.page.waitForTimeout(500);
+      }
+    }
+    return await this.page.evaluate((t: FilterTargets) => {
+      const form = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
+      if (!form) return false;
+      const setSelect = (name: string, value: string) => {
+        const el = form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null;
+        if (!el || el.value === value) return false;
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      };
+      const setCheckboxes = (name: string, value: string) => {
+        const boxes = Array.from(form.querySelectorAll('input[type="checkbox"]'))
+          .filter((el) => (el.getAttribute('name') ?? '').startsWith(`${name}[`)) as HTMLInputElement[];
+        const current = boxes.filter((b) => b.checked).map((b) => b.value);
+        const wanted = value ? [value] : [];
+        if (current.join(',') === wanted.join(',')) return false;
+        for (const box of boxes) {
+          const check = wanted.includes(box.value);
+          if (box.checked !== check) {
+            box.checked = check;
+            box.dispatchEvent(new Event('input', { bubbles: true }));
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        return true;
+      };
+      const changed = [
+        setSelect('minCondition', t.minCondition),
+        setCheckboxes('language', t.language),
+        setCheckboxes('sellerCountry', t.sellerCountry),
+        setCheckboxes('sellerType', t.sellerType),
+        setSelect('extra[isFoil]', t.isFoil),
+        setSelect('extra[isSigned]', t.isSigned),
+        setSelect('extra[isAltered]', t.isAltered),
+      ];
+      return changed.some(Boolean);
+    }, targets);
+  }
+
+  async submitSellerFilters(): Promise<void> {
+    if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
+    const button = this.page.locator('form input[type="submit"][name="apply"]');
+    await uniqueVisible(button, 'filter-apply');
+    const [nav] = await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null),
+      button.click({ timeout: 15_000 }).catch(() => null),
+    ]);
+    if (!nav) {
+      await this.page.evaluate(() => {
+        const el = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
+        if (el instanceof HTMLFormElement) el.requestSubmit();
+      });
+      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+    }
+    await this.waitForCloudflare();
+  }
+
+  async settleSellerList(timeoutMs = 15_000): Promise<void> {
+    await this.waitForCloudflare();
+    await this.page
+      .waitForFunction(
+        () => {
+          const main = document.querySelector('main');
+          if (!main) return false;
+          if (main.querySelector('.article-row')) return true;
+          return /no (results|offers|sellers|items)/i.test(main.textContent ?? '');
+        },
+        null,
+        { timeout: timeoutMs },
+      )
+      .catch(() => {});
   }
 }

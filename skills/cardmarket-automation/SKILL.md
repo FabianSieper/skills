@@ -20,7 +20,7 @@ description: Registrierte, read-only Playwright-Aktionen für Cardmarket (Karten
 | ID | Was sie tut | Parameter |
 |---|---|---|
 | `cards.search` | Kartensuche → Kacheln (Set, ab-Preis, Detail-URL) | `query`, `limit=20` |
-| `cards.price` | Karte → Detailseite: Top-Block (Rarity, Bestand, Trend) + Seller-Angebote | `name`, `sellers=50` |
+| `cards.price` | Karte → Detailseite: Seller-Filter (Default: excellent/English/Germany) + Top-Block + gefilterte Seller-Angebote | `name`, `sellers=50` + `condition`, `language`, `location`, `sellerType`, `foil`, `signed`, `altered` |
 | `cards.artworks` | Versionen/Artworks auflisten; optional Seller-Mengen-Check je Kachel | `name`, `minQty=0`, `limit=40` |
 
 Alle starten auf dem **Such-Einstieg** (`config.searchEntry` = `/en/Magic`) und

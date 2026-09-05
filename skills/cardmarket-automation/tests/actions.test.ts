@@ -106,7 +106,17 @@ test('validateInput happy + sad', () => {
   const price = byId('cards.price');
   assert.deepEqual(
     validateInput(price.parameters, { name: 'Forest' }),
-    plain({ name: 'Forest', sellers: 50 }),
+    plain({
+      name: 'Forest',
+      sellers: 50,
+      condition: 'excellent',
+      language: 'english',
+      location: 'germany',
+      sellerType: 'any',
+      foil: 'any',
+      signed: 'any',
+      altered: 'any',
+    }),
   );
   assert.equal(
     code(() => validateInput(price.parameters, { name: '' })),
@@ -148,6 +158,15 @@ test('validateOutput happy + sad', () => {
     found: true,
     card: 'Forest',
     url: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest',
+    filter: {
+      condition: 'excellent',
+      language: 'english',
+      location: 'germany',
+      sellerType: 'any',
+      foil: 'any',
+      signed: 'any',
+      altered: 'any',
+    },
     info: info(),
     sellerCount: 1,
     sellers: [seller()],

@@ -8,6 +8,7 @@
   "liveValidation": "passed",
   "liveNote": "2026-09-05 Re-Validierung (Session cardmarket-automation, angehaengter Chrome): nach 'Search 2.0'-Repair (Such-Einstieg = Game-Seite /en/Magic, da das Top-Bar-Form die Startseite /en verlassen hat) bestanden cards.search (Forest, 20 Kacheln), cards.price (Forest, Top-Block), cards.artworks (Esix Fractal Bloom, 3 Versionen - urspr. Fehlerfall). Such-Submit via form.requestSubmit(); Einstieg ueber config.searchEntry (openSearchEntry -> gotoAllowed).",
   "search2026Regression": "2026-09-05 live: /en -> form#searchForm/#ProductSearchInput/#search-btn = 0, /en/Magic = 1. Repair: site.config.ts +searchEntry '/en/Magic'; SearchPage.openHome() -> openSearchEntry() mit gotoAllowed(searchEntry). Alle 3 Aktionen re-validiert; typecheck ok + 30/30 Tests.",
+  "sellerFilterFeature": "2026-09-05: cards.price waendet vor dem Auslesen den Detailseiten-Seller-Filter an (Default excellent/english/germany), klickt 'Filter', wartet auf Reload und liest dann Top-Block + Seller-Zeilen. Browserlos: 36/36 Tests + typecheck. Live: Spellskite Default, language=any und location=any/condition=mint/language=german verifiziert.",
   "implemented": {
     "config": true,
     "types": true,
@@ -15,16 +16,16 @@
     "sitePage": true,
     "pages": ["SearchPage", "SearchResultsPage", "CardDetailPage", "CardVersionsPage"],
     "actions": ["cards.search", "cards.price", "cards.artworks"],
-    "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts"],
+    "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts", "tests/seller-filters.test.ts"],
     "docs": ["references/actions.md", "references/flows.md", "references/selectors.md", "references/verification.md", "SKILL.md", "examples"]
   },
   "verified": {
     "typecheck": "tsc --noEmit: keine Fehler",
-    "tests": "node --test: 30/30 pass",
+    "tests": "node --test: 36/36 pass",
     "cliBrowserFree": "list + describe cards.search/price/artworks: ok, ohne Browser",
     "cliRunInput": "run <action> --input <datei>: Syntax verifiziert; Positional-JSON wird als INVALID_INPUT abgelehnt",
     "liveSearch": "cards.search esix: ok, count 10, allowedNext [cards.price, cards.artworks]",
-    "livePrice": "cards.price esix: ok, found true, Top-Block + 20 Seller",
+    "livePrice": "cards.price Spellskite: ok, Seller-Filter (Default, language=any, location=any/mint/german) + Top-Block + Seller-Zeilen live verifiziert",
     "liveArtworks": "cards.artworks esix: ok, 3 Versionen; minQty=1: ok, maxSellerQuantity + qualifies"
   },
   "toolingFindings": {

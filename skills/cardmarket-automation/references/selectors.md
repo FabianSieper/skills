@@ -57,6 +57,23 @@
 | Mehr laden | `main button:has-text("SHOW MORE RESULTS")` – Verhalten unvollständig verifiziert (die Action liest nur die bereits gerenderten Zeilen) |
 | Versions-Link | `a:has-text("Show Versions")` |
 
+## Detailseite – Seller-Filter
+| Element | Selektor |
+|---|---|
+| Form | `form[action*="Product_Filter_FilterProduct"]` |
+| Submit | `form input[type="submit"][name="apply"]` |
+| Clear | `form input[type="submit"][name="reset"]` |
+| Mindestzustand | `select[name="minCondition"]` |
+| Sprache | Checkboxes `input[name="language[N]"]` |
+| Seller-Land | Checkboxes `input[name="sellerCountry[N]"]` |
+| Seller-Typ | Checkboxes `input[name="sellerType[N]"]` |
+| Foil / Signiert / Altered | `select[name="extra[isFoil]"]`, `select[name="extra[isSigned]"]`, `select[name="extra[isAltered]"]` |
+| Länder ausklappen | `form button:has-text("VIEW MORE COUNTRIES")` (falls Target-Land fehlt) |
+
+Beim Setzen von Filtern werden `input`/`change`-Events ausgelöst; geänderte
+Filter werden via „Filter"-Submit ausgeführt und die Seite lädt mit der
+Filter-URL neu (z. B. `?sellerCountry=7&language=1&minCondition=3`).
+
 Top-Block-Labels: `Rarity`, `Number`, `Printed in`, `Reprints`, `Available items`,
 `From`, `Price Trend`, `30-days average price`, `7-days average price`, `1-day average price`
 

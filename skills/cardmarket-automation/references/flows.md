@@ -6,7 +6,7 @@
 Such-Einstieg (Game-Seite, config.searchEntry = /en/Magic)
   → Suche (query)
   → Result-Kachel (erste)
-  → Detailseite: Top-Block + Seller-Angebote
+  → Detailseite: Seller-Filter setzen + „Filter"-Submit + Top-Block + Seller-Angebote
   → "Show Versions"
   → Versionen-/Artwork-Liste
 ```
@@ -15,7 +15,8 @@ Such-Einstieg (Game-Seite, config.searchEntry = /en/Magic)
 > (2026-09) das Such-UI von der Startseite entfernt hat.
 
 1. `cards.search` → Karte identifizieren (Set, ab-Preis, Detail-URL)
-2. `cards.price` → Verfügbarkeit + Preise (Top-Block + Seller-Angebote)
+2. `cards.price` → Seller-Filter (Default excellent/English/Germany, optional override)
+   anwenden, „Filter" klicken, Seite neu laden, dann Verfügbarkeit + Preise lesen
 3. `cards.artworks` → Druckvarianten / Artworks (optional mit `minQty` für Seller-Mengen)
 
 ## Variante: nur Artworks
