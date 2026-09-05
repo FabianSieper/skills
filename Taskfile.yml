@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  install:opencode:
+    desc: Installiert alle Skills global für OpenCode
+    cmds:
+      - npx --yes skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
+
