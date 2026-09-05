@@ -1,12 +1,12 @@
-# Technische Quellen
+# Technical sources
 
-Vor Versions-/CLI-Anpassungen aktuelle offizielle Dokumentation prüfen:
-- Playwright CLI Skill/Commands: https://github.com/microsoft/playwright-cli/blob/main/skills/playwright-cli/SKILL.md
-- Attach an bestehenden Browser: https://playwright.dev/agent-cli/commands/attach
+Check the current official documentation before making version- or CLI-related changes:
+- Playwright CLI skill and commands: https://github.com/microsoft/playwright-cli/blob/main/skills/playwright-cli/SKILL.md
+- Attach to an existing browser: https://playwright.dev/agent-cli/commands/attach
 - Sessions: https://playwright.dev/agent-cli/sessions
-- run-code und `--filename`: https://github.com/microsoft/playwright-cli/blob/main/skills/playwright-cli/references/running-code.md
+- `run-code` and `--filename`: https://github.com/microsoft/playwright-cli/blob/main/skills/playwright-cli/references/running-code.md
 - Playwright POMs: https://playwright.dev/docs/pom
 - Locators: https://playwright.dev/docs/locators
-- Actionability/Auto-Waiting: https://playwright.dev/docs/actionability
+- Actionability and auto-waiting: https://playwright.dev/docs/actionability
 
-Wichtige Annahmen des Gerüsts: `run-code --filename` erhält eine einzelne Function Expression; Import/Export/Require werden darin nicht direkt unterstützt. Deshalb Bundle-Adapter beibehalten und bei CLI-Upgrades regressionstesten.
+Important scaffold assumptions: `run-code --filename` receives a single function expression; import, export, and require are not supported directly in that file. Preserve the bundle adapter and regression-test it when upgrading the CLI.

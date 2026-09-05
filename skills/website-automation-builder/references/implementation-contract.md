@@ -1,35 +1,35 @@
-# Implementierungsvertrag
+# Implementation contract
 
-## Zielarchitektur
-`Agent -> Website-CLI -> Action Registry -> Browser Executor -> playwright-cli attached session -> bundled Action/POM -> existing Page`.
+## Target architecture
+`Agent -> Website CLI -> Action Registry -> Browser Executor -> playwright-cli attached session -> bundled Action/POM -> existing Page`.
 
-Der Agent darf in normaler Nutzung nur Action-ID und Parameter wählen. Er schreibt keine Klickfolge und keinen freien `run-code`-Snippet. POMs besitzen Locators und UI-Operationen; Actions verbinden POM-Methoden zu fachlichen Flows und prüfen Postconditions.
+During normal use, the agent may select only an action ID and its parameters. It does not write click sequences or free-form `run-code` snippets. POMs own locators and UI operations; actions combine POM methods into business flows and verify postconditions.
 
-## Browservertrag: existing-browser-only
-Der Browser ist bei normaler Skill-Nutzung bereits geöffnet. Dies ist ein harter Default.
+## Browser contract: existing-browser-only
+The browser is already open during normal skill use. This is a hard default.
 
-- Standardadapter: `attach --extension=chrome` mit fester benannter Session.
-- Optional: `attach --cdp=chrome` oder expliziter CDP-Endpunkt, nur wenn im Zielskill bewusst konfiguriert und getestet.
-- Niemals automatisch zwischen Extension/CDP wechseln.
-- Niemals `playwright-cli open`, `close`, `close-all`, `kill-all` oder `chromium.launch` in normaler Runtime verwenden.
-- Browser fehlt/nicht attachbar: `BROWSER_REQUIRED` bzw. `ATTACH_FAILED`.
-- Auth fehlt: `AUTH_REQUIRED`; Nutzer meldet sich im bereits offenen Browser an. MFA/CAPTCHA: `HUMAN_REQUIRED`.
-- Keine eigene storage-state-Datei als Standard. Browserprofil, Cookies, Extensions und Login bleiben Eigentum des bereits laufenden Browsers.
+- Default adapter: `attach --extension=chrome` with a fixed named session.
+- Optional: `attach --cdp=chrome` or an explicit CDP endpoint, but only when deliberately configured and tested in the target skill.
+- Never switch automatically between extension and CDP.
+- Never use `playwright-cli open`, `close`, `close-all`, `kill-all`, or `chromium.launch` during normal runtime execution.
+- If the browser is missing or cannot be attached, return `BROWSER_REQUIRED` or `ATTACH_FAILED`.
+- If authentication is missing, return `AUTH_REQUIRED`; the user signs in through the already open browser. For MFA/CAPTCHA, return `HUMAN_REQUIRED`.
+- Do not use a dedicated storage-state file by default. The browser profile, cookies, extensions, and login remain owned by the running browser.
 
-`connect` darf ausschließlich eine playwright-cli-Verbindung zum offenen Browser herstellen. Es startet keinen Browser. `list`/`describe` greifen gar nicht auf den Browser zu.
+`connect` may only establish a playwright-cli connection to the open browser. It never launches a browser. `list` and `describe` do not access the browser at all.
 
-## Warum Bundling nötig ist
-`playwright-cli run-code --filename=...` erwartet eine einzelne Function Expression und akzeptiert dort keine normale `import/export/require`-Syntax. Daher bleibt die Quellstruktur modular in TypeScript, während `src/runtime/cli-browser.ts` für jeden Aufruf ein temporäres, selbstenthaltenes Bundle erzeugt:
+## Why bundling is required
+`playwright-cli run-code --filename=...` expects a single function expression and does not accept normal `import/export/require` syntax in that file. The source structure therefore remains modular TypeScript, while `src/runtime/cli-browser.ts` creates a temporary, self-contained bundle for each invocation:
 
-1. Action-Modul + POMs + `SitePage` mit esbuild bündeln.
-2. Validierte Eingabe als JSON-Datenliteral einbetten.
-3. Eine einzelne `async page => { ... }`-Expression nach `.local/run-code/<uuid>.js` schreiben.
-4. Über `playwright-cli -s=<session> --raw run-code --filename=<file>` im bestehenden Browser ausführen.
-5. JSON-Ergebnis parsen und temporäre Datei löschen.
+1. Bundle the action module, POMs, and `SitePage` with esbuild.
+2. Embed validated input as a JSON data literal.
+3. Write a single `async page => { ... }` expression to `.local/run-code/<uuid>.js`.
+4. Execute it in the existing browser with `playwright-cli -s=<session> --raw run-code --filename=<file>`.
+5. Parse the JSON result and delete the temporary file.
 
-Der Agent erzeugt dieses Bundle nicht. Keine Nutzereingabe an Shellcode, `eval` oder Modulpfade durchreichen.
+The agent does not generate this bundle. Never pass user input to shell code, `eval`, or module paths.
 
-## Zielstruktur
+## Target structure
 ```text
 <site>-automation/
   SKILL.md
@@ -49,19 +49,19 @@ Der Agent erzeugt dieses Bundle nicht. Keine Nutzereingabe an Shellcode, `eval` 
   examples/*.json
   references/{actions,flows,selectors,verification}.md
   references/build-state.json
-  .local/                      # privat; Pläne/Attempt-Marker/temp run-code
+  .local/                      # private; plans, attempt markers, temporary run-code
 ```
 
-## Action-Modul
-Jede Action exportiert genau ein `action`-Objekt mit:
+## Action module
+Every action exports exactly one `action` object containing:
 - `id`, `kind`, `description`, `parameters`, `outputDescription`
 - `modulePath`: `fileURLToPath(import.meta.url)`
-- `next`: registrierte erlaubte/sinnvolle Folgeaktionen
+- `next`: registered permitted and useful subsequent actions
 - `validateOutput`
-- bei read: `run(page,input)`
-- bei write: `prepare(page,input)` und `execute(page,input,preview)`
+- for reads: `run(page,input)`
+- for writes: `prepare(page,input)` and `execute(page,input,preview)`
 
-Beispiel:
+Example:
 ```ts
 import { fileURLToPath } from 'node:url';
 import type { Action } from '../runtime/engine.ts';
@@ -80,9 +80,9 @@ export const action: Action = {
 };
 ```
 
-`next` ist Teil des Agentenvertrags. Das Ergebnis enthält `allowedNextActions`; ein kleines Modell soll daraus den nächsten Schritt wählen statt die Website neu zu explorieren. Leere Liste bedeutet: Flow beendet oder neuer Nutzerauftrag nötig.
+`next` is part of the agent contract. The result includes `allowedNextActions`; smaller models should choose the next step from this list instead of exploring the website again. An empty list means the flow is complete or a new user request is required.
 
-## CLI-Vertrag
+## CLI contract
 ```bash
 npm run --silent cli -- list
 npm run --silent cli -- describe catalog.search
@@ -93,35 +93,35 @@ npm run --silent cli -- plan item.update --input /private/update.json
 npm run --silent cli -- execute --plan <plan-id> --approve <approval-hash>
 ```
 
-`run` nur read. `plan` nur write/prepare. `execute` nur mit gespeicherter Preview und Approval-Hash. Nach möglichem Commit permanenten Attempt-Marker setzen; unbekannten Commit nicht wiederholen.
+`run` is for reads only. `plan` is for write/prepare only. `execute` requires a stored preview and approval hash. After a possible commit, set a permanent attempt marker; never repeat an uncertain commit.
 
-## POM- und Locator-Vertrag
-POMs kapseln Locators, Zustandsanker und elementare Website-Operationen. Actions enthalten fachliche Reihenfolge und Postconditions. Keine CLI- oder Agentenlogik in POMs.
+## POM and locator contract
+POMs encapsulate locators, state anchors, and elementary website operations. Actions contain the business sequence and postconditions. POMs contain no CLI or agent logic.
 
-Locator-Priorität:
-1. stabiler beobachteter `data-testid`/Test-ID-Vertrag,
-2. exakte Rolle/Name oder Label,
-3. eindeutiger fachlicher Container + semantisches Ziel,
-4. kurzes stabiles Attribut mit dokumentierter Begründung.
+Locator priority:
+1. a stable, observed `data-testid` or test-ID contract,
+2. an exact role/name or label,
+3. a unique business container plus semantic target,
+4. a short stable attribute with documented justification.
 
-Jedes Einzelziel muss genau einen Treffer haben. Test-ID ist kein Eindeutigkeitsbeweis. `uniqueVisible`, `clickUnique`, `fillUnique` verwenden. Keine `.first/.last/.nth`-Reparatur, generierten CSS-Klassen, XPath-Ketten, Koordinaten, `force:true`, `waitForTimeout` oder stillen Fallbackketten.
+Every individual target must produce exactly one match. A test ID is not proof of uniqueness. Use `uniqueVisible`, `clickUnique`, and `fillUnique`. Do not repair ambiguity with `.first/.last/.nth`, generated CSS classes, XPath chains, coordinates, `force:true`, `waitForTimeout`, or silent fallback chains.
 
-Snapshots/Refs wie `e14` sind nur Discovery-Hilfen und dürfen nicht als dauerhafte POM-Selektoren gespeichert werden.
+Snapshot references such as `e14` are discovery aids only and must not be stored as permanent POM selectors.
 
-## Zustände, Tabs und Navigation
-`SitePage.assertReady()` prüft Domain, relevanten Seitenzustand, Login/Account und bekannte Blockzustände. Login allein reicht nicht zur Accountidentität.
+## State, tabs, and navigation
+`SitePage.assertReady()` verifies the domain, relevant page state, login/account, and known blocked states. Login alone is insufficient to establish account identity.
 
-Neue Tabs/Popups nur durch die konkrete Action erzeugen und gezielt identifizieren; keine fremden Tabs schließen. Vor Action-Ausführung aktuellen Tab/Origin prüfen. Der Runtime-Adapter darf den offenen Browser nicht aufräumen oder dessen übrige Tabs verwalten.
+Only the concrete action may create new tabs or popups, and it must identify them deliberately; never close unrelated tabs. Check the current tab and origin before executing an action. The runtime adapter must not clean up the open browser or manage its other tabs.
 
-## Write-Vertrag
-`prepare` darf keine fachliche Mutation oder Autosave auslösen. Preview enthält mindestens Zielidentität/Zustandsversion und Änderungen. `execute` prüft direkt vorher erneut Account + Preview. Nach Commit-Grenze wird jeder unklare Fehler `UNKNOWN_COMMIT`.
+## Write contract
+`prepare` must not trigger a business mutation or autosave. The preview includes at least the target identity/state version and the proposed changes. Immediately before committing, `execute` verifies the account and preview again. After the commit boundary, every ambiguous error becomes `UNKNOWN_COMMIT`.
 
-## Fehler und Fallbacks
-Keine automatische Rückkehr zu freier Browsersteuerung. Insbesondere:
-- `UNKNOWN_ACTION`: Builder erweitern.
-- `UI_DRIFT`/`AMBIGUOUS_SELECTOR`: POM reparieren.
-- `BROWSER_REQUIRED`/`ATTACH_FAILED`: offenen Browser/Extension/CDP bereitstellen.
-- `CLI_PROTOCOL`: CLI/Runtime-Kompatibilität reparieren.
-- `AUTH_REQUIRED`/`HUMAN_REQUIRED`: Nutzer im bestehenden Browser übernehmen lassen.
+## Errors and fallbacks
+Never fall back automatically to free-form browser control. In particular:
+- `UNKNOWN_ACTION`: extend the builder.
+- `UI_DRIFT`/`AMBIGUOUS_SELECTOR`: repair the POM.
+- `BROWSER_REQUIRED`/`ATTACH_FAILED`: provide the open browser, extension, or CDP connection.
+- `CLI_PROTOCOL`: repair CLI/runtime compatibility.
+- `AUTH_REQUIRED`/`HUMAN_REQUIRED`: let the user take over in the existing browser.
 
-Keine Whole-action-Retries für Writes. Reads nur nach dokumentierter Unbedenklichkeit erneut ausführen.
+Never retry an entire write action. Retry reads only when their safety has been documented.

@@ -1,3 +1,3 @@
-# Website-Abnahme
+# Website acceptance
 
-BUILD_REQUIRED: Runtime-Fixture-Tests sind keine Website-Abnahme. Reale Aktionsprüfungen dokumentieren.
+BUILD_REQUIRED: Runtime fixture tests are not website acceptance tests. Document real action verification.

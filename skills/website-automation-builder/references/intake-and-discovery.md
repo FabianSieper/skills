@@ -1,59 +1,59 @@
-# Eingaben und Erkundung
+# Intake and discovery
 
-## Minimale erste Rückfrage
-Nur fehlende Teile fragen:
-"Welche Website und welche konkreten Aktionen soll der spätere Skill unterstützen? Nenne pro Aktion bitte ein Beispiel und woran du ein erfolgreiches Ergebnis erkennst. Darf der Skill dabei Daten verändern, und gibt es dafür ein Testkonto?"
+## Minimum initial clarification
+Ask only for missing information:
+"Which website and which concrete actions should the resulting skill support? For each action, provide an example and explain how you recognize a successful result. May the skill modify data, and is a test account available?"
 
-Browserannahme nicht erneut erfragen: standardmäßig ist Chrome bereits geöffnet und soll über playwright-cli wiederverwendet werden. Nur nachfragen, wenn Extension/CDP technisch nicht verfügbar ist oder der Nutzer ausdrücklich einen anderen Browser verlangt.
+Do not ask again about the browser assumption: Chrome is open by default and must be reused through playwright-cli. Ask only if extension/CDP attachment is technically unavailable or the user explicitly requests another browser.
 
-## Aktionsvertrag
-Pro Aktion dokumentieren:
+## Action contract
+Document each action:
 ```yaml
 id: inventory.find
 kind: read
-purpose: Artikel nach Artikelnummer finden
+purpose: Find an item by SKU
 input: { sku: { type: string, required: true } }
 output: { itemId: string, title: string, available: boolean }
-start: angemeldeter bestehender Browser; Inventar erreichbar
-identity: exakte Artikelnummer
-steps: [Inventar öffnen, Suche füllen, auslösen, Ergebnis prüfen]
-success: exakte Artikelnummer oder expliziter Leerzustand
+start: authenticated existing browser; inventory accessible
+identity: exact SKU
+steps: [open inventory, fill search, submit, verify result]
+success: exact SKU or explicit empty state
 next: [inventory.open]
-permissions: nur lesen
+permissions: read only
 status: unclarified
 ```
 
-## Erkundungsstrategie
-In DISCOVER darf der Builder playwright-cli direkt verwenden. Ziel ist nicht, diese Befehle später zu wiederholen, sondern daraus stabile POM-Methoden und Actions zu bauen.
+## Discovery strategy
+During DISCOVER, the builder may use playwright-cli directly. The goal is not to repeat these commands later, but to derive stable POM methods and actions from them.
 
-1. Bereits offenen Browser/Session verwenden.
-2. Bekannte Seite und sichtbaren Zustand bestimmen.
-3. Nächsten fachlich passenden Weg beobachten.
-4. Ziel durch Zustandsanker/URL/DOM bestätigen.
-5. robuste Locators und Postcondition dokumentieren.
-6. Flow als POM + Action implementieren.
+1. Use the already open browser and session.
+2. Determine the known page and visible state.
+3. Observe the next business-appropriate path.
+4. Confirm the target through state anchors, URL, or DOM.
+5. Document robust locators and the postcondition.
+6. Implement the flow as a POM plus action.
 
-Nach zwei erfolglosen Hypothesen oder fünf Minuten ohne Fortschritt pro Aktion gezielt nach Nutzerflow fragen. Früher fragen, wenn mehrere fachlich unterschiedliche Wege passen oder ein riskanter Schritt zur Erkundung nötig wäre.
+After two unsuccessful hypotheses or five minutes without progress on an action, ask the user specifically about their flow. Ask sooner when multiple business-distinct paths are plausible or exploration would require a risky step.
 
-Beispiel:
-"Ich bin bei 'Bestellungen' und sehe 'Offen' und 'Archiv', aber keinen Rechnungsbereich. Öffnest du zuerst eine einzelne Bestellung oder gibt es dafür einen eigenen Bereich? Bitte beschreibe deine Klickfolge; alternativ reicht ein Screenshot."
+Example:
+"I am in 'Orders' and can see 'Open' and 'Archive', but no invoices section. Do you first open an individual order, or is there a separate area for invoices? Please describe your click sequence; alternatively, a screenshot is enough."
 
-Nutzerantwort erklärt den fachlichen Weg, beweist aber keinen Locator. Anschließend aktuellen DOM erneut prüfen.
+The user's answer explains the business path but does not prove a locator. Inspect the current DOM again afterward.
 
-## Build-State
+## Build state
 ```json
 {
   "phase": "DISCOVER",
   "site": "https://example.org",
   "decisions": {
-    "locale": "de-DE",
+    "locale": "en-US",
     "browser": "existing-open-chrome",
     "attach": "playwright-cli-extension",
     "session": "example-automation"
   },
-  "actions": {"inventory.find": {"status": "blocked", "reason": "Navigationsweg fehlt"}},
-  "next": "Nutzer nach Weg zum Inventar fragen"
+  "actions": {"inventory.find": {"status": "blocked", "reason": "Navigation path is missing"}},
+  "next": "Ask the user how to reach the inventory"
 }
 ```
 
-Keine Cookies, Passwörter, Browserprofile, Original-DOM-Dumps oder persönlichen Testdaten speichern.
+Do not store cookies, passwords, browser profiles, original DOM dumps, or personal test data.

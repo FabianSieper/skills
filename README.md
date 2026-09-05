@@ -1,27 +1,27 @@
 # Skills
 
-Persönliche Sammlung wiederverwendbarer Agent Skills.
+Personal collection of reusable agent skills.
 
 ## Installation
 
-Alle Skills global für OpenCode installieren:
+Install all skills globally for OpenCode:
 
 ```bash
 task install:opencode
 ```
 
-Alternativ direkt über die CLI:
+Alternatively, use the CLI directly:
 
 ```bash
 npx skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
 ```
 
-Einen einzelnen Skill installieren:
+Install a single skill:
 
 ```bash
 npx skills add FabianSieper/skills --skill website-automation-builder
 ```
 
-## Verfügbare Skills
+## Available skills
 
-- `website-automation-builder` – Erstellt deterministische Website-Automationen mit TypeScript, Playwright-POMs und einem bereits geöffneten Browser.
+- `website-automation-builder` – Builds deterministic website automations with TypeScript, Playwright POMs, and an already open browser.

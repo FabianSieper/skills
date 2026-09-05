@@ -1,41 +1,41 @@
 ---
 name: website-automation-builder
-description: Erstelle oder erweitere einen wiederverwendbaren Website-Skill, dessen Agent nur registrierte Website-Aktionen auswählt, während TypeScript/Playwright-POMs die konkrete Navigation ausführen. Die fertigen Aktionen laufen über playwright-cli in einem bereits geöffneten Nutzerbrowser, standardmäßig via Chrome-Extension mit benannter Session; kein eigener Browserstart. Verwenden, wenn eine Website automatisiert und das Ergebnis als eigener, deterministischer Skill gespeichert werden soll. Kläre Aktionen/Erfolgskriterien, frage bei schwierigen Flows gezielt nach, implementiere robuste eindeutige Locators und teste die fertigen Action-Verträge.
+description: Create or extend a reusable website skill whose agent selects only registered website actions while TypeScript/Playwright POMs perform the concrete navigation. Completed actions run through playwright-cli in the user's already open browser, using the Chrome extension with a named session by default; never launch a separate browser. Use when a website must be automated and the result stored as a dedicated, deterministic skill. Clarify actions and success criteria, ask targeted questions about difficult flows, implement robust unique locators, and test the completed action contracts.
 ---
 
 # Website Automation Builder
 
-## Zielbild
-Erzeuge pro Website einen eigenständigen Skill `<site>-automation` mit TypeScript-POMs und registrierten Aktionen. Trenne strikt **Builder/Exploration** von **normaler Nutzung**.
+## Target architecture
+Create a standalone `<site>-automation` skill for each website, using TypeScript POMs and registered actions. Keep **builder/exploration** strictly separate from **normal use**.
 
-Die spätere LLM-Nutzung darf nicht erneut die Website verstehen oder Klickfolgen improvisieren. Sie folgt nur:
-`Nutzerabsicht -> dokumentierte Action-ID -> validierte Parameter -> Runtime -> playwright-cli -> vorgebaute POM-/Action-Funktion -> verifiziertes JSON`.
+During subsequent use, the LLM must not reinterpret the website or improvise click sequences. It follows only:
+`User intent -> documented action ID -> validated parameters -> runtime -> playwright-cli -> prebuilt POM/action function -> verified JSON`.
 
-Die Runtime nutzt den **bereits geöffneten Browser des Nutzers**. Browser offen ist der Default und eine feste Voraussetzung. Niemals für normale Skill-Ausführung einen managed/headless Browser starten oder einen Ersatzbrowser öffnen. Standard-Adapter: `playwright-cli attach --extension=chrome` mit fester benannter Session; CDP nur wenn im Zielskill ausdrücklich konfiguriert und getestet. Die CLI kann `run-code --filename` ausführen; modulare TypeScript-POMs/Actions werden dafür deterministisch zu einer einzelnen Funktions-Expression gebündelt.
+The runtime uses the **user's already open browser**. An open browser is the default and a hard prerequisite. Never launch a managed/headless browser or open a replacement browser during normal skill execution. Default adapter: `playwright-cli attach --extension=chrome` with a fixed named session; use CDP only when it is explicitly configured and tested in the target skill. The CLI can execute `run-code --filename`; modular TypeScript POMs and actions are therefore bundled deterministically into a single function expression.
 
-## Fester Ablauf
-Arbeite strikt `INPUT -> DISCOVER -> BUILD -> VERIFY -> HANDOFF`. Status pro Aktion: `unclarified | mapped | implemented | fixture_verified | live_verified | blocked` in `references/build-state.json`.
+## Required workflow
+Follow `INPUT -> DISCOVER -> BUILD -> VERIFY -> HANDOFF` strictly. Track each action as `unclarified | mapped | implemented | fixture_verified | live_verified | blocked` in `references/build-state.json`.
 
 ### 1. INPUT
-Lies `references/intake-and-discovery.md`. Kläre Website, konkrete Aktionen, Inputs, Outputs, read/write, Erfolgskriterien und erlaubte Mutationen. Browserannahme nicht erneut erfragen: standardmäßig ist Chrome bereits offen und soll wiederverwendet werden.
+Read `references/intake-and-discovery.md`. Clarify the website, concrete actions, inputs, outputs, read/write status, success criteria, and permitted mutations. Do not ask again about the browser assumption: Chrome is open by default and must be reused.
 
-Wenn eine Aufgabe fachlich oder navigational nicht leicht eindeutig automatisierbar erscheint, frage den Nutzer nach seinem Flow: wie er zu dem Bereich gelangt, welche Klickfolge er nutzt oder nach einem Screenshot. Frage sofort bei mehreren plausiblen Fachflows, unklaren Voraussetzungen oder riskanten Erkundungsschritten; spätestens nach zwei gezielten Fehlversuchen oder fünf Minuten ohne Fortschritt pro Aktion. Blockiere nur die betroffene Aktion.
+When a task is not straightforward to automate unambiguously from a business or navigation perspective, ask the user about their flow: how they reach the relevant area, which click sequence they use, or request a screenshot. Ask immediately when several plausible business flows exist, prerequisites are unclear, or exploration would require a risky step; ask no later than after two targeted failed attempts or five minutes without progress for an action. Block only the affected action.
 
 ### 2. DISCOVER
-Erkunde vereinbarte Aktionen gezielt. In dieser Phase sind direkte playwright-cli-Kommandos/Snapshots erlaubt, um den Flow und robuste Locators zu bestimmen. Nutze bevorzugt den bereits geöffneten Browser; keine Botblockaden umgehen oder Tarntechniken bauen.
+Explore agreed actions deliberately. Direct playwright-cli commands and snapshots are allowed during this phase to understand the flow and identify robust locators. Prefer the already open browser; do not bypass bot protection or build evasion techniques.
 
-Dokumentiere pro Interaktion: POM-Methode, Locator, Scope, erwartete Trefferzahl, fachliche Identität, Zustandsanker und verifizierbare Nachbedingung.
+For every interaction, document the POM method, locator, scope, expected match count, business identity, state anchor, and verifiable postcondition.
 
-Locator-Priorität:
-1. stabiler beobachteter Test-ID-Vertrag,
-2. exakter semantischer Locator (`getByRole`, `getByLabel`),
-3. fachliche ID innerhalb eines eindeutigen Containers,
-4. kurzes stabiles Attribut mit Begründung.
+Locator priority:
+1. a stable, observed test-ID contract,
+2. an exact semantic locator (`getByRole`, `getByLabel`),
+3. a business identifier inside a unique container,
+4. a short stable attribute with documented justification.
 
-Test-ID ist nicht automatisch eindeutig: jedes Einzelziel muss im relevanten Zustand genau einen Treffer liefern. Keine `.first()/.nth()`-Reparatur, generierten CSS-Klassen, XPath-Ketten, Koordinatenklicks, `force:true`, Sleeploops oder stille Locator-Fallbackketten.
+A test ID is not automatically unique: every individual target must produce exactly one match in the relevant state. Do not repair ambiguity with `.first()/.nth()`, generated CSS classes, XPath chains, coordinate clicks, `force:true`, sleep loops, or silent locator fallback chains.
 
 ### 3. BUILD
-Lies `references/implementation-contract.md`. Scaffold:
+Read `references/implementation-contract.md`. Scaffold:
 
 ```bash
 node "<BUILDER_ROOT>/scripts/scaffold.mjs" --name <site>-automation \
@@ -44,42 +44,42 @@ cd "<TARGET_ROOT>/<site>-automation"
 npm install
 ```
 
-Kein Browser-Download als Laufzeitvoraussetzung. Das Zielprojekt enthält `site.config.ts` mit fester browser session und Attach-Methode. Normaler Runtime-Code darf niemals `chromium.launch`, `playwright-cli open`, `close`, `close-all` oder `kill-all` aufrufen.
+Do not require a browser download at runtime. The target project contains `site.config.ts` with a fixed browser session and attach method. Normal runtime code must never invoke `chromium.launch`, `playwright-cli open`, `close`, `close-all`, or `kill-all`.
 
-Architektur:
+Architecture:
 `CLI -> Action Registry -> Browser Executor -> playwright-cli named attached session -> bundled Action/POM code -> existing Page`.
 
-Implementiere POMs in `src/pages/`/`src/components/`; je Action ein Modul in `src/actions/`. Action-Metadaten müssen `id`, `kind`, Schema, `modulePath`, Outputvalidator und `next` enthalten. `next` beschreibt erlaubte/sinnvolle Folgeaktionen für kleine Modelle.
+Implement POMs in `src/pages/` and `src/components/`, with one module per action in `src/actions/`. Action metadata must include `id`, `kind`, schema, `modulePath`, an output validator, and `next`. `next` describes permitted and useful subsequent actions for smaller models.
 
-`run-code` akzeptiert keine normalen Imports im übergebenen File. Deshalb bündelt `src/runtime/cli-browser.ts` das TypeScript-Modul plus SitePage mit esbuild und schreibt nur temporär eine einzelne Function Expression nach `.local/run-code/`. Eingaben werden vorher schema-validiert und als Datenliteral eingebettet; der Agent schreibt keinen freien run-code-Text.
+`run-code` does not accept normal imports in the provided file. Therefore, `src/runtime/cli-browser.ts` bundles the TypeScript module and SitePage with esbuild and writes a single function expression temporarily to `.local/run-code/`. Inputs are schema-validated first and embedded as data literals; the agent never writes free-form run-code text.
 
-Write-Aktionen bleiben `prepare -> Nutzerfreigabe -> execute`, mit Preview-/Account-/Versionsvergleich und permanentem Attempt-Marker. Nach möglichem Commit nie automatisch wiederholen.
+Write actions remain `prepare -> user approval -> execute`, with preview, account, and version comparisons plus a permanent attempt marker. Never retry automatically after a possible commit.
 
 ### 4. VERIFY
-Lies `references/verification.md`. Führe Typecheck/Tests aus. Prüfe pro Action Erfolg, Invalid Input, leer/nicht vorhanden, Selector-Eindeutigkeit, Postcondition, Auth/Human-State sowie erlaubte nächste Aktionen.
+Read `references/verification.md`. Run type checking and tests. For each action, test success, invalid input, empty or missing results, selector uniqueness, postconditions, authentication/human states, and permitted next actions.
 
-Zusätzlich zwingend testen:
-- `list`/`describe` funktionieren ohne Browserzugriff.
-- Browser bereits offen + korrekte Extension/CDP-Verbindung -> `connect`/`doctor` hängt an, startet keinen Browser.
-- Browser geschlossen/nicht attachbar -> `BROWSER_REQUIRED`/`ATTACH_FAILED`, kein Fallback auf `open`/managed/headless.
-- `run`/`plan`/`execute` verwenden nur die benannte Session.
-- temporäres run-code-Bundle ist eine einzelne Function Expression und enthält die gebündelten POMs.
-- normale Action-Ausführung benötigt keine Snapshot-Ref-Sequenz und keine LLM-generierten Playwright-Befehle.
-- `allowedNextActions` stimmt mit Registry/Dokumentation überein.
+Also test all of the following:
+- `list` and `describe` work without browser access.
+- With the browser already open and the correct extension/CDP connection, `connect` and `doctor` attach without launching a browser.
+- With the browser closed or not attachable, return `BROWSER_REQUIRED` or `ATTACH_FAILED` without falling back to `open`, managed, or headless modes.
+- `run`, `plan`, and `execute` use only the named session.
+- The temporary run-code bundle is a single function expression and contains the bundled POMs.
+- Normal action execution requires neither snapshot-reference sequences nor LLM-generated Playwright commands.
+- `allowedNextActions` matches the registry and documentation.
 
-Live-Tests nur sichere Reads bzw. ausdrücklich freigegebene Testmutationen. Login/MFA/CAPTCHA durch Nutzer im bestehenden Browser.
+Run live tests only for safe reads or explicitly approved test mutations. The user handles login, MFA, and CAPTCHA in the existing browser.
 
 ### 5. HANDOFF
-Vervollständige den Website-Skill mit konkreten Action-IDs, Beispielen, Preconditions, Outputs, Postconditions, Fehlerreaktionen und `allowedNextActions`.
+Complete the website skill with concrete action IDs, examples, preconditions, outputs, postconditions, error responses, and `allowedNextActions`.
 
-Der fertige Skill muss ausdrücklich sagen: **Browser ist bereits offen; Skill hängt an; Skill startet oder schließt keinen Browser.** Unbekannte Aktion oder UI-Drift führt zurück zum Builder, nicht zu freier Browsernavigation.
+The finished skill must state explicitly: **The browser is already open; the skill attaches to it; the skill never launches or closes a browser.** An unknown action or UI drift returns control to the builder rather than triggering free-form browser navigation.
 
-Paket niemals mit `.local`, Browserprofilen, Cookies, Traces, `node_modules` oder persönlichen Daten ausliefern.
+Never distribute `.local`, browser profiles, cookies, traces, `node_modules`, or personal data with the package.
 
-## Ressourcen
-- `references/intake-and-discovery.md`: Intake/Rückfragen/Discovery-Budget.
-- `references/implementation-contract.md`: verbindliche Runtime-/POM-/CLI-Architektur.
-- `references/verification.md`: Abnahme- und Regressionstests.
-- `references/sources.md`: technische Quellen.
-- `assets/site-template/`: Zielskill-Gerüst.
-- `assets/examples/`: POM-/Action-Beispiele, nur als Muster.
+## Resources
+- `references/intake-and-discovery.md`: intake, clarification, and discovery budget.
+- `references/implementation-contract.md`: required runtime, POM, and CLI architecture.
+- `references/verification.md`: acceptance and regression tests.
+- `references/sources.md`: technical sources.
+- `assets/site-template/`: target skill scaffold.
+- `assets/examples/`: POM and action examples; patterns only.

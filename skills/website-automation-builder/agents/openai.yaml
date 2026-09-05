@@ -1,6 +1,6 @@
 interface:
   display_name: Website Automation Builder
-  short_description: Website-Skills mit TypeScript, Playwright und POMs bauen
+  short_description: Build website skills with TypeScript, Playwright, and POMs
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:

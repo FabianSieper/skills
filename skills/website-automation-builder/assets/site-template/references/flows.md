@@ -1,3 +1,3 @@
-# Beobachtete Flows
+# Observed flows
 
-BUILD_REQUIRED: Nur real beobachtete oder vom Nutzer erklärte und danach bestätigte Wege eintragen.
+BUILD_REQUIRED: Record only paths that were observed directly or explained by the user and subsequently confirmed.

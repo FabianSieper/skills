@@ -1,3 +1,3 @@
-# Locator-Inventar
+# Locator inventory
 
-BUILD_REQUIRED: POM, Methode, Locator, Scope, Soll-Trefferzahl, Identitaet, Beleg und Prüfdatum.
+BUILD_REQUIRED: Record the POM, method, locator, scope, expected match count, identity, evidence, and verification date.

@@ -1,3 +1,3 @@
-# Aktionsverträge
+# Action contracts
 
-BUILD_REQUIRED: Für jede vereinbarte Aktion Vertrag, Parameter, Beispiel, Ausgabe, Postcondition und `next` eintragen. `next` darf ausschließlich registrierte Action-IDs enthalten und wird als `allowedNextActions` an den Agenten zurückgegeben.
+BUILD_REQUIRED: For every agreed action, document its contract, parameters, example, output, postcondition, and `next`. `next` may contain only registered action IDs and is returned to the agent as `allowedNextActions`.

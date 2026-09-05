@@ -1,37 +1,37 @@
 ---
 name: {{SLUG}}
-description: Führe ausschließlich die dokumentierten Aktionen auf {{HOST}} über vordefinierte TypeScript-/Playwright-POM-Funktionen aus, die mit playwright-cli in einen bereits geöffneten Browser eingebunden werden. Verwenden für die konkret dokumentierten Website-Aktionen dieses Skills. Nicht für freie Browsernavigation oder andere Websites verwenden.
+description: Run only the documented actions on {{HOST}} through predefined TypeScript/Playwright POM functions that attach to an already open browser through playwright-cli. Use for the specifically documented website actions in this skill. Do not use for free-form browser navigation or other websites.
 ---
 
 # {{SLUG}}
 
-## Ausführungsmodell
-Verwende ausschließlich registrierte Aktionen. Der Agent entscheidet **welche** Aktion benötigt wird und liefert validierte Parameter; die mitgelieferte TypeScript-Implementierung entscheidet **wie** navigiert, lokalisiert, geklickt, gelesen und verifiziert wird.
+## Execution model
+Use registered actions only. The agent decides **which** action is needed and supplies validated parameters; the included TypeScript implementation decides **how** to navigate, locate, click, read, and verify.
 
-Fester Pfad:
-`Nutzerabsicht -> list/describe -> registrierte Aktion -> Eingabevalidierung -> angehängte playwright-cli-Session -> gebündelte POM-/Action-Funktion -> Postcondition -> kompaktes JSON`.
+Fixed path:
+`User intent -> list/describe -> registered action -> input validation -> attached playwright-cli session -> bundled POM/action function -> postcondition -> compact JSON`.
 
-Während normaler Nutzung **keine** freien `snapshot/click/fill/goto/run-code`-Sequenzen erfinden. Raw CLI-Navigation ist nur für Builder/Debugging erlaubt. Bei `UNKNOWN_ACTION`, `UI_DRIFT` oder `AMBIGUOUS_SELECTOR` stoppen und den Builder zur gezielten Erweiterung/Reparatur verwenden.
+During normal use, do **not** invent free-form `snapshot/click/fill/goto/run-code` sequences. Raw CLI navigation is allowed only for building and debugging. On `UNKNOWN_ACTION`, `UI_DRIFT`, or `AMBIGUOUS_SELECTOR`, stop and use the builder for a targeted extension or repair.
 
-## Browser-Invariante
-Der Browser ist bei Nutzung dieses Skills standardmäßig **bereits geöffnet**. Dies ist eine Voraussetzung, keine Optimierung.
+## Browser invariant
+The browser is **already open** by default when this skill is used. This is a prerequisite, not an optimization.
 
-- Nie selbst einen Browser starten, neu starten, schließen oder durch einen managed/headless Browser ersetzen.
-- Standard: an den bereits geöffneten Chrome über `playwright-cli attach --extension=chrome` und eine feste benannte Session anbinden.
-- `site.config.ts` darf stattdessen explizit `cdp` konfigurieren; kein automatischer Wechsel zwischen Extension/CDP.
-- Vor der ersten Aktion `npm run --silent cli -- connect` oder direkt die Aktion verwenden; die Runtime hängt die benannte Session an, falls sie noch nicht existiert.
-- Wenn der Browser nicht geöffnet/attachbar ist: `BROWSER_REQUIRED`/`ATTACH_FAILED`; Nutzer soll den konfigurierten Browser öffnen bzw. die bestehende Extension/CDP-Verbindung herstellen.
-- Login, MFA oder CAPTCHA erledigt der Nutzer im bereits geöffneten Browser. Danach dieselbe Aktion erneut ausführen. Keine Sessiondatei oder Passwortautomatisierung anlegen.
-- Niemals `playwright-cli close`, `close-all`, `kill-all` oder `open` aus diesem Skill aufrufen.
+- Never launch, restart, or close a browser, and never replace it with a managed/headless browser.
+- Default: attach to the already open Chrome instance through `playwright-cli attach --extension=chrome` using a fixed named session.
+- `site.config.ts` may explicitly configure `cdp` instead; never switch automatically between extension and CDP.
+- Before the first action, run `npm run --silent cli -- connect` or invoke the action directly; the runtime attaches the named session if it does not yet exist.
+- If the browser is not open or attachable, return `BROWSER_REQUIRED` or `ATTACH_FAILED`; the user must open the configured browser or establish the existing extension/CDP connection.
+- The user handles login, MFA, or CAPTCHA in the already open browser, then runs the same action again. Do not create a session file or password automation.
+- Never call `playwright-cli close`, `close-all`, `kill-all`, or `open` from this skill.
 
-Die Runtime verwendet `playwright-cli run-code --filename=...` nur intern. Weil `run-code` keine `import/export/require`-Syntax im Eingabefile akzeptiert, werden modulare TypeScript-POMs und Actions vor dem Aufruf mit esbuild in eine einzelne Funktions-Expression gebündelt. Der Agent erzeugt diese Funktion nicht selbst.
+The runtime uses `playwright-cli run-code --filename=...` internally only. Because `run-code` does not accept `import/export/require` syntax in the input file, modular TypeScript POMs and actions are bundled with esbuild into a single function expression before invocation. The agent does not create this function itself.
 
-## Voraussetzungen
-**BUILD_REQUIRED:** Erst entfernen, wenn SitePage, POMs, Actions, Beispiele und Verifikation vollständig sind.
+## Prerequisites
+**BUILD_REQUIRED:** Remove only after SitePage, POMs, actions, examples, and verification are complete.
 
-Benötigt: Node.js >= 22.16, `playwright-cli` im PATH, bereits geöffneten konfigurierten Browser sowie eine funktionierende Extension- oder CDP-Anbindung. Einrichtung: `npm ci`. Kein `npx playwright install chromium` für die normale Skill-Ausführung nötig.
+Requires Node.js >= 22.16, `playwright-cli` on PATH, an already open configured browser, and a working extension or CDP connection. Setup: `npm ci`. Normal skill execution does not require `npx playwright install chromium`.
 
-Befehle immer aus `<ABSOLUTER_SKILL_ORDNER>` ausführen.
+Always run commands from `<ABSOLUTE_SKILL_DIRECTORY>`.
 
 ```bash
 npm run --silent cli -- list
@@ -43,34 +43,34 @@ npm run --silent cli -- plan <write-action> --input <file.json>
 npm run --silent cli -- execute --plan <plan-id> --approve <approval-hash>
 ```
 
-`list` und `describe` greifen nicht auf den Browser zu. `connect` hängt ausschließlich an den bereits geöffneten Browser an und startet keinen neuen.
+`list` and `describe` do not access the browser. `connect` only attaches to the already open browser and never launches a new one.
 
-## Unterstützte Aktionen
-Nur tatsächlich implementierte IDs aufführen.
+## Supported actions
+List only IDs that are actually implemented.
 
-| Nutzerabsicht | Action-ID | Read/Write | Eingabe-Beispiel | Prüfstatus |
+| User intent | Action ID | Read/Write | Example input | Verification status |
 |---|---|---|---|---|
 
-Vollständige Verträge: `references/actions.md`.
+Complete contracts: `references/actions.md`.
 
-Jede erfolgreiche Aktion liefert zusätzlich `allowedNextActions`. Nutze diese Liste als bevorzugten nächsten Navigationsraum; erfinde keine nicht registrierte Folgeaktion.
+Every successful action also returns `allowedNextActions`. Treat this list as the preferred navigation space for the next step; do not invent an unregistered subsequent action.
 
-## Fehler: feste Reaktion
-| Code | Reaktion |
+## Errors: required response
+| Code | Response |
 |---|---|
-| INVALID_INPUT / UNKNOWN_ACTION | Vertrag lesen bzw. fehlende Aktion mit Builder ergänzen; nichts raten |
-| BROWSER_REQUIRED / ATTACH_FAILED | Nutzer muss den konfigurierten bereits geöffneten Browser/Attach bereitstellen; keinen Ersatzbrowser starten |
-| AUTH_REQUIRED / HUMAN_REQUIRED | Nutzer im bestehenden Browser Login/MFA/CAPTCHA erledigen lassen |
-| UI_DRIFT / AMBIGUOUS_SELECTOR / POSTCONDITION_FAILED | Stoppen; betroffenen POM/Flow mit Builder reparieren |
-| CLI_PROTOCOL | Stoppen; CLI/Runtime-Version prüfen, keine freie CLI-Navigation als Fallback |
-| PLAN_CHANGED / PLAN_EXPIRED | Vorschau neu erstellen und erneut prüfen |
-| APPROVAL_REQUIRED | Konkrete Vorschau und Nutzerfreigabe prüfen |
-| PLAN_USED / UNKNOWN_COMMIT | Nicht wiederholen; fachlichen Zustand mit registrierter Read-Aktion prüfen |
-| BUSY | Laufenden Prozess prüfen; Sperre nicht blind löschen |
-| TIMEOUT / INTERNAL | Stoppen; sichere Diagnose, keine automatische Write-Wiederholung |
-| NOT_CONFIGURED | Builder muss Implementierung abschließen |
+| INVALID_INPUT / UNKNOWN_ACTION | Read the contract or add the missing action with the builder; do not guess |
+| BROWSER_REQUIRED / ATTACH_FAILED | The user must provide the configured already open browser/attach connection; do not launch a replacement browser |
+| AUTH_REQUIRED / HUMAN_REQUIRED | Let the user complete login/MFA/CAPTCHA in the existing browser |
+| UI_DRIFT / AMBIGUOUS_SELECTOR / POSTCONDITION_FAILED | Stop and repair the affected POM/flow with the builder |
+| CLI_PROTOCOL | Stop and check CLI/runtime compatibility; do not use free-form CLI navigation as a fallback |
+| PLAN_CHANGED / PLAN_EXPIRED | Create a fresh preview and verify it again |
+| APPROVAL_REQUIRED | Verify the concrete preview and user approval |
+| PLAN_USED / UNKNOWN_COMMIT | Do not repeat; inspect the business state with a registered read action |
+| BUSY | Inspect the running process; do not delete the lock blindly |
+| TIMEOUT / INTERNAL | Stop and diagnose safely; do not retry writes automatically |
+| NOT_CONFIGURED | The builder must complete the implementation |
 
-Exitcodes: 0 Erfolg, 2 Eingabe/Vertrag, 3 Browser/Auth/Nutzer/Freigabe, 4 UI/Runtime, 5 unklarer oder schon versuchter Commit.
+Exit codes: 0 success, 2 input/contract, 3 browser/authentication/user/approval, 4 UI/runtime, 5 uncertain or already attempted commit.
 
-## Datenschutz und Grenzen
-`.local` enthält Pläne, Attempt-Marker und temporäre `run-code`-Bundles; nie committen oder hochladen. Browserprofil, Cookies und Login bleiben im bereits geöffneten Nutzerbrowser und werden nicht vom Skill exportiert. Keine Botblockaden umgehen, keine Tarntechniken einbauen und keine Erfolgsgarantie nach Website-Änderungen geben.
+## Privacy and boundaries
+`.local` contains plans, attempt markers, and temporary `run-code` bundles; never commit or upload it. Browser profiles, cookies, and login data stay in the user's already open browser and are not exported by the skill. Do not bypass bot protection, add evasion techniques, or guarantee success after website changes.

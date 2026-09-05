@@ -27,7 +27,7 @@ function make(root:string){
       validateOutput:(value)=>{const raw=value as {value?:unknown};if(typeof raw.value!=='number')throw new AutomationError('POSTCONDITION_FAILED');return jsonValue(value);}}
   ];
   const browser:BrowserExecutor=async(action,phase,input,preview)=>{
-    if(action.id==='item.read'&&phase==='run')return {accountKey:state.account,value:await action.run({} as Page,input) as never};
+    if(action.kind==='read'&&phase==='run')return {accountKey:state.account,value:await action.run({} as Page,input) as never};
     if(action.kind!=='write')throw new Error('fixture');
     if(phase==='prepare')return {accountKey:state.account,value:await action.prepare({} as Page,input) as never};
     if(phase==='execute')return {accountKey:state.account,value:await action.execute({} as Page,input,preview!) as never};

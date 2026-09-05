@@ -1,14 +1,14 @@
 # Builder validation
 
-## Aktueller Stand
-Der Builder wurde auf die Architektur `registered action -> esbuild bundle -> playwright-cli run-code -> existing attached browser` umgestellt.
+## Current status
+The builder now uses the architecture `registered action -> esbuild bundle -> playwright-cli run-code -> existing attached browser`.
 
-Geprüfte statische Invarianten:
-- Zieltemplate enthält keinen Runtime-Aufruf von `chromium.launch`/`playwright-cli open`.
-- Browserkonfiguration verlangt bestehende Chrome-Session und feste Attach-Methode.
-- `list`/`describe` sind browserfrei; `connect` attach-only.
-- Action-Vertrag enthält `modulePath` und `next`/`allowedNextActions`.
-- temporäre run-code-Dateien liegen unter `.local` und werden nach Aufruf gelöscht.
-- `run-code`-Wrapper ist eine einzelne Function Expression; modulare POMs werden gebündelt.
+Verified static invariants:
+- The target template contains no runtime invocation of `chromium.launch` or `playwright-cli open`.
+- Browser configuration requires an existing Chrome session and a fixed attach method.
+- `list` and `describe` are browser-free; `connect` is attach-only.
+- The action contract includes `modulePath` and `next`/`allowedNextActions`.
+- Temporary run-code files are stored under `.local` and deleted after invocation.
+- The `run-code` wrapper is a single function expression; modular POMs are bundled.
 
-Eine Live-Abnahme gegen eine echte Website und den lokal installierten `playwright-cli` ist absichtlich Aufgabe jedes erzeugten Website-Skills. Die Builder-Umgebung besitzt keinen bereits geöffneten Nutzerbrowser und kann diese Integration nicht stellvertretend bestätigen.
+Live acceptance against a real website and the locally installed `playwright-cli` is intentionally the responsibility of every generated website skill. The builder environment has no already open user browser and cannot verify that integration on the target skill's behalf.
