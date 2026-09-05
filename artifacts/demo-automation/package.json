@@ -1,0 +1,26 @@
+{
+  "name": "demo-automation",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "cli": "node scripts/site-runtime.mjs",
+    "build": "node --experimental-strip-types src/build.ts",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts",
+    "validate": "node --experimental-strip-types src/validate-build.ts",
+    "verify": "npm run typecheck && npm run build && npm test && npm run validate"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.9",
+    "playwright": "1.63.0",
+    "prettier": "3.6.2",
+    "typescript": "5.8.3",
+    "@types/node": "22.15.30"
+  }
+}

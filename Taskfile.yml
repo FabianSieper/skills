@@ -5,6 +5,7 @@ tasks:
     desc: Test the builder scaffold
     cmds:
       - node skills/website-automation-builder/scripts/test-scaffold.mjs
+      - node skills/website-automation-builder/scripts/test-demo.mjs
   install:opencode:
     desc: Install all skills globally for OpenCode
     cmds:

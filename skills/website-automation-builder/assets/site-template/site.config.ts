@@ -11,15 +11,15 @@ export const config = {
   actionBudgetMs: 90_000,
   planTtlMs: 600_000,
   maxInputBytes: 65_536,
-  maxOutputBytes: 262_144,
+  maxOutputBytes: 16_384,
   maxBundleBytes: 1_048_576,
   maxCliBytes: 2_097_152,
 
   // Runtime invariant: the user's browser is already open. Never launch another browser.
   browser: {
     session: "{{SLUG}}",
-    attach: { mode: "extension" as const, target: "chrome" },
+    attach: { mode: "extension" as "extension" | "cdp", target: "chrome" },
     cliCommand: "playwright-cli",
-    cliVersion: "",
+    cliVersion: "0.1.19",
   },
 };

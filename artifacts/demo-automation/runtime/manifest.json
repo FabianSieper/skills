@@ -1,0 +1,120 @@
+{
+  "format": 1,
+  "buildHash": "f31d7bd691fd2ceba43fadede714a402fe2965060b1ac109f5c1fb449b200657",
+  "config": {
+    "name": "demo-automation",
+    "version": 1,
+    "configured": true,
+    "baseURL": "http://127.0.0.1:4173/",
+    "allowedOrigins": [
+      "http://127.0.0.1:4173"
+    ],
+    "requiresLogin": false,
+    "locale": "de-DE",
+    "timezoneId": "Europe/Berlin",
+    "timeoutMs": 15000,
+    "actionBudgetMs": 90000,
+    "planTtlMs": 600000,
+    "maxInputBytes": 65536,
+    "maxOutputBytes": 16384,
+    "maxBundleBytes": 1048576,
+    "maxCliBytes": 2097152,
+    "browser": {
+      "session": "demo-automation",
+      "attach": {
+        "mode": "extension",
+        "target": "chrome"
+      },
+      "cliCommand": "playwright-cli",
+      "cliVersion": "0.1.19"
+    }
+  },
+  "actions": [
+    {
+      "id": "inventory.find",
+      "kind": "read",
+      "description": "Find an item by its exact SKU; null means explicitly not found.",
+      "input": {
+        "sku": {
+          "type": "string",
+          "description": "Exact SKU",
+          "required": true,
+          "min": 1,
+          "max": 64
+        }
+      },
+      "output": {
+        "description": "null, or an object with the exact sku and nonempty title strings"
+      },
+      "example": {
+        "sku": "SKU-42"
+      },
+      "preconditions": [
+        "Authenticated inventory page is reachable."
+      ],
+      "postconditions": [
+        "Returned SKU equals the query, or the website shows its empty state."
+      ],
+      "next": [
+        "inventory.update-title"
+      ],
+      "bundle": {
+        "file": "actions/inventory.find.js",
+        "sha256": "575200b0bdb96d16d52455970af234a804f87fe902ace3ec9f872ebb50aad3f7"
+      }
+    },
+    {
+      "id": "inventory.update-title",
+      "kind": "write",
+      "description": "Update one item title after an exact preview.",
+      "input": {
+        "sku": {
+          "type": "string",
+          "description": "Exact SKU",
+          "required": true,
+          "min": 1,
+          "max": 64
+        },
+        "title": {
+          "type": "string",
+          "description": "New title",
+          "required": true,
+          "min": 1,
+          "max": 120
+        }
+      },
+      "output": {
+        "description": "Object containing the exact SKU and saved title."
+      },
+      "example": {
+        "sku": "SKU-42",
+        "title": "Replacement title"
+      },
+      "preconditions": [
+        "Authenticated inventory page is reachable."
+      ],
+      "postconditions": [
+        "The exact SKU shows the requested title and a new version."
+      ],
+      "next": [
+        "inventory.find"
+      ],
+      "bundle": {
+        "file": "actions/inventory.update-title.js",
+        "sha256": "9cc84b7c6252766401f6a61dccdf21ce93f9a5755c113b1fbf5105852ae7b4e3"
+      }
+    }
+  ],
+  "observe": {
+    "ids": [
+      "browser.status",
+      "browser.inspect",
+      "browser.inspectRegion",
+      "browser.screenshot"
+    ],
+    "bundle": {
+      "file": "actions/browser.observe.js",
+      "sha256": "197ee12c0f66627c2d4abfab9db3a5f2dd1294487f1aa08a7a2c796e896e1e2f"
+    }
+  }
+}

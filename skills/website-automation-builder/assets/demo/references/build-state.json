@@ -1,0 +1,20 @@
+{
+  "phase": "BUILD",
+  "actions": {
+    "inventory.find": {
+      "mapped": true,
+      "implemented": true,
+      "fixture": "not-run",
+      "live": "not-run",
+      "remainingRisk": "Local fixture only; real browser test not yet run."
+    },
+    "inventory.update-title": {
+      "mapped": true,
+      "implemented": true,
+      "fixture": "not-run",
+      "live": "not-run",
+      "remainingRisk": "No live write test; requires an exact approved plan."
+    }
+  },
+  "next": "Run the demo verification suite"
+}

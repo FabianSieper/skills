@@ -20,13 +20,14 @@ async function main() {
       url: { type: "string" },
       out: { type: "string" },
       help: { type: "boolean" },
+      demo: { type: "boolean" },
     },
     strict: true,
     allowPositionals: false,
   });
   if (values.help) {
     console.log(
-      "Usage: scaffold.mjs --name <site>-automation --url https://host --out /path/<site>-automation",
+      "Usage: scaffold.mjs --name <site>-automation --url https://host --out /path/<site>-automation [--demo]",
     );
     return;
   }
@@ -43,6 +44,8 @@ async function main() {
     throw new Error("Required: --name NAME --url URL --out PATH");
   const url = new URL(values.url);
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (values.demo && !local)
+    throw new Error("--demo requires a localhost URL.");
   if (
     url.username ||
     url.password ||
@@ -89,9 +92,55 @@ async function main() {
       }
     }
   }
+  await mkdir(dirname(out), { recursive: true });
   const temporary = await mkdtemp(join(dirname(out), `.${name}-`));
   try {
     await copy(source, temporary);
+    if (values.demo) {
+      const assets = resolve(source, "../");
+      // Demo overlays deliberately replace only template files in this new directory.
+      async function overlay(from, to) {
+        await mkdir(to, { recursive: true });
+        for (const entry of await readdir(from, { withFileTypes: true })) {
+          if (entry.isSymbolicLink()) throw new Error("Demo symlink");
+          if (entry.isDirectory())
+            await overlay(join(from, entry.name), join(to, entry.name));
+          else {
+            let text = await readFile(join(from, entry.name), "utf8");
+            for (const [key, value] of Object.entries(replacements))
+              text = text.split(key).join(value);
+            await writeFile(join(to, entry.name), text);
+          }
+        }
+      }
+      await overlay(join(assets, "demo"), temporary);
+      for (const [file, target] of [
+        ["InventoryPage.ts", "src/pages/InventoryPage.ts"],
+        ["find.action.ts", "src/actions/inventory.find.ts"],
+        ["update.action.ts", "src/actions/inventory.update-title.ts"],
+      ]) {
+        await writeFile(
+          join(temporary, target),
+          await readFile(join(assets, "examples", file)),
+        );
+      }
+      const configPath = join(temporary, "site.config.ts");
+      await writeFile(
+        configPath,
+        (await readFile(configPath, "utf8")).replace(
+          "configured: false",
+          "configured: true",
+        ),
+      );
+      const skillPath = join(temporary, "SKILL.md");
+      await writeFile(
+        skillPath,
+        (await readFile(skillPath, "utf8")).replace(
+          "BUILD_REQUIRED: add supported user intents.",
+          "Search inventory by SKU and plan an item title update in the local demo fixture.",
+        ),
+      );
+    }
     await rename(temporary, out);
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });

@@ -2,6 +2,15 @@
 
 Personal collection of reusable agent skills.
 
+The website automation builder generates portable skills: agents only need to read
+`SKILL.md` and start the local `node scripts/site-runtime.mjs` process. Generated
+skills use precompiled TypeScript/POM actions through `playwright-cli` in an
+already-open browser. They require no harness-specific tools or plugins.
+
+Run `task test` for scaffold checks and a freshly generated demo's typecheck,
+build, unit tests and subprocess integration tests. Live-browser evidence is
+documented separately in the builder's references.
+
 ## Installation
 
 Install all skills globally for OpenCode:

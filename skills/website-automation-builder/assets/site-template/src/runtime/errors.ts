@@ -7,6 +7,9 @@ export type ErrorCode =
   | "ATTACH_FAILED"
   | "CLI_PROTOCOL"
   | "UI_DRIFT"
+  | "UNSUPPORTED_UI_STATE"
+  | "UNKNOWN_REGION"
+  | "BUILD_REQUIRED"
   | "AMBIGUOUS_SELECTOR"
   | "POSTCONDITION_FAILED"
   | "PLAN_CHANGED"
@@ -19,6 +22,12 @@ export type ErrorCode =
   | "INTERNAL"
   | "NOT_CONFIGURED";
 const messages: Record<ErrorCode, string> = {
+  UNSUPPORTED_UI_STATE:
+    "Observe the current state; use a known recovery action or return to Builder/Repair mode.",
+  UNKNOWN_REGION:
+    "Use a registered region ID; diagnostic inspect can explain an unknown page.",
+  BUILD_REQUIRED:
+    "Precompiled runtime is missing, stale or damaged. Rebuild in Builder mode.",
   INVALID_INPUT:
     "Invalid input. Read the action contract; check required fields, types and limits.",
   UNKNOWN_ACTION:
@@ -112,19 +121,26 @@ export function recovery(
     return "user-action";
   if (
     [
-      "UI_DRIFT",
-      "AMBIGUOUS_SELECTOR",
       "POSTCONDITION_FAILED",
       "CLI_PROTOCOL",
       "NOT_CONFIGURED",
+      "BUILD_REQUIRED",
     ].includes(code)
   )
     return "repair";
   if (["PLAN_CHANGED", "PLAN_EXPIRED"].includes(code)) return "replan";
   if (
-    ["PLAN_USED", "UNKNOWN_COMMIT", "BUSY", "TIMEOUT", "INTERNAL"].includes(
-      code,
-    )
+    [
+      "UI_DRIFT",
+      "AMBIGUOUS_SELECTOR",
+      "UNSUPPORTED_UI_STATE",
+      "UNKNOWN_REGION",
+      "PLAN_USED",
+      "UNKNOWN_COMMIT",
+      "BUSY",
+      "TIMEOUT",
+      "INTERNAL",
+    ].includes(code)
   )
     return "inspect-state";
   return "none";

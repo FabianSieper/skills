@@ -1,49 +1,34 @@
 ---
 name: website-automation-builder
-description: Build or repair a deterministic website skill backed by registered TypeScript/Playwright actions. Use when repeatable website work must run through a CLI against the user's existing browser. The result never improvises UI steps, launches a browser, or performs an unapproved write.
+description: Build, repair or extend portable website skills with registered TypeScript/POM actions, compact observation and a fixed local CLI using playwright-cli in the user's already-open browser.
 ---
 
 # Website Automation Builder
 
-Create one `<site>-automation` skill. Normal use is fixed:
-`intent -> registered action -> validated input -> attached browser -> verified JSON`.
-Discovery may use raw `playwright-cli`; the finished skill may not.
+Produce one independent `<site>-automation` skill. Its only agent requirements are reading SKILL.md, using local files and starting a process. No harness tools, MCP, plugins or special agent permissions.
+
+Runtime: intent → known action/observation → fixed CLI → precompiled POM code → playwright-cli → user's existing browser → bounded JSON.
+
+## Modes
+
+- **Runtime:** registered domain actions and global observation. No raw commands, selectors, arbitrary code, free clicks or new automation.
+- **Diagnostic:** observation only, with bounded accessibility excerpts and locator counts. No mutation.
+- **Builder/Repair:** direct playwright-cli exploration, locator development and tested action changes. Only enter for an explicit build, repair or extension task.
+
+Never launch, replace, restart or close the user's browser. Extension attach to Chrome with one fixed site session is the default; explicit CDP configuration is the only alternative. Never bypass login, MFA, CAPTCHA or bot protection.
 
 ## Workflow
 
-Follow `PRECHECK -> INPUT -> DISCOVER -> BUILD -> VERIFY -> HANDOFF`. Update `references/build-state.json` after each phase; block only the affected action.
+Follow PRECHECK → INPUT → DISCOVER → BUILD → VERIFY → HANDOFF. Maintain `references/build-state.json`; block only affected actions.
 
-### PRECHECK
+1. PRECHECK: run `node "<BUILDER_ROOT>/scripts/preflight.mjs"`. Inventory is not proof of attach. If unavailable, continue browser-free work and record the precise live-test boundary.
+2. INPUT/DISCOVER: read [intake-and-discovery](references/intake-and-discovery.md). Ask immediately about ambiguous routes, prerequisites, risky writes or unclear controls; ask no later than two targeted failed navigation attempts.
+3. BUILD: read [runtime-contract](references/runtime-contract.md), [pom-and-selectors](references/pom-and-selectors.md), [observation-contract](references/observation-contract.md) and [generated-skill-contract](references/generated-skill-contract.md). For writes also read [write-safety](references/write-safety.md).
+   `node "<BUILDER_ROOT>/scripts/scaffold.mjs" --name <site>-automation --url https://example.org --out <target>/<site>-automation`
+   Implement observed POMs, actions and evidence; run `npm install` and `npm run build` in the generated directory. Compilation belongs here, never in normal Runtime.
+4. VERIFY: read [verification](references/verification.md). Run `npm run verify`; test safe reads in the attached browser and only authorized writes. Fixture and live evidence must remain distinguishable.
+5. HANDOFF: deliver SKILL.md, compiled CLI and runtime, maintained TypeScript sources, references, tests and lockfile. Report ready only after validation, with concrete limitations for untested live behavior.
 
-Run `node "<BUILDER_ROOT>/scripts/preflight.mjs"`. The browser must already be open and attachable through the configured extension or CDP endpoint. Never launch, replace, restart, or close it.
+For a reproducible local demo, scaffold with `--demo`. Builder regression suite: `node scripts/test-scaffold.mjs`; full generated-demo verification: `node scripts/test-demo.mjs`.
 
-### INPUT and DISCOVER
-
-Read [references/intake-and-discovery.md](references/intake-and-discovery.md). Define each action before exploring. Ask for the user's route or a screenshot when business paths differ, prerequisites are unknown, a risky step is near, or two targeted attempts fail.
-
-Record only observed locators, identity anchors, starting state, and postconditions. Never bypass bot protection.
-
-### BUILD
-
-Read [references/implementation-contract.md](references/implementation-contract.md), then scaffold:
-
-```bash
-node "<BUILDER_ROOT>/scripts/scaffold.mjs" --name <site>-automation --url https://example.org --out "<TARGET_ROOT>/<site>-automation"
-cd "<TARGET_ROOT>/<site>-automation" && npm install
-```
-
-Implement `SitePage`, POMs, one module per action, the registry, tests, `SKILL.md`, and `references/actions.md`. Use the read and write examples in `assets/examples/` as shapes, never as observed selectors.
-
-### VERIFY and HANDOFF
-
-Read [references/verification.md](references/verification.md). Run `npm run verify`; it is the handoff gate. Live-test safe reads and only explicitly approved test writes. Login, MFA, and CAPTCHA remain with the user.
-
-Handoff only when validation reports `status: ready`. Unknown actions or UI drift return to this builder; they never trigger improvised navigation.
-
-Do not distribute `.local`, `node_modules`, profiles, cookies, traces, credentials, DOM dumps, or personal test data.
-
-## Resources
-
-- [Implementation contract](references/implementation-contract.md): action/runtime rules.
-- [Verification](references/verification.md): required evidence.
-- [Technical sources](references/sources.md): version-sensitive upstream documentation.
+Do not distribute .local, node_modules, browser profiles, cookies, credentials, snapshots, personal test data or traces. Read [sources](references/sources.md) when changing version-sensitive CLI behavior.

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Inventory fixture</title>
+  </head>
+  <body>
+    <main
+      data-testid="inventory"
+      data-state="inventory"
+      data-account="fixture-account"
+    >
+      <h1>Inventory fixture</h1>
+      <p data-testid="inventory-summary">1 article</p>
+      <section data-testid="search-filters">
+        <h2>Search filters</h2>
+        <label
+          >Artikelnummer <input id="sku" aria-label="Artikelnummer" /></label
+        ><button id="search">Suchen</button>
+      </section>
+      <section data-testid="results">
+        <h2>Results</h2>
+        <div id="result"></div>
+      </section>
+    </main>
+    <dialog aria-label="Artikel bearbeiten">
+      <label>Titel <input id="title" aria-label="Titel" /></label
+      ><button id="save">Speichern</button>
+    </dialog>
+    <script>
+      const item = { sku: "SKU-42", title: "Forest", version: 1 };
+      const result = document.getElementById("result");
+      const dialog = document.querySelector("dialog");
+      function render(sku) {
+        result.replaceChildren();
+        result.dataset.testid = "result-" + sku;
+        result.dataset.empty = String(sku !== item.sku);
+        if (sku !== item.sku) {
+          result.textContent = "No results";
+          return;
+        }
+        const row = document.createElement("article");
+        row.dataset.testid = "item-" + item.sku;
+        row.dataset.sku = item.sku;
+        row.dataset.version = String(item.version);
+        const title = document.createElement("span");
+        title.dataset.testid = "title";
+        title.textContent = item.title;
+        const edit = document.createElement("button");
+        edit.textContent = "Bearbeiten";
+        edit.onclick = () => {
+          document.getElementById("title").value = item.title;
+          dialog.showModal();
+        };
+        row.append(title, edit);
+        result.append(row);
+      }
+      document.getElementById("search").onclick = () =>
+        render(document.getElementById("sku").value);
+      document.getElementById("save").onclick = () => {
+        item.title = document.getElementById("title").value;
+        item.version++;
+        dialog.close();
+        render(item.sku);
+      };
+      render(item.sku);
+    </script>
+  </body>
+</html>

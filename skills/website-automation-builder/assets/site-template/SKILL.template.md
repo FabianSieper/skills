@@ -1,43 +1,31 @@
 ---
 name: {{SLUG}}
-description: Run the documented actions on {{HOST}} through predefined TypeScript/Playwright functions in the user's existing browser. Never use for free-form navigation or another website. BUILD_REQUIRED: add supported user intents.
+description: Use registered website actions and compact browser observation on {{HOST}} in the user's already-open browser. BUILD_REQUIRED: add supported user intents.
 ---
 
 # {{SLUG}}
 
-Use only registered actions: `intent -> list/describe -> validated input -> action -> verified JSON`. Never invent `snapshot`, `click`, `fill`, `goto`, or `run-code` sequences. `UNKNOWN_ACTION`, UI drift, or ambiguity returns to the builder.
-
-## Browser
-
-The configured browser is already open. Attach to its fixed named session; never launch, replace, restart, or close a browser. The user handles login, MFA, and CAPTCHA. A missing connection is a user prerequisite, not permission to create another browser.
-
-Requires Node.js >=22.16, `playwright-cli` on PATH, and `npm ci`. Run from the absolute skill directory:
+Use the local CLI from this skill directory (Node >=22.16 and playwright-cli on PATH). The distributed runtime is precompiled; no npm install is needed for normal use.
 
 ```bash
-npm run --silent cli -- list
-npm run --silent cli -- describe <action-id>
-npm run --silent cli -- connect
-npm run --silent cli -- doctor
-npm run --silent cli -- run <read-action> --input <file.json>
-npm run --silent cli -- plan <write-action> --input <file.json>
-npm run --silent cli -- execute --plan <plan-id> --approve <approval-hash>
-npm run --silent cli -- cleanup
+node scripts/site-runtime.mjs list
+node scripts/site-runtime.mjs describe <action>
+node scripts/site-runtime.mjs run <read-action> --json '{}'
+node scripts/site-runtime.mjs status
+node scripts/site-runtime.mjs inspect
+node scripts/site-runtime.mjs inspect-region <known-region>
+node scripts/site-runtime.mjs screenshot
+node scripts/site-runtime.mjs doctor
+node scripts/site-runtime.mjs plan <write-action> --json '{}'
+node scripts/site-runtime.mjs execute --plan <plan-id> --approve <approval-hash>
 ```
 
-`list`, `describe`, and `cleanup` are browser-free. Every result names `allowedNextActions`; choose only from that list. An empty list means stop.
+Choose registered actions first. Use list/describe only when the action or its parameters are unknown. Work from structured data and next; an empty next ends that flow. Observe only when needed. Observation remains available in every state.
 
-For writes, `plan` does not authorize execution. Show the exact preview and stop. Run `execute` only after the user explicitly approves that plan. Never retry `PLAN_USED` or `UNKNOWN_COMMIT`; inspect state through a registered read action.
+The user's browser is already open. The CLI attaches to its fixed named session; it never starts, replaces or closes a browser. The user handles login/MFA/challenges. BROWSER_REQUIRED or ATTACH_FAILED requires fixing that prerequisite.
 
-Follow the returned `error.recovery`:
+Normal Runtime never uses raw clicks, selectors, eval, run-code or improvised navigation. On UI_DRIFT/UNSUPPORTED_UI_STATE, observe; use an applicable known recovery action or report that repair is needed. `inspect --mode diagnostic` adds bounded details without mutation. Only an explicit build/repair/extension task enters Builder mode; never create automation during an ordinary action request.
 
-- `fix-input`: use `describe`; do not guess.
-- `user-action`: ask for the stated browser, authentication, human, or approval step.
-- `replan`: create and show a new preview.
-- `repair`: return to the builder.
-- `inspect-state`: diagnose safely; never retry a write automatically.
+For writes, show the exact plan/account/target/change and obtain explicit user approval before execute. The approval hash binds the plan; it is not approval by itself. Never retry UNKNOWN_COMMIT or PLAN_USED: reread state first.
 
-## Actions
-
-BUILD_REQUIRED: list every registered action ID and its user intent. Full machine-readable contracts come from `describe`; verification evidence is in `references/actions.md`.
-
-`.local` is private and must never be uploaded. Do not expose profiles, cookies, credentials, plans, traces, DOM dumps, or personal data.
+For sensitive/long input use `--input file.json` instead of --json. Keep .local private; screenshots and plans must not be distributed. Development and verification evidence is in references/.

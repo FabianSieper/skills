@@ -9,14 +9,16 @@ id: inventory.find
 kind: read
 description: Find one item by exact SKU
 preconditions: [authenticated inventory is reachable]
-parameters: {sku: {type: string, required: true, min: 1, max: 64}}
-example: {sku: SKU-42}
+parameters: { sku: { type: string, required: true, min: 1, max: 64 } }
+example: { sku: SKU-42 }
 output: exact item or explicit not-found
 postcondition: returned SKU equals the query
 next: [inventory.update-title]
 ```
 
 ## Exploration
+
+Ask immediately when two business routes are plausible, prerequisites or a control's meaning are unclear, or a risky mutation is near. After two targeted unsuccessful navigation attempts, stop exploring that action and ask for the user's real click sequence or screenshot. Keep implementing independent actions. Do not repeatedly guess routes.
 
 Use one named attached session. Minimal commands:
 
