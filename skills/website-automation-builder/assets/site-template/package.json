@@ -3,17 +3,24 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "engines": { "node": ">=22.16.0" },
+  "engines": {
+    "node": ">=22.16.0"
+  },
   "scripts": {
     "cli": "node --experimental-strip-types src/cli.ts",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts"
+    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts",
+    "validate": "node --experimental-strip-types src/validate-build.ts",
+    "verify": "npm run format:check && npm run typecheck && npm test && npm run validate"
   },
   "dependencies": {
-    "esbuild": "0.25.9",
-    "playwright": "1.63.0"
+    "esbuild": "0.25.9"
   },
   "devDependencies": {
+    "playwright": "1.63.0",
+    "prettier": "3.6.2",
     "typescript": "5.8.3",
     "@types/node": "22.15.30"
   }

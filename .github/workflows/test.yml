@@ -1,0 +1,17 @@
+name: test
+on: [push, pull_request]
+jobs:
+  builder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node skills/website-automation-builder/scripts/test-scaffold.mjs
+      - run: |
+          target="$(mktemp -d)/fixture-automation"
+          node skills/website-automation-builder/scripts/scaffold.mjs --name fixture-automation --url https://example.org --out "$target"
+          npm --prefix "$target" install --ignore-scripts
+          npm --prefix "$target" run format:check
+          npm --prefix "$target" run typecheck
+          npm --prefix "$target" test

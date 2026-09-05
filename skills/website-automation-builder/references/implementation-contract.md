@@ -1,127 +1,67 @@
 # Implementation contract
 
-## Target architecture
-`Agent -> Website CLI -> Action Registry -> Browser Executor -> playwright-cli attached session -> bundled Action/POM -> existing Page`.
+The agent selects an action ID and parameters. POMs own selectors and UI operations; actions own business sequences and postconditions. Runtime code attaches only to the configured named session and sends a browser-safe bundled function to `playwright-cli run-code --filename`.
 
-During normal use, the agent may select only an action ID and its parameters. It does not write click sequences or free-form `run-code` snippets. POMs own locators and UI operations; actions combine POM methods into business flows and verify postconditions.
+## Action
 
-## Browser contract: existing-browser-only
-The browser is already open during normal skill use. This is a hard default.
+Each `src/actions/<id>.ts` exports only `action`. Required metadata is returned by `describe`, so keep it concrete:
 
-- Default adapter: `attach --extension=chrome` with a fixed named session.
-- Optional: `attach --cdp=chrome` or an explicit CDP endpoint, but only when deliberately configured and tested in the target skill.
-- Never switch automatically between extension and CDP.
-- Never use `playwright-cli open`, `close`, `close-all`, `kill-all`, or `chromium.launch` during normal runtime execution.
-- If the browser is missing or cannot be attached, return `BROWSER_REQUIRED` or `ATTACH_FAILED`.
-- If authentication is missing, return `AUTH_REQUIRED`; the user signs in through the already open browser. For MFA/CAPTCHA, return `HUMAN_REQUIRED`.
-- Do not use a dedicated storage-state file by default. The browser profile, cookies, extensions, and login remain owned by the running browser.
-
-`connect` may only establish a playwright-cli connection to the open browser. It never launches a browser. `list` and `describe` do not access the browser at all.
-
-## Why bundling is required
-`playwright-cli run-code --filename=...` expects a single function expression and does not accept normal `import/export/require` syntax in that file. The source structure therefore remains modular TypeScript, while `src/runtime/cli-browser.ts` creates a temporary, self-contained bundle for each invocation:
-
-1. Bundle the action module, POMs, and `SitePage` with esbuild.
-2. Embed validated input as a JSON data literal.
-3. Write a single `async page => { ... }` expression to `.local/run-code/<uuid>.js`.
-4. Execute it in the existing browser with `playwright-cli -s=<session> --raw run-code --filename=<file>`.
-5. Parse the JSON result and delete the temporary file.
-
-The agent does not generate this bundle. Never pass user input to shell code, `eval`, or module paths.
-
-## Target structure
-```text
-<site>-automation/
-  SKILL.md
-  agents/openai.yaml
-  package.json
-  package-lock.json
-  tsconfig.json
-  site.config.ts
-  src/cli.ts
-  src/runtime/{errors,input,guards,cli-browser,engine,fingerprint}.ts
-  src/pages/SitePage.ts
-  src/pages/*.ts
-  src/components/*.ts
-  src/actions/*.ts
-  src/actions/index.ts
-  tests/*.test.ts
-  examples/*.json
-  references/{actions,flows,selectors,verification}.md
-  references/build-state.json
-  .local/                      # private; plans, attempt markers, temporary run-code
-```
-
-## Action module
-Every action exports exactly one `action` object containing:
-- `id`, `kind`, `description`, `parameters`, `outputDescription`
-- `modulePath`: `fileURLToPath(import.meta.url)`
-- `next`: registered permitted and useful subsequent actions
-- `validateOutput`
-- for reads: `run(page,input)`
-- for writes: `prepare(page,input)` and `execute(page,input,preview)`
-
-Example:
 ```ts
-import { fileURLToPath } from 'node:url';
-import type { Action } from '../runtime/engine.ts';
-import { SearchPage } from '../pages/SearchPage.ts';
-
-export const action: Action = {
-  id: 'catalog.search',
-  kind: 'read',
-  modulePath: fileURLToPath(import.meta.url),
-  next: ['catalog.open-result'],
-  description: 'Search catalog by exact query.',
-  parameters: { query: {type:'string',description:'Query',required:true,min:1,max:100} },
-  outputDescription: 'Bounded search results.',
-  run: (page,input) => new SearchPage(page).search(input.query as string),
-  validateOutput: value => validateSearchResult(value)
+export const action:Action={
+  id:'catalog.find',kind:'read',next:[],
+  description:'Find one item by exact SKU.',
+  preconditions:['Authenticated catalog is reachable.'],
+  postcondition:'Returned SKU equals the query, or not-found is explicit.',
+  parameters:{sku:{type:'string',description:'Exact SKU',required:true,min:1,max:64}},
+  example:{sku:'SKU-42'},
+  outputDescription:'Exact item or null.',
+  run:(page,input)=>new CatalogPage(page).find(input.sku as string),
+  validateOutput:value=>validateItem(value)
 };
 ```
 
-`next` is part of the agent contract. The result includes `allowedNextActions`; smaller models should choose the next step from this list instead of exploring the website again. An empty list means the flow is complete or a new user request is required.
+Register paths only in `src/actions/index.ts`; never put `import.meta`, Node APIs, or `modulePath` in an action:
 
-## CLI contract
-```bash
-npm run --silent cli -- list
-npm run --silent cli -- describe catalog.search
-npm run --silent cli -- connect
-npm run --silent cli -- doctor
-npm run --silent cli -- run catalog.search --input examples/search.json
-npm run --silent cli -- plan item.update --input /private/update.json
-npm run --silent cli -- execute --plan <plan-id> --approve <approval-hash>
+```ts
+import {registerAction} from '../runtime/engine.ts';
+import {action as find} from './catalog.find.ts';
+export const actions=[registerAction(find,new URL('./catalog.find.ts',import.meta.url))];
 ```
 
-`run` is for reads only. `plan` is for write/prepare only. `execute` requires a stored preview and approval hash. After a possible commit, set a permanent attempt marker; never repeat an uncertain commit.
+`next` may contain only registered actions that are useful from the resulting state. Empty means stop. Keep outputs small and limited to documented fields.
 
-## POM and locator contract
-POMs encapsulate locators, state anchors, and elementary website operations. Actions contain the business sequence and postconditions. POMs contain no CLI or agent logic.
+## POMs
 
-Locator priority:
-1. a stable, observed `data-testid` or test-ID contract,
-2. an exact role/name or label,
-3. a unique business container plus semantic target,
-4. a short stable attribute with documented justification.
+Put page/component operations in `src/pages` or `src/components`. Locator order:
 
-Every individual target must produce exactly one match. A test ID is not proof of uniqueness. Use `uniqueVisible`, `clickUnique`, and `fillUnique`. Do not repair ambiguity with `.first/.last/.nth`, generated CSS classes, XPath chains, coordinates, `force:true`, `waitForTimeout`, or silent fallback chains.
+1. observed stable test ID;
+2. exact role/name or label;
+3. business identifier scoped to a unique container;
+4. short stable attribute with justification.
 
-Snapshot references such as `e14` are discovery aids only and must not be stored as permanent POM selectors.
+Use `uniqueVisible`, `clickUnique`, `fillUnique`, and `navigate`. Never use `.first/.last/.nth`, generated classes, XPath chains, coordinates, `force:true`, sleeps, or silent fallback selectors. Each target must match exactly once.
 
-## State, tabs, and navigation
-`SitePage.assertReady()` verifies the domain, relevant page state, login/account, and known blocked states. Login alone is insufficient to establish account identity.
+`SitePage.assertReady()` must verify allowed origin, expected state, account/role, and known login/challenge markers. Return a stable `accountKey`; use `public` only for genuinely public flows. Fail closed on the wrong tab. Actions may open a popup only when the contract requires it; identify it and never close unrelated tabs.
 
-Only the concrete action may create new tabs or popups, and it must identify them deliberately; never close unrelated tabs. Check the current tab and origin before executing an action. The runtime adapter must not clean up the open browser or manage its other tabs.
+## Writes
 
-## Write contract
-`prepare` must not trigger a business mutation or autosave. The preview includes at least the target identity/state version and the proposed changes. Immediately before committing, `execute` verifies the account and preview again. After the commit boundary, every ambiguous error becomes `UNKNOWN_COMMIT`.
+A write exports:
 
-## Errors and fallbacks
-Never fall back automatically to free-form browser control. In particular:
-- `UNKNOWN_ACTION`: extend the builder.
-- `UI_DRIFT`/`AMBIGUOUS_SELECTOR`: repair the POM.
-- `BROWSER_REQUIRED`/`ATTACH_FAILED`: provide the open browser, extension, or CDP connection.
-- `CLI_PROTOCOL`: repair CLI/runtime compatibility.
-- `AUTH_REQUIRED`/`HUMAN_REQUIRED`: let the user take over in the existing browser.
+```ts
+prepare(page,input) => {target:{...},version:'observed-state',changes:{...}}
+execute(page,input,preview) => verifiedResult
+```
 
-Never retry an entire write action. Retry reads only when their safety has been documented.
+`prepare` must not mutate or autosave. `plan` returns a preview and requires the agent to show it and stop. `execute` is allowed only after explicit user approval of that exact plan. The runtime rechecks account and preview in the same browser invocation immediately before commit, creates a durable local attempt marker, and converts any post-boundary failure to `UNKNOWN_COMMIT`.
+
+The approval hash binds data; it cannot prove who authorized it. User authorization is therefore an orchestration boundary, not a security identity mechanism.
+
+## Failure rules
+
+- Browser/auth/human errors: request the indicated user action.
+- Input/plan errors: correct input or create a new plan.
+- UI, output, registry, bundle, or protocol errors: return to the builder.
+- `PLAN_USED` or `UNKNOWN_COMMIT`: inspect with a registered read; never repeat the write.
+- Never fall back to raw browser commands during normal use.
+
+Plans and temporary bundles may contain input data. They stay mode-restricted under `.local`; completed/uncertain plans and temporary bundles are removed. `cleanup` removes expired plans and leftovers without deleting attempt markers.
