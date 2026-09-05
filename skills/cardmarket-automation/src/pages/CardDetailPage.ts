@@ -153,44 +153,44 @@ export class CardDetailPage extends SitePage {
         await this.page.waitForTimeout(500);
       }
     }
-    return await this.page.evaluate((t: FilterTargets) => {
-      const form = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
-      if (!form) return false;
-      const setSelect = (name: string, value: string) => {
-        const el = form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null;
-        if (!el || el.value === value) return false;
-        el.value = value;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        return true;
-      };
-      const setCheckboxes = (name: string, value: string) => {
-        const boxes = Array.from(form.querySelectorAll('input[type="checkbox"]'))
-          .filter((el) => (el.getAttribute('name') ?? '').startsWith(`${name}[`)) as HTMLInputElement[];
-        const current = boxes.filter((b) => b.checked).map((b) => b.value);
-        const wanted = value ? [value] : [];
-        if (current.join(',') === wanted.join(',')) return false;
-        for (const box of boxes) {
-          const check = wanted.includes(box.value);
-          if (box.checked !== check) {
-            box.checked = check;
-            box.dispatchEvent(new Event('input', { bubbles: true }));
-            box.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+    let changed = false;
+
+    const setSelect = async (name: string, value: string) => {
+      const loc = this.filterForm.locator(`select[name="${name}"]`);
+      if ((await loc.count()) === 0) return;
+      const current = await loc.inputValue();
+      if (current !== value) {
+        await loc.selectOption(value);
+        changed = true;
+      }
+    };
+
+    const setCheckboxGroup = async (name: string, value: string) => {
+      const boxes = this.filterForm.locator(`input[type="checkbox"][name^="${name}["]`);
+      const count = await boxes.count();
+      const wanted = value ? [value] : [];
+      for (let i = 0; i < count; i++) {
+        const box = boxes.nth(i);
+        const boxValue = (await box.getAttribute('value')) ?? '';
+        const isChecked = await box.isChecked();
+        const shouldCheck = wanted.includes(boxValue);
+        if (isChecked !== shouldCheck) {
+          if (shouldCheck) await box.check();
+          else await box.uncheck();
+          changed = true;
         }
-        return true;
-      };
-      const changed = [
-        setSelect('minCondition', t.minCondition),
-        setCheckboxes('language', t.language),
-        setCheckboxes('sellerCountry', t.sellerCountry),
-        setCheckboxes('sellerType', t.sellerType),
-        setSelect('extra[isFoil]', t.isFoil),
-        setSelect('extra[isSigned]', t.isSigned),
-        setSelect('extra[isAltered]', t.isAltered),
-      ];
-      return changed.some(Boolean);
-    }, targets);
+      }
+    };
+
+    await setSelect('minCondition', targets.minCondition);
+    await setCheckboxGroup('language', targets.language);
+    await setCheckboxGroup('sellerCountry', targets.sellerCountry);
+    await setCheckboxGroup('sellerType', targets.sellerType);
+    await setSelect('extra[isFoil]', targets.isFoil);
+    await setSelect('extra[isSigned]', targets.isSigned);
+    await setSelect('extra[isAltered]', targets.isAltered);
+
+    return changed;
   }
 
   async submitSellerFilters(): Promise<void> {
