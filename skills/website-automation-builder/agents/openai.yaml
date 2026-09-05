@@ -1,0 +1,12 @@
+interface:
+  display_name: Website Automation Builder
+  short_description: Website-Skills mit TypeScript, Playwright und POMs bauen
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,10 @@
+{
+  "phase": "INPUT",
+  "decisions": {
+    "browser": "existing-open-chrome",
+    "attach": "extension=chrome",
+    "runtime": "registered-actions-via-playwright-cli-run-code"
+  },
+  "actions": {},
+  "next": "Define concrete actions and success criteria"
+}

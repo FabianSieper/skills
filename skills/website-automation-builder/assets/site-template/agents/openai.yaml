@@ -1,0 +1,3 @@
+interface:
+  display_name: "{{SLUG}}"
+  short_description: "Definierte Website-Aktionen auf {{HOST}} ausfuehren"
