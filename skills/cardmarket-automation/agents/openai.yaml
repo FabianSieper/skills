@@ -1,0 +1,3 @@
+interface:
+  display_name: "cardmarket-automation"
+  short_description: "Read-only Cardmarket-Aktionen (Suche, Preis, Artworks) am bereits geöffneten Browser ausführen"

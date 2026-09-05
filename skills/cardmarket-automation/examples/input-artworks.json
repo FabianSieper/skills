@@ -1,0 +1,8 @@
+{
+  "action": "cards.artworks",
+  "input": {
+    "name": "Forest",
+    "minQty": 5,
+    "limit": 40
+  }
+}

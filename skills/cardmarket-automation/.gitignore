@@ -1,0 +1,9 @@
+node_modules/
+.local/
+.playwright-cli/
+.env
+.env.*
+!.env.example
+*.log
+test-results/
+playwright-report/

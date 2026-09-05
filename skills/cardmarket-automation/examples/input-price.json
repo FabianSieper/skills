@@ -1,0 +1,7 @@
+{
+  "action": "cards.price",
+  "input": {
+    "name": "Forest",
+    "sellers": 50
+  }
+}

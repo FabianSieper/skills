@@ -1,0 +1,20 @@
+{
+  "name": "cardmarket-automation",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": { "node": ">=22.16.0" },
+  "scripts": {
+    "cli": "node --experimental-strip-types src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts"
+  },
+  "dependencies": {
+    "esbuild": "0.25.9",
+    "playwright": "1.63.0"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "@types/node": "22.15.30"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "status": "live_verified",
+  "site": "cardmarket-automation",
+  "url": "https://www.cardmarket.com",
+  "configured": true,
+  "phase": "LIVE",
+  "liveValidation": "passed",
+  "liveNote": "Live-Runs (Session cardmarket-automation, angehaengter Chrome-Browser) bestanden: cards.search (esix, 10 Treffer), cards.price (esix, Top-Block + 20 Seller), cards.artworks (esix, 3 Versionen; minQty>0 mit Rueckkehr ueber den sichtbaren 'Show Versions'-Link). Such-Submit loest form.requestSubmit() via page.evaluate (der sichtbare #search-btn-Click wird vom Site-Autocomplete-JS per preventDefault unterdrueckt).",
+  "implemented": {
+    "config": true,
+    "types": true,
+    "parse": true,
+    "sitePage": true,
+    "pages": ["SearchPage", "SearchResultsPage", "CardDetailPage", "CardVersionsPage"],
+    "actions": ["cards.search", "cards.price", "cards.artworks"],
+    "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts"],
+    "docs": ["references/actions.md", "references/flows.md", "references/selectors.md", "references/verification.md", "SKILL.md", "examples"]
+  },
+  "verified": {
+    "typecheck": "tsc --noEmit: keine Fehler",
+    "tests": "node --test: 30/30 pass",
+    "cliBrowserFree": "list + describe cards.search/price/artworks: ok, ohne Browser",
+    "cliRunInput": "run <action> --input <datei>: Syntax verifiziert; Positional-JSON wird als INVALID_INPUT abgelehnt",
+    "liveSearch": "cards.search esix: ok, count 10, allowedNext [cards.price, cards.artworks]",
+    "livePrice": "cards.price esix: ok, found true, Top-Block + 20 Seller",
+    "liveArtworks": "cards.artworks esix: ok, 3 Versionen; minQty=1: ok, maxSellerQuantity + qualifies"
+  },
+  "toolingFindings": {
+    "node": "v26.7.0 (>=22.16.0 ok)",
+    "playwrightCli": "0.1.19 (playwright 1.63.0-alpha)",
+    "esbuild": "0.25.9 (postinstall-Skript-Blockade bekannt, funktionsfähig)",
+    "extensionAttach": "attach --extension=chrome verbindet mit dem Relay der Chrome-Extension; der Nutzer muss im Browser 'Allow and select' freigeben; ohne Freigabe haengt der CLI-Prozess (keine Fallback-Browser-Verwendung)",
+    "openForbidden": "`open` startet einen verwalteten Headless-Browser (Temp-Profil, --disable-extensions) und wird von Cloudflare geblockt -> im Extension-Modell strikt verboten; der Skill-Adapter (cli-browser.ts) nutzt nur attach + run-code"
+  }
+}

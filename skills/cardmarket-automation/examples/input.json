@@ -1,0 +1,7 @@
+{
+  "action": "cards.search",
+  "input": {
+    "query": "Forest",
+    "limit": 20
+  }
+}
