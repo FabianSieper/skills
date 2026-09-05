@@ -32,7 +32,24 @@
   11 versions); `minQty=5` → Seller-Mengen-Check je Kachel (0/51/61, `qualifies`).
 - Ergebnis: Status `scaffolded` → `live_verified`.
 
+## 2026-09-05: „Search 2.0"–Regression & Repair
+- **Befund (live, Session `cardmarket-automation`):** `/en` → `searchForm=0`,
+  `searchInput=0`, `searchBtn=0`; `/en/Magic` → `searchForm=1`, `searchInput=1`,
+  `searchBtn=1`. Cardmarket hat das Top-Bar-Such-UI von der Startseite entfernt;
+  das Form bleibt auf Game-Seiten. Damit brach `SearchPage.openHome()` (→
+  Basis-URL `/en`) alle drei Aktionen bei `search-input` mit `UI_DRIFT`.
+- **Repair:** `site.config.ts` +`searchEntry: '/en/Magic'`; `SearchPage`:
+  `openHome()` → `openSearchEntry()` mit `gotoAllowed(config.searchEntry)`.
+- **Re-Verifikation (live, nach Repair):** `cards.search` „Forest" → `ok`, 20
+  Kacheln; `cards.price` „Forest" → `ok`, Top-Block; `cards.artworks` „Esix,
+  Fractal Bloom" (ursprünglicher Fehlerfall) → `ok`, 3 Versionen. `typecheck` ✔,
+  `npm test` ✔ (30/30).
+- **Status bleibt** `live_verified` (erneut validiert, 2026-09-05).
+
 ## Known Gaps
 - `SHOW MORE RESULTS`-Button: Verhalten unvollständig verifiziert (die Action liest
   nur die bereits gerenderten Zeilen) – `references/selectors.md`.
 - Preise als Text im deutschen Format – Downstream-Parsing nötig.
+- Such-Einstieg hängt an `searchEntry` = `/en/Magic`; entfernt Cardmarket das
+  Top-Bar-Form auch von Game-Seiten, wieder `UI_DRIFT` → Einstieg per read-only
+  `run-code`-Diagnose neu bestimmen (vgl. 2026-09-05-Regression).

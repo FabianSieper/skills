@@ -2,10 +2,12 @@
   "status": "live_verified",
   "site": "cardmarket-automation",
   "url": "https://www.cardmarket.com",
+  "searchEntry": "/en/Magic",
   "configured": true,
   "phase": "LIVE",
   "liveValidation": "passed",
-  "liveNote": "Live-Runs (Session cardmarket-automation, angehaengter Chrome-Browser) bestanden: cards.search (esix, 10 Treffer), cards.price (esix, Top-Block + 20 Seller), cards.artworks (esix, 3 Versionen; minQty>0 mit Rueckkehr ueber den sichtbaren 'Show Versions'-Link). Such-Submit loest form.requestSubmit() via page.evaluate (der sichtbare #search-btn-Click wird vom Site-Autocomplete-JS per preventDefault unterdrueckt).",
+  "liveNote": "2026-09-05 Re-Validierung (Session cardmarket-automation, angehaengter Chrome): nach 'Search 2.0'-Repair (Such-Einstieg = Game-Seite /en/Magic, da das Top-Bar-Form die Startseite /en verlassen hat) bestanden cards.search (Forest, 20 Kacheln), cards.price (Forest, Top-Block), cards.artworks (Esix Fractal Bloom, 3 Versionen - urspr. Fehlerfall). Such-Submit via form.requestSubmit(); Einstieg ueber config.searchEntry (openSearchEntry -> gotoAllowed).",
+  "search2026Regression": "2026-09-05 live: /en -> form#searchForm/#ProductSearchInput/#search-btn = 0, /en/Magic = 1. Repair: site.config.ts +searchEntry '/en/Magic'; SearchPage.openHome() -> openSearchEntry() mit gotoAllowed(searchEntry). Alle 3 Aktionen re-validiert; typecheck ok + 30/30 Tests.",
   "implemented": {
     "config": true,
     "types": true,

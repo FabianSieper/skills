@@ -5,8 +5,13 @@
 > Bei `UI_DRIFT`/`AMBIGUOUS_SELECTOR`: nie `.first()`/`.nth()`/force, an Builder.
 
 ## Strategie
-- Alles beginnt auf der Startseite; die Startseite enthält kein Such-UI → `goto`
-  (Basis-URL) und dann sichtbare Elemente nutzen.
+- Alles beginnt auf dem **Such-Einstieg** (`config.searchEntry` = `/en/Magic`,
+  eine Game-Seite) via `openSearchEntry()` → `gotoAllowed(searchEntry)` und dann
+  sichtbare Elemente nutzen. „Search 2.0" (2026-09) hat das Top-Bar-Such-UI von der
+  Startseite (`/en`, Basis-URL) **entfernt** – die Basis-URL allein reicht nicht
+  mehr zum Suchen; das Form bleibt aber auf Game-Seiten. `SitePage.assertReady()`
+  (Basis-URL, nur Cloudflare-Guard) ist unverändert; `SearchPage.search()` geht
+  bewusst auf `searchEntry`.
 - **Suche via `form.requestSubmit()`** – den sichtbaren Button direkt zu klicken,
   wird von Autocomplete-JavaScript interceptiert (bekannte playwright-cli-
   Beschränkung); `requestSubmit()` umgeht das zuverlässig.
@@ -15,9 +20,12 @@
   (Ergebnis-Kachel bzw. „Show Versions").
 - Preise im deutschen Zahlenformat („0,25 €") – im Output so belassen.
 
-## Suchform (Startseite)
+## Suchform (Such-Einstieg, z. B. `/en/Magic`)
+> Live 2026-09-05: `https://www.cardmarket.com/en` → `searchForm=0` (Form weg);
+> `https://www.cardmarket.com/en/Magic` → `searchForm=1` (Form da).
 | Element | Selektor |
 |---|---|
+| Einstieg | `config.searchEntry` = `/en/Magic` (Game-Seite mit globalem Top-Bar-Form) |
 | Form | `form#searchForm` |
 | Suchfeld | `input#ProductSearchInput` |
 | Button | `button#search-btn` |

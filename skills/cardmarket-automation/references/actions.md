@@ -1,7 +1,9 @@
 # Cardmarket Skill – Registrierte Aktionen
 
-Alle Aktionen sind **read-only**, öffentlich (kein Login) und starten auf der
-Startseite. Aufruf: `npm run cli -- run <id> --input <datei>` – `<datei>` enthält die
+Alle Aktionen sind **read-only**, öffentlich (kein Login) und starten auf dem
+**Such-Einstieg** (Game-Seite `config.searchEntry` = `/en/Magic`; „Search 2.0"
+2026-09 hat das Such-UI von der Startseite `/en` entfernt). Aufruf:
+`npm run cli -- run <id> --input <datei>` – `<datei>` enthält die
 Parameter als nacktes JSON-Objekt (siehe `examples/`). `npm run cli -- list` zeigt alle IDs.
 
 | ID | Parameter | Output | Nächste |

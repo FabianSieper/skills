@@ -3,13 +3,16 @@
 ## Standard-Flow
 
 ```
-Startseite
+Such-Einstieg (Game-Seite, config.searchEntry = /en/Magic)
   → Suche (query)
   → Result-Kachel (erste)
   → Detailseite: Top-Block + Seller-Angebote
   → "Show Versions"
   → Versionen-/Artwork-Liste
 ```
+
+> Einstieg ist eine Game-Seite (nicht die Startseite `/en`), weil „Search 2.0"
+> (2026-09) das Such-UI von der Startseite entfernt hat.
 
 1. `cards.search` → Karte identifizieren (Set, ab-Preis, Detail-URL)
 2. `cards.price` → Verfügbarkeit + Preise (Top-Block + Seller-Angebote)
