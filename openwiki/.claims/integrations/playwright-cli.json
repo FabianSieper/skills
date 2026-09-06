@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:0ec0ae3454429c380374f5fe93cc06d1ec98e7b45570216b9be7693f9adbcb5d",
+  "claims": [
+    {
+      "id": "claim_d244120315b14d4a8cdf1a15cee8f55a",
+      "statement": "The Playwright CLI (playwright-cli) is the only browser transport for generated site runtimes; it is a user-scoped global command on PATH, pinned to version 0.1.19, and the runtime never talks to Playwright directly, shells out to a browser binary, a shell, or a runtime compiler.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/site.config.ts#L18-L24",
+          "version": "repo-lines-v1:sha256:b894e25e849495f9bf9427a543b18d55c681daef613021b393fe2386584f42b2:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEwM2E1NDA2NjQ5ZjlhYTBmZWRjYTQ2ZTZkODQ5NzRmOWU2ZWFkMmJlZTNmNDQyOGQ3Y2YyZGIwMDY1MzVkNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDVjMjAzMDlkNWFlZjRhMmFhZjJmMDRkYzRlYjc5YjQxZTg1MjA0OTkyYTkzNzA1MWVkYWZlZjQ0OGIwYWM1ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md",
+          "version": "repo-file-v1:sha256:1a609c93bff3eea9ab99fed93c0334c851fdc39fb6ac5335551bfb87c171d57c"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L82-L130",
+          "version": "repo-lines-v1:sha256:c42319d85aab47a95b01861338a18791542ba0a6e1b06cc6ab4e9d7ff7e0f022:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzZGFkMDcxOWYzZmY4NDk3MjE5ZTMzZTFmMzZkMGE2MzdmZWQ1YmVlOTAzNDIzODZkMzFhZWFkZjU2ZmQ2MzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyZDUyMGY1MThiNDY5ZTZiYWUyNDYxYWY5MDNhZjViM2YxMDNkMzQxYjNjMWFkNzZmY2Q5MDI3ZjFmNGIzNjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyNThhOTE5MDRjMjc1ZDUwMzgwZWFhYWU4NWRkMzgyNmJmY2NhYzRkMzg3MjhkNTlmZjkyM2NkMDMxNjY3MzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_52f482ea83aa48e0836b37434a422982",
+      "statement": "The runtime treats the pinned Playwright CLI version 0.1.19 as an invariant: CliBrowser.ensureAttached() requires the --version output to exactly equal config.browser.cliVersion (\"0.1.19\") and throws CLI_PROTOCOL (playwright-cli-version) on any mismatch, failing closed with no semver range and no silent auto-upgrade.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/site.config.ts#L23-L23",
+          "version": "repo-lines-v1:sha256:0919e83af9e525573715e5fc2ca01c1b1e396e5d4b2003ef27a570b5ed9ff048:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkxOWU4M2FmOWU1MjU1NzM3MTVlNWZjMmNhMDFjMWIxZTM5NmU1ZDRiMjAwM2VmMjdhNTcwYjVlZDlmZjA0OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkxOWU4M2FmOWU1MjU1NzM3MTVlNWZjMmNhMDFjMWIxZTM5NmU1ZDRiMjAwM2VmMjdhNTcwYjVlZDlmZjA0OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWMyNjkzMzYwNDFiM2VkMjYxYjcyNjk5MjdiNmZjMDk4NzhhNmVkMmI1MDU1NTZjMDk5N2E3NTc3MmRmODU1MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTliMWJhMjNmOTI2MjU5OTg3MTFlODhmZDViMjkwNWRmYzUzZmIyOGM3NWQ1Y2FlZTI3NGQwNWUzYTU1Nzk0ZCJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L131-L135",
+          "version": "repo-lines-v1:sha256:0209c310b859362cf892da18523fc0c3cddfdb949a73a76ff7bacc95e04e7738:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTFmMTk1NTUwZDhhOTIwZmUwZjc5ZDdmMmMyZjllMjA3NTcwNzMxYzgzODM5YTVmMjZkYjhjODc2NDY1NzQ0MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTE1MzE5NGM2NmExYTQ0ZTNlNTlmODk2NWEyZTA2N2Q4N2Y0OTg0MmU5NWY4N2VmOGFmZDg0YmNiZDg5MzFhOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmM3OTViYjUzYjcwMjQxNzIxY2E3YTBkYmRhMTFkZDk0MzIwZmZkMWU1MGM5OWQyY2M4YTQ4MDVhNmUzODAyOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2ZhNmEzODkxZjhiODQ4ZTBlNDE2ZTBlZmYxMWNlMjU1M2QyM2ZmMmIyZjg0ZTg4MWNhNmEyOGNiZmVkYzNkNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3c6a594d5e17428e9209fdaaf490f79c",
+      "statement": "The attach-only invariant holds at every branch of CliBrowser.ensureAttached(): the runtime never launches, replaces, or closes a browser, and a missing or non-attaching browser is a hard user-action error (BROWSER_REQUIRED / ATTACH_FAILED), never a fallback to open/launch/headless/profile/close.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/site.config.ts#L18-L23",
+          "version": "repo-lines-v1:sha256:0626173ab7948835b8bd649bd35ce0e7b86815cc40776bc1c358bc53a2f85284:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEwM2E1NDA2NjQ5ZjlhYTBmZWRjYTQ2ZTZkODQ5NzRmOWU2ZWFkMmJlZTNmNDQyOGQ3Y2YyZGIwMDY1MzVkNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkxOWU4M2FmOWU1MjU1NzM3MTVlNWZjMmNhMDFjMWIxZTM5NmU1ZDRiMjAwM2VmMjdhNTcwYjVlZDlmZjA0OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDVjMjAzMDlkNWFlZjRhMmFhZjJmMDRkYzRlYjc5YjQxZTg1MjA0OTkyYTkzNzA1MWVkYWZlZjQ0OGIwYWM1ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTliMWJhMjNmOTI2MjU5OTg3MTFlODhmZDViMjkwNWRmYzUzZmIyOGM3NWQ1Y2FlZTI3NGQwNWUzYTU1Nzk0ZCJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L131-L169",
+          "version": "repo-lines-v1:sha256:70641fbd70428252bff8906c2c227554ee641b71fc5545ab3b60ec6997ca5fae:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxZjE5NTU1MGQ4YTkyMGZlMGY3OWQ3ZjJjMmY5ZTIwNzU3MDczMWM4MzgzOWE1ZjI2ZGI4Yzg3NjQ2NTc0NDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjNzk1YmI1M2I3MDI0MTcyMWNhN2EwZGJkYTExZGQ5NDMyMGZmZDFlNTBjOTlkMmNjOGE0ODA1YTZlMzgwMjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4MDNlYmE0MGRiYmFjOTI3NmFjZTgxMDMxNDNmODRlOGRmZGNjNWUyODVlMDc1OWIyNGMyOGM4NTQ4YmMxYWUifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/runtime-contract.md",
+          "version": "repo-file-v1:sha256:0bde03005380bef93c9d0579159521511a0c6c99cf099f8101cf2b2ff1273a44"
+        }
+      ]
+    },
+    {
+      "id": "claim_061ac9d9556e4365ac61513743ac2b1a",
+      "statement": "In extension mode, CliBrowser.ensureAttached() gates the attach with requireRunningBrowser(target): it inventories OS processes (ps -A -o comm= on POSIX, tasklist /FO CSV /NH on Windows) and refuses to invoke the CLI extension attach if the configured browser process is absent, because the CLI extension attach would otherwise open its connection URL through the browser executable and spawn a browser; CDP never launches.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L156-L159",
+          "version": "repo-lines-v1:sha256:02fb38b9d7e8078b9bef146d50133607bb743d9beee8618d43d0d68bee6f858b:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmZjZDY0N2IyYmY1ZjdlZmEyMGNiZTJjNmQ2ZmNjNWVlNTJhMDA4YzUzNmJiOTViYjUzOWUyNWM1Y2I1MDFhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZkYjQ0OTUwYjcwOGFhMzQ5YWJiNWQwNTIzYjFlNTIxYjMwOGUxMmU1ZTJiOWNlODA3ZTdiY2QzY2RkNzM2ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDdhMzRmZmQ1ZTRhNDc5MzZkOTgxNTNkYzVkNDljNzNjYmIzNzQ0ZmNmNGY3OTkzOGQyN2M0NTg4YjA1NGVjYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzJiOTU1YzExM2M1YjFiOGMxNTJlMjBhYzkxZWZjNjlkMmFiYWUxYTFhNGQ5NjgxY2U2MDRjYmE5NWRmNTAzMyJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L35-L80",
+          "version": "repo-lines-v1:sha256:f630ab19fd9490079f68ee4e01ad6506145631976db6680b8f27185a9937fe98:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5ZGI2NDdlMTg0N2NiMGRjMTU3ZTc2YmU4OGIxMWI3ZjgzZGFlNGEzOGZjMGZiNzMwYTg4ZTkwYTQ0ZThjYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFlZGYyYTU1OTc0NTM3MThmZmRkYTJlZTEwNzNiNmEzYTk0ZGQyNTAwMzQ4ZTYxMmViOWM0Zjk1ZWY0NWUxMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYzNTczMmZlNjYzN2JmNmI3ZjY4NmRmZTRkN2RiYTI5OTRhOGM0NTA5OWZjZTlkODlhNjEyMjZlNDBjZDA4ZmUifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/sources.md",
+          "version": "repo-file-v1:sha256:8fd9844544ebce65b199ce97c2be4d101c9c0e9a7e67008242a73a2d706d53d2"
+        }
+      ]
+    },
+    {
+      "id": "claim_647a08ef6a314b559035a67b0e419b2e",
+      "statement": "Named-session reuse: ensureAttached() parses CLI list --json output (parseSessions expects a { browsers: [...] } array), locates the named session config.browser.session, and reuses it without attaching when it is compatible — status === \"open\", attached === true, compatible === true, and in extension mode browserType === target.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L136-L152",
+          "version": "repo-lines-v1:sha256:018f39e0f214125580c4c915a2f4840b5876249c3f9e6ece246001e2e95202db:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0NjUzMGJkNzAyODg3MzBlZTRjZDRmYjgxNzE3MWRmZWU4N2E5NDFlNjcwYjgzZjIyYjExMjI5OGQwMTcwYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjNjY5M2JkMjQ0ZmM5MWQ5YzlkYmM1ZTI1ZjQzZDc5MmEyODQ2OGQ0M2RkN2VmNjM4Y2ZkODI4Mjg4YzBlYTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ3YTM0ZmZkNWU0YTQ3OTM2ZDk4MTUzZGM1ZDQ5YzczY2JiMzc0NGZjZjRmNzk5MzhkMjdjNDU4OGIwNTRlY2EifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L19-L31",
+          "version": "repo-lines-v1:sha256:830a26d714bca7014cc95b37a102fb0d178b72cbe1f07275c72190852e99ca67:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1YTllNDE1ZTNhNmY1YmZmYmNmOTljMzM5YzlmMmNjNjNkYzlkMzkwOGRlODE5YjA2MzQyZTkzYjhlYWIzNDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjOWE4NDk3OTVhODNkMmNjOTQ2MmUyMzE0MGMwNWI5ODY3MTQwNGE5MzlhOWRmZTU2NWY1YWQ2OWVmZWUxZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFlZGYyYTU1OTc0NTM3MThmZmRkYTJlZTEwNzNiNmEzYTk0ZGQyNTAwMzQ4ZTYxMmViOWM0Zjk1ZWY0NWUxMDEifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/sources.md",
+          "version": "repo-file-v1:sha256:8fd9844544ebce65b199ce97c2be4d101c9c0e9a7e67008242a73a2d706d53d2"
+        }
+      ]
+    },
+    {
+      "id": "claim_f2904a29bdc94253bbbda5d06504dc47",
+      "statement": "playwright-cli scopes session state (including storage state such as cookies and localStorage) to its working directory; the runtime always invokes the CLI with cwd set to the skill root (this.project) so it deterministically lands in the same session namespace, and the CLI session name must equal the project config.name.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L96-L106",
+          "version": "repo-lines-v1:sha256:69ece444b44e1cff1088c28835e02c2f1ca5076a20a436b17f5f23408a01e1dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExZGY4N2E0NzMxNmM3MDhjNTUwMjA5OGU5YWY2YzQ0NTM0ZWI4MGJlYWRjZjYwNjMwMjhlZmNhODU5MzdhYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlNjczYWJkNDU3YTk3ZWVhMTdhNjAwNjJlYjBmYWVhNmJkZjA5NDg2OGNjNmI4ZjhjMGViZGEyZjYxZWQ0MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkYTA5NjBiMjRmNzM5ODRkMzZkN2FhOWYwNzUzNWJhM2YyZGEwNTFkM2U5YzZiOGI0ZTQwMjExZDUwMzU3ZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM2Y2E3Nzk0NWI2N2RkNTYzNmVmZmU4N2ViM2RjN2ExNDAwMWNiMGJhMWRhZWVkNmQ0OGZjZWRhOGFjM2M1N2MifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/runtime-contract.md",
+          "version": "repo-file-v1:sha256:0bde03005380bef93c9d0579159521511a0c6c99cf099f8101cf2b2ff1273a44"
+        }
+      ]
+    },
+    {
+      "id": "claim_17a28afbddb744c3bdb0777d5378da84",
+      "statement": "run-code --raw result decoding is version-sensitive: Playwright CLI 0.1.19 encodes a returned JSON string once more as a JSON string literal, so the runtime performs a double-decode (JSON.parse then, if the value is a string, JSON.parse again) before validating the envelope; changing the version pin without re-validating this behavior is unsafe.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L204-L211",
+          "version": "repo-lines-v1:sha256:1fceb96e4383192abf9e7fa66509dc14755fbc4072b8dba401623881de74dd8d:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmI4Y2Y3M2U3NzVhZWRjYjg4YWM1ZDVmY2VjNGI1YzIzNzQ0YzhhZjE2NjIzYjFlNmIxMjQzZjkyOTg4ZWY0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWI2MmY2MGQ4NTkwYTU3OWNmNDZmOGQ2NzM3OGM0YzU3MmI5NjJjZWNjZGI5MGM3YTVmN2I0MmI5NjA3ODJhNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWQ2ZWJhMDY3YmVmZGViZDUyN2I5ZGJlMmUyMmU5ZDViNDIwNTdjODgwOTA3Yjc1YmM1ODkyNmRhOTA4ZmRkMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWRkNDFkNTBmZDQ1MzczNzYxZjlhMzJjMDA4MzU0NzhmMzdiNDFhNGMwNmVhODlhYWIwMDVkNzU0ZTNhMWFlMSJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/sources.md",
+          "version": "repo-file-v1:sha256:8fd9844544ebce65b199ce97c2be4d101c9c0e9a7e67008242a73a2d706d53d2"
+        }
+      ]
+    },
+    {
+      "id": "claim_034441be292443eab1baa85944e6026c",
+      "statement": "The runtime executes precompiled per-action bundles inside the CLI's browser VM by serializing the verified actions/<id>.js bundle (SHA-256 + size checked) into an async page wrapper written as an exclusive file under .local/run-code/<uuid>.js and invoking -s=<session> --raw run-code --filename=<path>; the wrapper is serialization only and the prebuilt function owns all behavior.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L170-L242",
+          "version": "repo-lines-v1:sha256:01404d706c5734d730a228132ea9fd470e5d6e4f4cf9e9a41ba0c917de56c490:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyMjEyMDEwNDlkN2Y1M2MyZTE2ODNjYWM4YTgxYTIxNGVjMDkxNzdmMmU4NzMyM2FkMDcyNGQyYmFmNWQwNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmZTFhMjNmZWEzNjVlOTFiMGU4ODAxNWM2NWQzZjI3NzM2Yjk0ZDFmOGI1ZjczMDMzMWQzZjhlMWJiMmY0OGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0Y2YwNjM2OTEwNDZiNDE4ODhhODg1NzhmZWQ0MGQyYWFiODAwNjYwMmM5NDk0YmNhYWQyNGU1MGVlZGVmODAifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/runtime-contract.md#L26-L26",
+          "version": "repo-lines-v1:sha256:ddc24eec02775be747c9201a5d978107dcb26fc818a64b4aaabab153ee77e3cd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGRjMjRlZWMwMjc3NWJlNzQ3YzkyMDFhNWQ5NzgxMDdkY2IyNmZjODE4YTY0YjRhYWFiYWIxNTNlZTc3ZTNjZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGRjMjRlZWMwMjc3NWJlNzQ3YzkyMDFhNWQ5NzgxMDdkY2IyNmZjODE4YTY0YjRhYWFiYWIxNTNlZTc3ZTNjZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjk3YjZlOTkzZjljNzRiNmE2MDlmYzgwNjhhNzQ4ODgzYzkyOGU1NDE3ZTJmZjJhZjg1YzZmOThlMGY4YzNkYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTM0OGIwNDRjMDM4ODczMGM1ZWE1MTkyYmYyYzAzOGVmMTAyNGJhOGE4MzZjYjVjNDRkY2YzZjE2OWZmMmM3OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c3d0756e71743808545cd6d2d7bf305",
+      "statement": "Browser observations (the fixed read-only DOM projection browser.status / browser.inspect / browser.inspectRegion / browser.screenshot from observation.ts) and element attributes are obtained through the same pinned-CLI run-code path against the user's live page; the runtime never executes raw caller-supplied JavaScript or selectors, and a site can only extend observation via the ObservationSite interface.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/references/element-attributes.md",
+          "version": "repo-file-v1:sha256:bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/observation.ts",
+          "version": "repo-file-v1:sha256:dc93908e2937dce1416d622dccefb418adc20b5072db3072c3771fc8c4d13fe7"
+        }
+      ]
+    },
+    {
+      "id": "claim_3bbcc444a3a7481a9de18368edb22735",
+      "statement": "The browser VM that executes run-code lacks the usual Node globals (URL, TextEncoder, Buffer, process), so the precompiled code uses ECMAScript-only origin and UTF-8 size checks (string-based origin validation, not the WHATWG URL global) instead of Node APIs.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/references/sources.md",
+          "version": "repo-file-v1:sha256:8fd9844544ebce65b199ce97c2be4d101c9c0e9a7e67008242a73a2d706d53d2"
+        }
+      ]
+    },
+    {
+      "id": "claim_a98bb19145a3409a83eaa48fce07a211",
+      "statement": "The runtime shells out to the CLI via execFile (never a shell string), binding each purpose to a bounded timeout and buffer: list/attach use a 30 s timeout while runtime (run-code) is bounded by config.actionBudgetMs; maxBuffer is always config.maxCliBytes, and subprocess failures are classified into BROWSER_REQUIRED / ATTACH_FAILED / CLI_PROTOCOL by purpose and message content.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/site.config.ts#L11-L16",
+          "version": "repo-lines-v1:sha256:33a1fb33fd5b0e8a8085acddbae1848a9416d02f2b5fd523a5777fd29dd4c840:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDBmZWNhNmNmNzRhOTk3ZDljYjgwZjM0NGQ1NGI1ZmE2NWY3ZjhmNjM3OWVlMWY2MTQ4NTMwOTc2OTM2ZTYxNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmFkOTExMWIyZDYwNzZmOGRiNzZiZGQxZGE3NTg4NmMyODk3NDZkZjg1Y2M3MTEzNDdhNTc1N2E3ODQyZGU3NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmQ3M2I1ZDM0NjExNGUzYzE2M2Y5MmJkYzM3NjFkMWNlYWQ5MDA1MGJhNDBkYzk3MWQ5ZjE3NTM0OTBlZmNmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzk4MmNmNTFhZTNlNzY5NjFkZDM5Y2ZkNmI4YjliYzk0ZWI0OGEwODdmYjViNGRmNDZhNmQ4NjE5MzRlMGQ4ZCJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L92-L130",
+          "version": "repo-lines-v1:sha256:dab2c71ef61f339ec67780c20da39cfdfff1d32a7bb294ef8025b5aba05bd2c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkZTE3NDM4ZjFiODBlMWY3M2IzNDg2OTMwNjhhNjE3OWFhMGYzZTljMzk1ZTE5YzMwNjljZjIyODU0NjBiODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZGFhYjI5MmQ3NjNjZGNlNTJkMzZlY2ZlNzczZDdhZmIyMGVlNjZiNDlmYjI0Y2FmZGY1ODU0NGU3NTgyMzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyNThhOTE5MDRjMjc1ZDUwMzgwZWFhYWU4NWRkMzgyNmJmY2NhYzRkMzg3MjhkNTlmZjkyM2NkMDMxNjY3MzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_962f4ba748b348469afb8e32d3131219",
+      "statement": "For portable deployments (scripts/site-runtime.mjs), the CliBrowser constructor accepts a browser.cliScript override: the bundled CLI JS entry point is invoked through process.execPath instead of playwright-cli on PATH (on Windows this avoids shell .cmd wrappers); the protocol is unchanged and there is no agent-provided executable override.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L96-L101",
+          "version": "repo-lines-v1:sha256:acad72d9d63552443eb216a269ebccd5c6bf49c05d038397d60b170046a34cb1:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTFkZjg3YTQ3MzE2YzcwOGM1NTAyMDk4ZTlhZjZjNDQ1MzRlYjgwYmVhZGNmNjA2MzAyOGVmY2E4NTkzN2FiZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkzZmM5Nzg5NDE0MDYyMzA5NmNhOWRiNzE1NDQyMmQ0MDQ0Y2RkYmZjOTVhZDQwZGFhNzg1ZjliOTM0MmNmYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmRhMDk2MGIyNGY3Mzk4NGQzNmQ3YWE5ZjA3NTM1YmEzZjJkYTA1MWQzZTljNmI4YjRlNDAyMTFkNTAzNTdmYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTRlZjQwNjQ5OWIzODdlOGQ0N2RmZjkwZjU0NGYzOGE3ODc1ZjYzODk3ZDc3ZTdhMjBkNDMzNzYwYzExMTA5OCJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/runtime-contract.md#L38-L38",
+          "version": "repo-lines-v1:sha256:f0fdf25106bbd67fd791c0b50eed5a3813bbd05e8ff42ca4fc9f24b8d8ff9eff:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjBmZGYyNTEwNmJiZDY3ZmQ3OTFjMGI1MGVlZDVhMzgxM2JiZDA1ZThmZjQyY2E0ZmM5ZjI0YjhkOGZmOWVmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjBmZGYyNTEwNmJiZDY3ZmQ3OTFjMGI1MGVlZDVhMzgxM2JiZDA1ZThmZjQyY2E0ZmM5ZjI0YjhkOGZmOWVmZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWY5NTczNzY2MGI3MGFhOGYwYWJjMGFlZWNlY2M3NDhjMGY2ZmVkYzc5N2YxYzM3YWFkODA1ZjJmMGY3MmNhYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzcxNDQwMjJhNmM4ZjNmNTdhNzljOTkxZDI5Mjk1OTFlYzI2ZmVkNmQyNmI2ZDFkOWQ5MzE0N2EzMTM3MmUwNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_bcf3a86957ff45cca35233ae4e57b229",
+      "statement": "The run-code result envelope is strictly validated after decoding: value.ok must be true (a false envelope with a known error code maps to the matching ErrorCode), value.accountKey must be a non-empty string, and the serialized result must not exceed maxOutputBytes; any violation throws CLI_PROTOCOL (run-code-output), so the integration fails closed on protocol drift.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L212-L238",
+          "version": "repo-lines-v1:sha256:f56c582e89ffbb4c3c76b28cfe6443f26b11c29e9052031f892f2ed4d09a4b0e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQwZjZlM2VjMmY3YjdhMDZiNGU3OGFmZjk5ZjBlYjEyNDM2OTExYTJiYzU1MDY1YTI0Yjg2YTBjNDk2NzU4ZGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNmZjYTE3NWUyNGUyOTQxMTUzOWMwYmY4Njc5M2M4Mjg1OGUyMWQ5NGY0NzU1MDg3Njg2NmUzY2YzNTc5NzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlYzZkNTM1ZjczNzg4ZmQwOGI0MmJhN2MzZWQ0MmVkMTE2ODlmNTAzNWYwMWU3ZmI1YWZhMDkyNWQ1ODRkN2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlNDcyMzkwNzJmNTViZjVlNTE1ZGUxMDBmZTM5MWRmYWMwNWJmZjg1Mjg4NDhhNzRjYjUwNzc0MTU5NDM2ZjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_24e2f2d7fad047fa9e4ec46da57376f3",
+      "statement": "The pinned playwright-cli skill and its references (SKILL.md, references/element-attributes.md, references/session-management.md, references/storage-state.md) live under the cardmarket copy at skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/; the runtime binds to those commands and the 0.1.19 protocol, while the reusable engine that calls them is documented in the site-runtime page.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/SKILL.md",
+          "version": "repo-file-v1:sha256:1a609c93bff3eea9ab99fed93c0334c851fdc39fb6ac5335551bfb87c171d57c"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/references/element-attributes.md",
+          "version": "repo-file-v1:sha256:bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/references/session-management.md",
+          "version": "repo-file-v1:sha256:cd3e261b8763bf952f1e371b876cb78d054379afec85482f9250633e1b7e6c44"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/node_modules/playwright-core/lib/tools/skills/playwright-cli/references/storage-state.md",
+          "version": "repo-file-v1:sha256:9ac47f9ae4a1aedcd2077f8ac9ab1ba6bee1962cb83ff51adcd36fb6d83b5ec6"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c2ebef837ca4c41a7d40bbde7fc879b",
+      "statement": "The integration is tested without launching a real browser: tests/cli-browser.test.ts covers the version pin, named-session attach/reuse, BROWSER_REQUIRED/ATTACH_FAILED mapping, bundle integrity, and the run-code --raw double-decode round-trip, and the demo project (assets/demo/tests/runtime.integration.test.ts) runs the full CLI against a fake Playwright CLI (fake-playwright-cli.mjs) and a fixture server covering missing browser, failed attach, named-session reuse, CDP configuration, compact observation, and run-code result mapping.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/demo/tests/runtime.integration.test.ts",
+          "version": "repo-file-v1:sha256:00d1d574a3ac94d101e0f5b49d2893f0a62ffbdc04f382c913123ff653fea785"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/tests/cli-browser.test.ts",
+          "version": "repo-file-v1:sha256:757d553faa826d21fba96b486d9da3f2e6942a4af7b9f3e87db49d932dd22fb2"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f07b001cd8143d4886cb337365e6a97",
+      "statement": "The meta setup skill (.agents/skills/setup) and its audit (scripts/check.mjs, references/requirements.md) require the Playwright CLI to be exactly 0.1.19 (PLAYWRIGHT_CLI_VERSION), install only what is missing (npm install -g @playwright/cli@0.1.19), treat the browser/extension install as a manual user action, and never run playwright-cli attach or open or modify the browser automatically; an unexpected CLI version is treated as incompatible, not an invitation to upgrade.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L52-L81",
+          "version": "repo-lines-v1:sha256:0cbd265da172ba41aa7d6f9b73d01ac3a39c45c10c1ab95a339bf6d1756ad876:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxM2Q0ODc4ZTM0NzBiNzQxNTBiYmUxZjg4NmIzNDIxNGY0YjY3ZDYxMDY3NTE4MTA4NTg1N2ZjZTk5M2E1YzciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmMWJjOTEzNzRhNWZmZTU2NDQ3ZjhkZTNlOTcyZjYxMTQ5MjQ5ODBhZWVmMzQyMmFhMDkyYjAyYjJhOTAwYzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1ZDM4NDU1N2U3NzFmYzI1YzM5M2VhZTUwYjE3MDQxZjBhNjY0M2JmY2EyYjBhZmNiMTBhM2U4MTc0MDljMzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM0ZGEyMTdmMmUzNTk0ZDJkZDhjNjRmMGYzNWE3YWE4ZDViNWQwYThhMDM2Njc3MmUwZTY1YjYyZmRmYjZmMDkifQ"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/references/requirements.md#L1-L13",
+          "version": "repo-lines-v1:sha256:04d384664dfbf062e226b788484a07ea8d4fd1cf4702fee7ac8b9ab5f013d9fd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0NjVlZDg4YjgyMTQ0MTM5YWM2ZmQwMDJhMmFmMTM4NzEzZTliOTliMGRmYTc5NzFmMDgzYTBhMGIxZWRkNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5MTJhNmEzNTk3YTc2MzU2ODY4YWZkMjdkZDE2MDY3NjY2NThhMjkxMTc0OWIxY2E2N2NhYjcwYzljYjE0ZWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5NjVmMTRjYWU5Njk2ZmYxOGY0NDBhNjNkYWIzOThjNjVhNDJlYzdmMzhmYjFkZmE2YTlhODA5NjA3YmM5YjcifQ"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L15-L15",
+          "version": "repo-lines-v1:sha256:a4ce0b2a29475639d0c46bf72a0b2f8b2e13887a65b58eb84b9ff0b4c3a8b354:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTRjZTBiMmEyOTQ3NTYzOWQwYzQ2YmY3MmEwYjJmOGIyZTEzODg3YTY1YjU4ZWI4NGI5ZmYwYjRjM2E4YjM1NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTRjZTBiMmEyOTQ3NTYzOWQwYzQ2YmY3MmEwYjJmOGIyZTEzODg3YTY1YjU4ZWI4NGI5ZmYwYjRjM2E4YjM1NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzU4YjZkYzQ1Yzk3NWM1YjFhZDRiYzdkNTQ0YTQxY2EyZWQ5MWQ0ZDQ1OTA1Nzg2Nzc3OWI0ZGZlMDkyYTgwZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmFiNmFhMjg2ZTU4YTY0MGE2NDdjOGE1ZTI3MzJmMmQyZTUyYjhiNzhkZDJkYzdmYmFiNjVlMWQ0YTczM2MwMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_704050300e1a4b9fa7e6868a3b79e84c",
+      "statement": "The runtime's integration-specific error codes are CLI_PROTOCOL (exit 4, recovery repair) for unexpected CLI results or wrong version, ATTACH_FAILED (exit 3, recovery user-action) for attach/session failures, and BROWSER_REQUIRED (exit 3, recovery user-action) for an absent configured browser; these are typed AutomationErrors with a code, step, and deterministic recovery strategy.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/cli-browser.ts#L115-L128",
+          "version": "repo-lines-v1:sha256:486b2f7be2582655c103fcc2fc9525f91a91ca31be8267a41f225662a4cd70f3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlYmJhYjVmZjI2MDViYWVhZTY2NTE3YzhjMjk1ZTc1NzYwYjM2YjlkZTM5ZWQ3YmMwZjVjY2E4NWMyYTg2YzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlZjY5MDA3YTdlNzVjY2RiMmMxOWVmYTlkOTVjNDNiZjc4N2YzM2EyYjljODI2NWM0YTVjZTY0MmZlNmRiZWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczMjQzYzUxNDUzOGQyM2VjZGQyYjRlOGE3YzhlNjI2MjUyYTMxNmM4NzhkYTFhZTM0MWJkN2U1NDNmOGY4NDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFhYjAzYTJiYWMyMDUzYjcwM2VmNzEzYjcyZTk5ZTM5OWY5OTc1NTU2YTg1MThmMTJlNjc0ZGU0ZTZhNTI4MjkifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/runtime/errors.ts",
+          "version": "repo-file-v1:sha256:0d67fabdff7dce65bddff202d834ece0088bb76b99785f24f6ab1e2865bd3b85"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-06T13:03:24.416Z"
+  }
+}

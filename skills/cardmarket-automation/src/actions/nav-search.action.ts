@@ -15,7 +15,7 @@ const outputDescription = '{ status, state }';
 function validateOutput(raw: unknown): NavOutput {
   const object = raw as Record<string, unknown>;
   if (!object || typeof object !== 'object' || object.status !== 'ok') throw new AutomationError('POSTCONDITION_FAILED');
-  if (object.state !== 'start' && object.state !== 'results' && object.state !== 'detail' && object.state !== 'versions') throw new AutomationError('POSTCONDITION_FAILED');
+  if (object.state !== 'start' && object.state !== 'results' && object.state !== 'detail' && object.state !== 'versions' && object.state !== 'own-offers') throw new AutomationError('POSTCONDITION_FAILED');
   return object as unknown as NavOutput;
 }
 

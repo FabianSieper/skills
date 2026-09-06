@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:a773354453ba4dbd2443b36e9da0b612e15571cb5ea95e981fa20b9a31c8b171",
+  "claims": [
+    {
+      "id": "claim_c7869c5bc67f4bb4a0df0fcab4dc80ea",
+      "statement": "The cardmarket instance defines four discrete browser states via the StateId type ('start' | 'results' | 'detail' | 'versions'). State is derived purely from the current URL via stateFromUrl in src/lib/state.ts, which maps URL patterns to state IDs. This makes state a pure function of the URL, observable even when domain assertions have failed.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/lib/state.ts#L4-L12",
+          "version": "repo-lines-v1:sha256:9e9abcbf09301c991d331215441e29a8a0251047558712a5b71e98ee20c94548:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNiNmQyMzA0NDNiYmNjNzVjMzQ5ZDA3YjYyNThlOGU1NTgyZmM0Nzk2NDU3Y2JjZWJhNDQyYTM4MzQwNmFkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjAyNGNkNjVhMDhjYjkzZTRiOWEwMzRjN2IyNzEwZTlhOTJkNDdkYTYwMmEwZmIwYTNkY2FhNTM5ZmY1OGFhYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmVkNjRkOGU5NDZhZjMxMmJkZmEzZDU0NDZjYzlhYTk1NTJlYWNlMzYzN2NhM2YxODBmYzJhM2FmNjI2ZWUxOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/types.ts#L153-L153",
+          "version": "repo-lines-v1:sha256:a981bd64f137bcf49c4db1b2b46456c63ce40ad949d1bc7acf2848ac8112bac8:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTk4MWJkNjRmMTM3YmNmNDljNGRiMWIyYjQ2NDU2YzYzY2U0MGFkOTQ5ZDFiYzdhY2YyODQ4YWM4MTEyYmFjOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTk4MWJkNjRmMTM3YmNmNDljNGRiMWIyYjQ2NDU2YzYzY2U0MGFkOTQ5ZDFiYzdhY2YyODQ4YWM4MTEyYmFjOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjNmMjc5ZWE4NjQ5ZjIzYzA5NmNjN2IzNTUzMDBkMTFiNGVmYTllYTM5YjVhYmY4YmYwMDBlMjYzOGJjNjRiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGRmMThjNDQ1YzgwZTNmY2VhNDVlYWI2NWQ0YTU1ZmY4NzI1MjczNTc0OGM2NDdjMTJmNmIxZjEzZGZkYTI5ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ac70fd0c067043e6b46c6b2e0820b22a",
+      "statement": "The builder's site-template SitePage requires every generated site to implement detectState(), regions(), and visibleData(). The template version is intentionally unconfigured: detectState returns 'unknown', and assertReady throws NOT_CONFIGURED, signalling what must be filled in via BUILD_REQUIRED comments.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/src/pages/SitePage.ts#L4-L25",
+          "version": "repo-lines-v1:sha256:6b7dbb0a9e471f7a2b9fbb7b4f9102af2ba3fd7653c75bc21f04810f93f3c164:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiZGRiNWU2Zjg2Nzc1YTlmZjQ2ZTUzYmE2ZjVmODczNWJjN2YzMjk0NjdlMDZmYjhhOTJkMzlhOWE3Y2E5OTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU3MTIzYTVlNTU1ODg0YWFhYjVhMThhMjI1NmQyN2YzNGQ3M2JjNTJlYWQxNTkwMjBiMzMyMjgzYzRlOWZkOTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUxMWQxYzkwNWU1ZjNlY2U4MjViMDcyMDk4ODg2ZjgxNTBhNzhlY2MyMTg2MWU5NTIzNGUzNDg4MjUwZDJlYzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmNzM5YTA2YzFjYmIxMjQ0ZTMzNjNkMzhiY2Y5ZmE1MGNlODRmZWQzOTljMjE5M2EzYzdmMDhkNTk5MThiMmEifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/pom-and-selectors.md#L22-L22",
+          "version": "repo-lines-v1:sha256:e0384401a98e31130b07e0fbbfd2829a7349064d712e86fe14f085914bbe5bba:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTAzODQ0MDFhOThlMzExMzBiMDdlMGZiYmZkMjgyOWE3MzQ5MDY0ZDcxMmU4NmZlMTRmMDg1OTE0YmJlNWJiYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTAzODQ0MDFhOThlMzExMzBiMDdlMGZiYmZkMjgyOWE3MzQ5MDY0ZDcxMmU4NmZlMTRmMDg1OTE0YmJlNWJiYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk4ZjU2OTk1NGZlNzc1YmU4MGFkYTljNDM5MThiNzQ2ZDVkZjE0MTA2YjI4MTNlMTMwZDVkODVlNzllYTU4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjE2ZTgyZDU3YzcyMGZiZmFhOTc3M2ZlZjBkNDI4NjdjZTQ3ZjgwZDNhZTMwY2RlYTUxZTg4MjBkOWZmYzllMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f3dc9d835fa846c49e5bcf5c868d456e",
+      "statement": "POM transitions are of two kinds: in-page actions (filter submission, pagination, modal open/close) that keep the agent in the same state, and cross-POM transitions (search to results to detail, detail to versions) that navigate to a different page-object instance. Cross-POM transitions are POM methods that return a new POM instance, e.g. SearchPage.search() returns SearchResultsPage, SearchResultsPage.openCard() returns CardDetailPage, CardVersionsPage.openArtwork() returns CardDetailPage.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/CardVersionsPage.ts#L81-L87",
+          "version": "repo-lines-v1:sha256:ea7ef9323f4ac81a6ca07c5ea3509f7491b25fc444096d10f337560537e00e40:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWVlZTE3ODIxNDNkZGRhMTc5ZjFiNmE3OTY0YjI1ZjhmYzRjYWFlMTliYzZmNDIxYzQ2YzdlNDdlMWIxZTk1NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODM4NGIxNjA4ODUyNWI3NWIzOTNlMTQ1OWUxOWQxNjg2YTFhZjQzM2YxY2I1NzA1NmVkMjYxNTQ3YmVlMjdmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTFiMDgwNjdjMWIyMjhjMjViZDdjZTk0NDIyZTcyYjA4MWZmMjhlMTc1OTZlZGI2ZjcyNDkyM2FmOTVhZjBlZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODA2MmRiM2YwMTg2ZGYyZGI5ZTFmMmQxZDVjNzM0YWI2MWExZDg0NGViMThiZjNiNzVkZmI2ZmNhY2FlNDUwMyJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/SearchPage.ts#L31-L43",
+          "version": "repo-lines-v1:sha256:8deebf4b8d80b1fe1338451b330a9ea2f26338ed0906ef31ea4854c1bc9006c7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3N2ZmOWE4ZDI2ZTA5Yjg1YjY3NjJlOGM1YjdmN2YyYTdjYWE4MTdjN2MyNTgzYjZkNjRjZTNmZWU4ODIyZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkZDI3ZjEwZTIwZTI0M2FmMDdjMjA2YmFiMzIyZmMxYmMyN2Q2ZDI0NjBiNTA0MTg2NzkyZDc1NDUyNmIyZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlZThkNmZhNjI5NmU1OTA3YTk0NGY4MzZhNTljYTRjNTgwYzQxZTc4MDBjZTg5OTczMzM2ZTVjMDBjNDE2MWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYzVjOTBmNmE0MzQzMGQzYmZlZThhNjJhODU5YzQzNDMxMjM2YTM0M2RjMjhiZDkxYzFhNTA3ZGEwMzNkYmQifQ"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/SearchResultsPage.ts#L103-L116",
+          "version": "repo-lines-v1:sha256:01ce81692957d35e46678bd3584ce3b8cd5ee79c7adf11c3ef6ae1980e84612b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5M2JjMmE0ZmQ3NzE4OGZjMzEyMzg1N2I3ZGFmNjJjNTFmYTg5ZTUzMGUxYjhjZmMwNzQyMzNkZjMyZTgyNzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzODRiMTYwODg1MjViNzViMzkzZTE0NTllMTlkMTY4NmExYWY0MzNmMWNiNTcwNTZlZDI2MTU0N2JlZTI3ZjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJkZWFhOWI4ZGRlZmIxZDBiNDAxZTc2YmY1MGIyY2MxOTAwM2VkNjgxYzM3ZGNmYTI3MWM2ZWI3YWMzYTliODQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjliY2RmMGNjYTAyMGYyM2Y3MzFjMjZiZWQ4NjI4YjhiYmRhZGUxZTEzNGVmZDYzMzU0YzNhMGQ5NDUwNDQ0ODQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_212465ce1736492aabb24ca3526835b2",
+      "statement": "SitePage provides the shared base for all cardmarket POMs with three core responsibilities: assertReady (origin guard, Cloudflare detection, account key), gotoAllowed (navigate with origin + Cloudflare guards), and waitForCloudflare (poll page title, throw HUMAN_REQUIRED if challenge persists beyond 90 s).",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/SitePage.ts#L26-L62",
+          "version": "repo-lines-v1:sha256:10dd27427d93ea5a16c0ebc5e02d2c16d050cb807ca9b76c15fe68e59ff7b433:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlZWY2MDEwODJjZmZiNDFiNWZmMjY2YWQ3OWM1NjA0MGZiZDkwNTczOGU1ODVhZDYyYTBhNTE3ZTIwMGEwYWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMzIyOGY4MzM3NjE4MjY3YTNhNGZhYWNlZjU1NzMzYTFhNjdmYTE5ZDIxZGM4YjIyYzc5MDA0OGI3NjA3YTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwMzMzZWZiZTdjZWFlN2Q0NTkxZDgyMTdjNzI2NjI0NmVjN2NmYzczMzEyYzY1YzhhZDlhMGVjOWY5MWY1ZDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0Yzk3MTk3ZDU2MzBiMjUxNmQ4NzMxZGY0ZDIzMWZjMDJiN2NlMmI5Yjc0M2I5NjEyNGU4NzhhZWQxODcyOWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_16a87ad6c0ea4484aa30fab39192d92f",
+      "statement": "CardDetailPage is the richest POM in the cardmarket instance. It encapsulates reading (extractInfo, extractSellers, readUserOffers, readUserStockOffer), writing (openUserOfferEditForm, readUserOfferEditForm, closeUserOfferEditForm, applyUserOfferChanges, submitUserOfferEditForm, prepareUserOfferUpdate, executeUserOfferUpdate), and filtering (applySellerFilters, submitSellerFilters, settleSellerList) methods. All are in-page transitions that keep the agent in the detail state.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/CardDetailPage.ts#L68-L501",
+          "version": "repo-lines-v1:sha256:c368477eec04ddc7a2db572605d8e9e34151760bbeedf7550949731751c11e4b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDM0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzMmJiMTFiNTgxNmVlODNmY2UxNzRhODMxYmY2Mzk2OGQ3ODhkM2QyNjMwOTI1YWZkODIwZGNmNjI0ZTYwYTQxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIyZWMwZDFlNTk0ODFmNTc0NTkwNGZkYWY5OTIwMGEzNDcwZjE1NjkwYjQ3YjI3ODAzYmFhNzY4M2IzNTllN2E1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzYjM0NTU2MGU3MGUwYWZhOWVlYjNmNDhhMTY1NThhMmQ1ZmMxZWFhNzFkODhhMjcwNDdjYzNkMDRiZDg5NTc0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MiwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2YmM1YzkwZjZhNDM0MzBkM2JmZWU4YTYyYTg1OWM0MzQzMTIzNmEzNDNkYzI4YmQ5MWMxYTUwN2RhMDMzZGJkIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a88520ce6bf4f15943fab34ef35a111",
+      "statement": "The prepare/execute write-safety pattern in CardDetailPage captures a Preview (form state snapshot) at plan time and verifies at execute time that the form has not changed (sameFormState). If the state has drifted, it throws PLAN_CHANGED. Postconditions verify that the business effect (price, quantity, condition, language) was applied correctly, throwing POSTCONDITION_FAILED on mismatch.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/CardDetailPage.ts#L468-L501",
+          "version": "repo-lines-v1:sha256:23852b60d4faf4e96f7355ba948e5ea699993c737f9582d05ac8b39d3e8ee740:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzMTViNzE5YjVlMWRkOWQ3NjQ0ZmRhNjU3Njg1NTJmMTA0Y2ZiZDliNjJkYzQwOWUyZTk0MDU0M2E3ZDUwNWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlYzBkMWU1OTQ4MWY1NzQ1OTA0ZmRhZjk5MjAwYTM0NzBmMTU2OTBiNDdiMjc4MDNiYWE3NjgzYjM1OWU3YTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjNjRlM2QzNjU1YzdmODI2ZjI0Mzk3YmQ2N2NjNTY3MWU5NzhhYzBiNGE2MDI4YTczYTIxODJkNGIxYmIwZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYzVjOTBmNmE0MzQzMGQzYmZlZThhNjJhODU5YzQzNDMxMjM2YTM0M2RjMjhiZDkxYzFhNTA3ZGEwMzNkYmQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bdecc161d3e044d4b5cd53f0712d4665",
+      "statement": "The builder's pom-and-selectors.md contract establishes a strict selector policy: a priority ordering for locators (data attributes to getByRole/getByLabel to business ID in unique container to stable short attribute), mandatory uniqueness checks via uniqueVisible/clickUnique/fillUnique (count must be exactly one), and prohibited patterns (no first/last/nth, no long XPath, no generated classes, no force:true, no coordinate clicks, no arbitrary sleeps). A missing target is UI_DRIFT; multiple matches are AMBIGUOUS_SELECTOR.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/runtime/guards.ts#L6-L32",
+          "version": "repo-lines-v1:sha256:7edbb33acabf111d6100dce32ff195a4696f36fe4f6456dc5f7a284a5f71289b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkN2E1YzcxZmFkZDFjYTk5NDM5ZTYzZTk2NzIwYTFkNzdmNDQ2YmE3MjZjZGNhNTI3YWU2ZDM4N2I0OTRjM2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MjIxMDBhOWQyMjhmZmJlMmFkYmY1MmU1MThiYTJhYjM5OTE1N2YyM2RkYzRkNTdmZTg5ZmVmZjBjYWMyMGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmYjdmZjBiOTlkOWQ5ZWNjNzE3ZTQ4YTgwYmQxNzc2NWY5MDliYTY2YmY4ZTI5YTg4YzVlN2U3NGY2NWMzNGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/pom-and-selectors.md#L11-L20",
+          "version": "repo-lines-v1:sha256:77f6c65f2bf696cbab4995c0778993475ba742d6dba55c6c31e73b25094c57e9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhZWYwNWFlZDRiZjM3NmRiMmNkMTJhMTQ1N2ZiYTkzZGZmODg0Mzk4NDEwNjRlZmUzMzM1NmFhY2YxZWE3YzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0MmY0YjI1MDQyZmZlMmFlYjA2YzgyYTY2NWRiZjNkMTMzOWU0ZmRhMmJlM2E1MGM2MDNiZGY2ZGNiY2U5M2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwMTVhYjRiMGVkZGM0M2VlMjgyYWMyNWNiNTUyYmEyMDZiNWUxZTE2MjdmMjQ4YTNhZjJjNjlhYzYyNmY5ZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1NjE3NGIzMmU3MTdhMmJhMGJhMGU1NmZhYzMwYjFkYjE1ZmJhYjQ1YjZlNDZjN2I2ODIwZjNkYzNmMzkyZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_de286078856647fc89cccbd1ac33f978",
+      "statement": "URL construction in url.ts uses string-based parsing (no WHATWG URL global) because the Playwright CLI browser runtime is a minimal VM. resolveHref resolves relative/absolute hrefs against the base URL. Origin validation in guards.ts (navigate, allowedURL) checks config.allowedOrigins before and after page.goto. parse.ts provides locale-tolerant parsers: parseQty strips non-digits, parsePrice normalizes comma decimal separators.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/lib/parse.ts#L10-L30",
+          "version": "repo-lines-v1:sha256:d3cb3974549733b741a10f64b0133cead93cc92021b2f535685b0333fb329216:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkNGJkNGFhMjVkOGMwZDRlZDg4MDc4ZDA3NWY2N2Y1Y2ViOGRiYzJiNTNjOTgzYTFhOTRkOTcwMTE0YzBjNTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2YjM1M2RkYzQyNzFhY2E1ZDk0ZDE2Zjk4NzRiNWUyOGI4YzExYWYzYTkxYzc4YWJiMGZjYTFlMDI3ZDMwNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNiM2JkOTczZmFlYTgwYzg1NGEyY2VmMDU1YjE4NzhlYWQxZDI4YThjMTU5OGU2MGJhYzJmOGVjMmEwYmFlZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxMGIzNmFhNzRhNTliY2Y0YTg4MTg1ODM3ZjY1OGFmYWYzNjQ2ZWZmMmJiMTZjMzkyOGQwZTkzMzVlOTQ1ZDIifQ"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/lib/url.ts#L1-L20",
+          "version": "repo-lines-v1:sha256:c769a098c0b80f9a852ea395c07d67ece853bc74365dd4b4cd9e6a9ea16e5855:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NWM2Njc3MWNjZjdiODA0NGJkMDA1ZWJlZWVmN2NlNmM3OWIyY2UzYmIzOTlhMjk4NTI5ZjMzZDg0YjYwNzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1MjgxNWNhZDY2MjQ2NDY4MTQzZGVjNmIyZTQ0Zjc4NGNiOTYxOTUxODdlOGIxOTkxNmYzNmJmZGU5ZGU0NDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/runtime/guards.ts#L22-L32",
+          "version": "repo-lines-v1:sha256:2a473622c78f425e14a92e290ad08b9123f99d9124864e27ac30264455f182c8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3YjgzMWJhZmRkNGZiMGRkOTUwMmVhYWE1MTI5ZjkzY2YxOWEyMGRlZWNiMzY2MGZmM2NiZDAwMTg1Yjg3YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MjIxMDBhOWQyMjhmZmJlMmFkYmY1MmU1MThiYTJhYjM5OTE1N2YyM2RkYzRkNTdmZTg5ZmVmZjBjYWMyMGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY0ZjE5MDJiMWYwOWYxZmY2ZDkwN2Y5YjBlNWM0ZjViY2NkMjkzNzc2MGZjZDNmMmNiZmNiM2U5NGZjYTk5MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5241393f8a304935ba6de58bc5f51d79",
+      "statement": "Filter state is managed by seller-filters.ts (semantic filter value mappings, buildFilterTargets, reverse* functions, SELLER_FILTER_DEFAULTS) and user-offer-filters.ts (OfferCondition/OfferLanguage value and label mappings). These centralize validation to prevent INVALID_INPUT errors and keep raw value literals out of POM methods.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/seller-filters.ts#L46-L284",
+          "version": "repo-lines-v1:sha256:e4297ab166a264e44302f3c9a416438a5fab21c6f5dc77d0d569061a17280f1f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjM5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1ZGJlODgxMGNkNDM0ODE3NDU2YzM2NmU5YmFlZmFlZjA4M2Y0ODFmN2MxOWM3NDljNDk3Nzg5ZDVmYjk1MGZlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1MWJiYjdiZjVjMTdjMDY3MzY2MWUwNDU0Njk5Nzc4YmIzZDQyZGNkNmJmZDczNTEyYTU4YWVkNDBmYTM0NGIwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyNGJlZTU0NTdhNDYxZjBkODA3Mzg4MzAyZGQyZDIwMzhiNTM3ZTliOTk1MDdhOTc2ZmMyZDM2ZDQ4MWFkNzIxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/user-offer-filters.ts#L3-L54",
+          "version": "repo-lines-v1:sha256:bbf0fdf1457aff1874b90ac3f4353fe3918c847f87197129e6da8d958804dcc8:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzZDc0YmMxM2Y1NDVlYTM0ODNiYmE2YmIxM2IyZjIwMDJhODU3YTBiNzE3ZWJkNGQxMWE5MDczODhhODAyMjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE1YjhlMGFiNzVlOWNkZjIzODg3ZDEwM2ZmNTlhNWM2MzgwNTY0OTU1NWI2ZmI5YWQ4ZDdmNGY3ZTMwYzA2OGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBiZmYxZTcyZmJiM2FhOTRkMmQxNDhlMGQ5YjVjNTM0OTlmYWEyYjM2YjViMjU4NmY0NTQ1MDRiOTU1ZTc1MmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyMWZjYTcyYThlYTE4ZjdlNWY2MTdmYTAwYjg4MjRjYzQ2ZWMwMGNlY2QzYWZjZDUzMjhkZGIyZTcyN2E4MjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_81d0ecec73314c5880237e5398f9e095",
+      "statement": "The builder contract requires that documented stages in references/flows.md match the states in code. State is the pure observation layer that remains usable after failed domain assertions. Selector/stage alignment is an invariant to preserve: if a POM's selector or state-detection pattern changes, the corresponding flow documentation, action next pointers, and StateId values must be updated in the same change.",
+      "evidence": [
+        {
+          "resource": "repo://TODOs.md#L5-L5",
+          "version": "repo-lines-v1:sha256:523b26733dd7ca501d4f2ccd3fd1903dd200b458916e35e0ee0a3a0514051374:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTIzYjI2NzMzZGQ3Y2E1MDFkNGYyY2NkM2ZkMTkwM2RkMjAwYjQ1ODkxNmUzNWUwZWUwYTNhMDUxNDA1MTM3NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTIzYjI2NzMzZGQ3Y2E1MDFkNGYyY2NkM2ZkMTkwM2RkMjAwYjQ1ODkxNmUzNWUwZWUwYTNhMDUxNDA1MTM3NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDU2YzIwOWZkMjRjY2JlOGYyNjZlMjRjODBhZDgwYjQ4YWMzMzBhODVlZmMzZWJiNTA5M2NkMWQ1ZjFhMTFlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODBkZDc5MjY2MGJmMzhkMzdmYzIxNDhkNmY0YTk2NWUyZWMwYzhiMjAwZmFmNzZiNWNjZTNmYmRmOGNkMGE4NSJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/references/flows.md#L3-L3",
+          "version": "repo-lines-v1:sha256:67c08fe3d6833f2f01e15b7ffa6a1e6725928062cc5eba8e50697ebf1690a394:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjdjMDhmZTNkNjgzM2YyZjAxZTE1YjdmZmE2YTFlNjcyNTkyODA2MmNjNWViYThlNTA2OTdlYmYxNjkwYTM5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjdjMDhmZTNkNjgzM2YyZjAxZTE1YjdmZmE2YTFlNjcyNTkyODA2MmNjNWViYThlNTA2OTdlYmYxNjkwYTM5NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDM1N2YxNWJiZWQwY2E5ODZmMjdiYWY0MjQ5OTBmMGUzNjhkYjQ2ZDgxMjAyZTY4NTdlMGQwZTdlMzM0ZjAzNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/pom-and-selectors.md#L22-L22",
+          "version": "repo-lines-v1:sha256:e0384401a98e31130b07e0fbbfd2829a7349064d712e86fe14f085914bbe5bba:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTAzODQ0MDFhOThlMzExMzBiMDdlMGZiYmZkMjgyOWE3MzQ5MDY0ZDcxMmU4NmZlMTRmMDg1OTE0YmJlNWJiYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTAzODQ0MDFhOThlMzExMzBiMDdlMGZiYmZkMjgyOWE3MzQ5MDY0ZDcxMmU4NmZlMTRmMDg1OTE0YmJlNWJiYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk4ZjU2OTk1NGZlNzc1YmU4MGFkYTljNDM5MThiNzQ2ZDVkZjE0MTA2YjI4MTNlMTMwZDVkODVlNzllYTU4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjE2ZTgyZDU3YzcyMGZiZmFhOTc3M2ZlZjBkNDI4NjdjZTQ3ZjgwZDNhZTMwY2RlYTUxZTg4MjBkOWZmYzllMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1144284a2b42425fb6f9ab5d3705dde0",
+      "statement": "Navigation actions carry a next array that tells the runtime which actions are valid from the resulting state. The state graph is the union of all POM transitions and action next pointers. For example: nav.home to next info and nav.search, nav.search to next info and nav.open, nav.open to next info, nav.versions, nav.filter, user.offers, and nav.versions to next info and nav.artwork.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/src/actions/nav-home.action.ts#L34-L34",
+          "version": "repo-lines-v1:sha256:e851e15d4f98eb8b55d3814741f658d60c1727f3952931faeca44d106f1b4f56:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTg1MWUxNWQ0Zjk4ZWI4YjU1ZDM4MTQ3NDFmNjU4ZDYwYzE3MjdmMzk1MjkzMWZhZWNhNDRkMTA2ZjFiNGY1NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTg1MWUxNWQ0Zjk4ZWI4YjU1ZDM4MTQ3NDFmNjU4ZDYwYzE3MjdmMzk1MjkzMWZhZWNhNDRkMTA2ZjFiNGY1NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDIzMWI2MzQ5MGM1OGE4OWM0Yjk4Zjc3MjMwZTNmNTkyODUzZjc0NTY3NGQ5ZjY1NjNjZTNkNTU4ZGM3YzBlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/actions/nav-open.action.ts#L40-L40",
+          "version": "repo-lines-v1:sha256:39430150c7a47828337ff3281227ae53c56e8e33652cd783d0cf75fa12eccff0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzk0MzAxNTBjN2E0NzgyODMzN2ZmMzI4MTIyN2FlNTNjNTZlOGUzMzY1MmNkNzgzZDBjZjc1ZmExMmVjY2ZmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzk0MzAxNTBjN2E0NzgyODMzN2ZmMzI4MTIyN2FlNTNjNTZlOGUzMzY1MmNkNzgzZDBjZjc1ZmExMmVjY2ZmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTQyOTkzYWI4ODUxNGY0NDE0YWMyM2YzNzgzNzY0OGE5YWIyYzEzNTUxY2I1MWQ5ZjgzOWVlMDQ0OWY0MDdiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/actions/nav-search.action.ts#L34-L34",
+          "version": "repo-lines-v1:sha256:1bd928973b9cd15da6501873c1bc46ee73f3e524947e4f786a712e1379819245:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWJkOTI4OTczYjljZDE1ZGE2NTAxODczYzFiYzQ2ZWU3M2YzZTUyNDk0N2U0Zjc4NmE3MTJlMTM3OTgxOTI0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWJkOTI4OTczYjljZDE1ZGE2NTAxODczYzFiYzQ2ZWU3M2YzZTUyNDk0N2U0Zjc4NmE3MTJlMTM3OTgxOTI0NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTQyOTkzYWI4ODUxNGY0NDE0YWMyM2YzNzgzNzY0OGE5YWIyYzEzNTUxY2I1MWQ5ZjgzOWVlMDQ0OWY0MDdiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/actions/nav-versions.action.ts#L37-L37",
+          "version": "repo-lines-v1:sha256:26793c785cb838ad12e2bbf286513c34ae33837bc7d2771d1c4e910ce72fa8d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjY3OTNjNzg1Y2I4MzhhZDEyZTJiYmYyODY1MTNjMzRhZTMzODM3YmM3ZDI3NzFkMWM0ZTkxMGNlNzJmYThkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjY3OTNjNzg1Y2I4MzhhZDEyZTJiYmYyODY1MTNjMzRhZTMzODM3YmM3ZDI3NzFkMWM0ZTkxMGNlNzJmYThkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTQyOTkzYWI4ODUxNGY0NDE0YWMyM2YzNzgzNzY0OGE5YWIyYzEzNTUxY2I1MWQ5ZjgzOWVlMDQ0OWY0MDdiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3ff214f1310048b8a404a3931d975dd3",
+      "statement": "The SearchPage POM lives on a game page (config.searchEntry, e.g. /en/Magic) that still carries the search form after the 2026 'Search 2.0' redesign removed it from the homepage. search() fills #ProductSearchInput and submits via native form.requestSubmit() (the site's autocomplete JS intercepts Playwright's click), then waits for the results URL and returns a new SearchResultsPage.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/site.config.ts#L9-L9",
+          "version": "repo-lines-v1:sha256:87bb5c0cbeb1f5a03d7d78339617f38eb0f9c95273ca8cef01b1e2d8d9344147:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODdiYjVjMGNiZWIxZjVhMDNkN2Q3ODMzOTYxN2YzOGViMGY5Yzk1MjczY2E4Y2VmMDFiMWUyZDhkOTM0NDE0NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODdiYjVjMGNiZWIxZjVhMDNkN2Q3ODMzOTYxN2YzOGViMGY5Yzk1MjczY2E4Y2VmMDFiMWUyZDhkOTM0NDE0NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTI0MjcyZGQ3MmU0Mjc1YmRmNTE3MTE0ZmEyNDUzYjA2MWE3NWUyZjFlNTlhM2I2YzZiYmJiMDFlZDg1ODEzNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWYxNGYxMmZmZmNlMzI1NTNmYTgzMjIyNTAyMTdlZWM1OWNiMzU2MjU3MDFlZmRlZmM4MzMwMmJhMWZmODBhNyJ9"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/src/pages/SearchPage.ts#L20-L43",
+          "version": "repo-lines-v1:sha256:a6f317f5ab0e618cb2241098485f54f26ca402c0d503e82a1a7da769e66d5582:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5YjA1ODFkYzQyM2JhNDUzZjU0MDg4MTRkZjI5YzhmYzgwMTVlNzRmZTc4MmQ1NDkwOTVhM2E3MWNkZDIyNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkZDI3ZjEwZTIwZTI0M2FmMDdjMjA2YmFiMzIyZmMxYmMyN2Q2ZDI0NjBiNTA0MTg2NzkyZDc1NDUyNmIyZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5NzZkOWEzNGIxNmU1NWFjOTQ5NTdiNzNjNTFhM2U5MTM4ODUwN2FiZjllZTkxYzAxMDZhM2NiNGQyMWRmNDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYzVjOTBmNmE0MzQzMGQzYmZlZThhNjJhODU5YzQzNDMxMjM2YTM0M2RjMjhiZDkxYzFhNTA3ZGEwMzNkYmQifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-06T13:03:24.416Z"
+  }
+}

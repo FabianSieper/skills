@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "pages": {
+    "/openwiki/architecture/overview.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:e5691d381d132a8ed642d0a90257d2906041d4846d03117cd478646542e2215e",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/concepts/pom-and-state.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:a773354453ba4dbd2443b36e9da0b612e15571cb5ea95e981fa20b9a31c8b171",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/concepts/site-runtime.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:5a7af1aaad8c7c62d94a257114b00f7957951511f66d0209f6d1ff235545e18c",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/concepts/skill-model.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:7f0de0f03e91d55926446916c4326cc92c5d9b40eee809a4739c7fb7e13c8d3e",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/integrations/playwright-cli.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:0ec0ae3454429c380374f5fe93cc06d1ec98e7b45570216b9be7693f9adbcb5d",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/operations/setup-and-ci.md": {
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6",
+      "pageVersion": "sha256:989ad18cf329aba720bbd50550f0b96af759366d541502408776071fdba5a848",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b"
+    },
+    "/openwiki/testing/verification.md": {
+      "pageVersion": "sha256:b012c1525fc3371615a3d0858a7cfeb14739f73ebb188d8147d71198f36cde9c",
+      "completedBy": "openwiki/0.5.0",
+      "completedRunId": "44624def-cd73-443d-add1-6bfac785561b",
+      "gitHead": "269d3bb6d4f57afc9059dc5b88567713199d9303",
+      "sourceFingerprint": "sha256:a490fb8e3d6193f1fcb5f627ba0f5b5f24c0385fe35a3a564801d27465ca42c6"
+    }
+  }
+}

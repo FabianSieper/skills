@@ -8,6 +8,9 @@ export const config = {
   // This is the entry page every flow (search/price/artworks) starts from.
   searchEntry: '/en/Magic',
   homeEntry: '/en',
+  // Authenticated user stock. This is the destination behind
+  // Selling → My Offers → Singles.
+  ownOffersEntry: '/en/Magic/Stock/Offers/Singles',
   allowedOrigins: ['https://www.cardmarket.com'],
   requiresLogin: false,
   locale: 'en-GB',

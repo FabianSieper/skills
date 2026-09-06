@@ -6,6 +6,8 @@ description: Guarded Cardmarket state-machine automation (login state, search, d
 # Cardmarket Automation
 
 > **CONTRACT:** Attach to existing Chrome (`playwright-cli attach --extension=chrome --session=cardmarket-automation`). **NEVER** open/replace/close the browser. Missing browser = `BROWSER_REQUIRED` (hard stop). Writes require `plan`, exact user review, and `execute` approval; never modify an offer without an explicit instruction.
+>
+> **ARTWORK RULE:** When checking prices, you must **always navigate to the detail page of a specific artwork** (via `nav.versions` → `nav.artwork` → `detail`). Different artwork variants of the same card name can have drastically different prices. Never report a price based only on the search results page — the "From X €" shown there can be for a completely different artwork. Always confirm the exact artwork image on the detail page before reading or quoting a price.
 
 ## States
 
@@ -13,12 +15,13 @@ description: Guarded Cardmarket state-machine automation (login state, search, d
 |---|---|---|
 | `start` | site/game/search entry | begin a new task, reach the login prompt |
 | `results` | search result tiles | identify a card, open one result |
-| `detail` | one card page | read top block, sellers, own offers, current filter, apply filter, open versions, update one own offer |
+| `detail` | one card page | read top block and other sellers using the default or requested filter; open versions or own offers |
 | `versions` | artwork/version list | read versions, open one artwork |
+| `own-offers` | Selling → My Offers → Singles | filter and read the logged-in user's stock; open one listing's card detail |
 
 The `info` command detects the current state and returns `{ state, ..., auth }`.
 
-All states are reachable without login. `auth.loggedIn` is `false` when the page shows a username/password login form at the top.
+`start`, `results`, `detail`, and `versions` are public. `own-offers` requires a logged-in session. `auth.loggedIn` is `false` when the page shows a username/password login form at the top.
 
 ## Transitions
 
@@ -30,6 +33,9 @@ All states are reachable without login. `auth.loggedIn` is `false` when the page
 | `detail` | `nav.versions` | – | `versions` |
 | `versions` | `nav.artwork` | `index` | `detail` |
 | `detail` | `nav.filter` | `condition`, `language`, `location`, `sellerType`, `foil`, `signed`, `altered` | `detail` |
+| any, logged in | `nav.own-offers` | – | `own-offers` |
+| `own-offers` | `nav.own-offers.filter` | `cardName` and any visible stock filter | `own-offers` |
+| `own-offers` | `nav.own-offers.open` | `index` | `detail` |
 
 Nav commands return status only: `{ status, state }`.
 
@@ -44,8 +50,20 @@ Run `info` to read the current state.
 | `limit` | 30 | 1–150 | `results`, `versions` |
 | `sellers` | 50 | 0–500 | `detail` |
 | `minQty` | 0 | 0–1000 | `versions` seller-quantity check |
+| `all` | `false` | boolean | `own-offers`; when `true`, follows each bottom next-page control to the last page |
+| `condition`, `language`, `location`, `sellerType`, `foil`, `signed`, `altered` | seller defaults | valid seller filters | `detail`; applied before other sellers are read |
 
 `info` output is state-specific and includes `auth: { loggedIn }`. See `references/actions.md`.
+
+On a detail page, `info` always applies Cardmarket's canonical seller default (`excellent`, `english`, `germany`, all extras) unless its seller-filter parameters are supplied. Pass the requested filter values to `info` whenever comparing an own offer against other sellers.
+
+## Own Offers Listing
+
+Use `nav.own-offers` for Selling → My Offers → Singles. Apply `nav.own-offers.filter` with `{ "cardName": "Forest" }` to search your stock by card name; its other parameters correspond to the editable left-side filters and use their visible labels where relevant. `info` returns rows and the currently active stock filter.
+
+For a request to list all own offers, call `info` with `{ "all": true }`. It follows every bottom next-page button, verifies the stock filter has not been lost, and reports `complete: true` only after the last page. It intentionally leaves the browser on that final page.
+
+To compare an own listing's price, filter/read the listing, run `nav.own-offers.open` with its current-page index, then run `info` with the default or requested seller filter. The opened detail page reports the filter that was actually applied and the other seller rows; use `nav.versions` there when the card's other print variants are relevant.
 
 ## User Offers
 
@@ -69,6 +87,8 @@ Supported changes: `price`, `quantity`, `condition`, `language`, `foil`, `signed
    - in results? `info`, then `nav.open`
    - in detail? `info`, `nav.filter`, or `nav.versions`
    - in versions? `info`, then `nav.artwork`
+   - need own stock? `nav.own-offers`, then `nav.own-offers.filter` and `info`
+   - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
    - `auth.loggedIn === false` and a logged-in session is needed? `nav.home`, then ask the user to enter username/password in the attached browser
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 

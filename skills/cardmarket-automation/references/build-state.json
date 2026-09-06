@@ -1,5 +1,5 @@
 {
-  "status": "live_verified",
+  "status": "live_verified_except_own_offers_listing",
   "site": "cardmarket-automation",
   "url": "https://www.cardmarket.com",
   "searchEntry": "/en/Magic",
@@ -14,9 +14,9 @@
     "types": true,
     "parse": true,
     "sitePage": true,
-    "pages": ["SearchPage", "SearchResultsPage", "CardDetailPage", "CardVersionsPage"],
-    "actions": ["cards.search", "cards.price", "cards.artworks"],
-    "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts", "tests/seller-filters.test.ts"],
+    "pages": ["SearchPage", "SearchResultsPage", "CardDetailPage", "CardVersionsPage", "OwnOffersPage"],
+    "actions": ["cards.search", "cards.price", "cards.artworks", "nav.own-offers", "nav.own-offers.filter", "nav.own-offers.open"],
+    "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts", "tests/seller-filters.test.ts", "tests/state.test.ts"],
     "docs": ["references/actions.md", "references/flows.md", "references/selectors.md", "references/verification.md", "SKILL.md", "examples"]
   },
   "verified": {
@@ -34,5 +34,12 @@
     "esbuild": "0.25.9 (postinstall-Skript-Blockade bekannt, funktionsfähig)",
     "extensionAttach": "attach --extension=chrome verbindet mit dem Relay der Chrome-Extension; der Nutzer muss im Browser 'Allow and select' freigeben; ohne Freigabe haengt der CLI-Prozess (keine Fallback-Browser-Verwendung)",
     "openForbidden": "`open` startet einen verwalteten Headless-Browser (Temp-Profil, --disable-extensions) und wird von Cloudflare geblockt -> im Extension-Modell strikt verboten; der Skill-Adapter (cli-browser.ts) nutzt nur attach + run-code"
+  },
+  "ownOffersListing": {
+    "mapped": true,
+    "implemented": true,
+    "fixture": "not-run",
+    "live": "not-run",
+    "remainingRisk": "No UI fixture or attached authenticated Chrome session was available. Validate the current left-side filter control names, a filtered multi-page loop, and a card-name link in the user's own stock."
   }
 }

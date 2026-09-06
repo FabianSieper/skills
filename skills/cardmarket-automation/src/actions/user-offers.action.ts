@@ -28,7 +28,7 @@ function isUserOffer(value: unknown): boolean {
 
 function validateOutput(raw: unknown): UserOffersOutput {
   if (!isObject(raw)) throw new AutomationError('POSTCONDITION_FAILED');
-  const states: StateId[] = ['start', 'results', 'detail', 'versions'];
+  const states: StateId[] = ['start', 'results', 'detail', 'versions', 'own-offers'];
   if (!states.includes(raw.state as StateId) || typeof raw.card !== 'string' || typeof raw.set !== 'string' ||
       typeof raw.url !== 'string' || typeof raw.found !== 'boolean' || typeof raw.count !== 'number' ||
       !Array.isArray(raw.offers) || raw.count !== raw.offers.length || !raw.offers.every(isUserOffer) || !isAuth(raw.auth))

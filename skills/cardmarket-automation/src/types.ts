@@ -51,6 +51,51 @@ export type UserOffersOutput = {
 
 export type UserOfferChanges = Record<string, string | number | boolean>;
 
+/** One row on Selling → My Offers → Singles (`#UserOffersTable`). */
+export type OwnOffer = {
+  articleId: number;
+  card: string;
+  cardUrl: string;
+  condition: string;
+  language: string;
+  price: string;
+  quantity: number;
+};
+
+/** The visible values currently selected in the left-hand stock filter. */
+export type OwnOfferFilterState = {
+  cardName: string;
+  expansion: string;
+  rarity: string;
+  condition: string;
+  language: string;
+  comments: string;
+  minPrice: string;
+  maxPrice: string;
+  minQuantity: string;
+  foil: string;
+  signed: string;
+  altered: string;
+  sort: string;
+};
+
+/** A partial request to change one or more left-hand stock filters. */
+export type OwnOfferFilter = Partial<{
+  cardName: string;
+  expansion: string;
+  rarity: string;
+  condition: string;
+  language: string;
+  comments: string;
+  minPrice: number;
+  maxPrice: number;
+  minQuantity: number;
+  foil: 'any' | 'yes' | 'no';
+  signed: 'any' | 'yes' | 'no';
+  altered: 'any' | 'yes' | 'no';
+  sort: string;
+}>;
+
 export type UserOfferUpdateOutput = {
   state: 'detail';
   articleId: number;
@@ -150,7 +195,7 @@ export type ArtworksOutput = {
   artworks: (Artwork | ArtworkCheck)[];
 };
 
-export type StateId = 'start' | 'results' | 'detail' | 'versions';
+export type StateId = 'start' | 'results' | 'detail' | 'versions' | 'own-offers';
 export type NavStatus = 'ok' | 'not_found' | 'not_available' | 'wrong_state';
 export type NavOutput = { status: NavStatus; state: StateId };
 export type AuthInfo = { loggedIn: boolean };
@@ -158,4 +203,14 @@ export type StartInfo = { state: 'start'; ready: boolean; auth: AuthInfo };
 export type ResultsInfo = { state: 'results'; query: string; count: number; cards: SearchCard[]; auth: AuthInfo };
 export type DetailInfo = { state: 'detail'; card: string; url: string; filter: ResolvedSellerFilter; info: CardInfo; sellerCount: number; sellers: SellerOffer[]; auth: AuthInfo };
 export type VersionsInfo = { state: 'versions'; card: string; versionsUrl: string; total: number; shown: number; minQuantity: number; artworks: (Artwork | ArtworkCheck)[]; auth: AuthInfo };
-export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo;
+export type OwnOffersInfo = {
+  state: 'own-offers';
+  url: string;
+  filter: OwnOfferFilterState;
+  count: number;
+  offers: OwnOffer[];
+  pagesVisited: number;
+  complete: boolean;
+  auth: AuthInfo;
+};
+export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo | OwnOffersInfo;

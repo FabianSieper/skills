@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:7f0de0f03e91d55926446916c4326cc92c5d9b40eee809a4739c7fb7e13c8d3e",
+  "claims": [
+    {
+      "id": "claim_fcfdba2c43394dffbb48773814a9ca4d",
+      "statement": "Every skill in the repo is governed by one shared model that answers three questions: how much must be read to use it (progressive disclosure), what an agent must do to run it (portability constraint), and what a skill may/may not require of the host harness (no-extra-tools invariant). The references/ directory is the authoritative detail layer beneath SKILL.md.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/SKILL.md",
+          "version": "repo-file-v1:sha256:90f6bfcee21012450a3ac636e48e8e2537ff11b0bc0b8409abe0fe0de7044d05"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/generated-skill-contract.md",
+          "version": "repo-file-v1:sha256:70a9fc353821ff3ff1645bd898aab91a49276764834a7517b35334c7ce44b604"
+        }
+      ]
+    },
+    {
+      "id": "claim_9e1a73d88c1a486198a25bd0e0c1d1b6",
+      "statement": "A skill is consumed in three unequal layers: (1) YAML frontmatter name+description as the registration/discovery layer, (2) the full SKILL.md body as a short control plane, (3) the references/ directory as the authoritative detail layer. The control plane must list/describe progressively, observe when needed, follow next pointers, require the already-open browser, and obtain exact plan approval for writes — and must NOT enumerate the whole registry or teach Playwright, bundling, or selectors.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/SKILL.template.md",
+          "version": "repo-file-v1:sha256:5d277cefaa1a8743bc4735027373cc444308e605850475f37a6c9629ffd34c05"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/generated-skill-contract.md",
+          "version": "repo-file-v1:sha256:70a9fc353821ff3ff1645bd898aab91a49276764834a7517b35334c7ce44b604"
+        }
+      ]
+    },
+    {
+      "id": "claim_ae0a4a42a61c4694b1d3538bbe4b7ad3",
+      "statement": "The portability constraint is the single most important invariant: an agent only needs to read SKILL.md, use local files, and start a local process. A generated skill can be copied to any skill location understood by an agent; local process execution is sufficient. The runtime dependency floor is Node >=22.16 plus the pinned playwright-cli on PATH; no npm install is needed for normal use.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/SKILL.md",
+          "version": "repo-file-v1:sha256:90f6bfcee21012450a3ac636e48e8e2537ff11b0bc0b8409abe0fe0de7044d05"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/SKILL.template.md",
+          "version": "repo-file-v1:sha256:5d277cefaa1a8743bc4735027373cc444308e605850475f37a6c9629ffd34c05"
+        }
+      ]
+    },
+    {
+      "id": "claim_0746279d45464d018e6c76b44184ecc4",
+      "statement": "The no-extra-tools invariant constrains what may be added to a skill: a generated skill requires no harness-specific tools, MCP, plugins, SDKs, or special agent permissions. Specifically, no agents/openai.yaml, custom tool definitions, MCP configs, harness SDKs, or harness permissions are necessary. Any addition that would make a skill depend on a particular agent's tool set is disallowed.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/SKILL.md",
+          "version": "repo-file-v1:sha256:90f6bfcee21012450a3ac636e48e8e2537ff11b0bc0b8409abe0fe0de7044d05"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/generated-skill-contract.md",
+          "version": "repo-file-v1:sha256:70a9fc353821ff3ff1645bd898aab91a49276764834a7517b35334c7ce44b604"
+        }
+      ]
+    },
+    {
+      "id": "claim_bda903446ff24325a0b50d228ac1d7a7",
+      "statement": "The SKILL.md frontmatter contract is defined by the builder's template SKILL.template.md: it carries exactly two fields — name (the skill's stable slug, e.g. cardmarket-automation) and description (a one-line summary, with a BUILD_REQUIRED marker when unconfigured). No other identity metadata is required; all behavioral content lives in the body and references.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/assets/site-template/SKILL.template.md",
+          "version": "repo-file-v1:sha256:5d277cefaa1a8743bc4735027373cc444308e605850475f37a6c9629ffd34c05"
+        }
+      ]
+    },
+    {
+      "id": "claim_8cb2f081678d40a79a90e17a81a94308",
+      "statement": "The required reference-directory layout is: SKILL.md, scripts/site-runtime.mjs (compiled Node entry point), runtime/manifest.json, runtime/actions/*.js (precompiled domain + observation bundles), src/ (pages/, components/, actions/, runtime/, build.ts, validate-build.ts), site.config.ts, package.json, package-lock.json, tsconfig.json, and references/ (actions.md, flows.md, selectors.md, verification.md, build-state.json). The runtime is precompiled so normal use needs neither node_modules nor src/; bundles are generated artifacts and must never be hand-edited.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/references/generated-skill-contract.md",
+          "version": "repo-file-v1:sha256:70a9fc353821ff3ff1645bd898aab91a49276764834a7517b35334c7ce44b604"
+        }
+      ]
+    },
+    {
+      "id": "claim_3b02932c48604f508834f4f2d0b9346d",
+      "statement": "The cardmarket-automation SKILL.md declares name: cardmarket-automation and a description summarizing guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates) that attaches to an existing Chrome session. Its references/ directory contains actions.md (full parameter and output schemas), flows.md, selectors.md, verification.md, and build-state.json.",
+      "evidence": [
+        {
+          "resource": "repo://skills/cardmarket-automation/SKILL.md",
+          "version": "repo-file-v1:sha256:ae0e450e5f4101cce8287afa79dd74d05cb992ad8319a113c0e17f909f1c9f9e"
+        },
+        {
+          "resource": "repo://skills/cardmarket-automation/references/actions.md",
+          "version": "repo-file-v1:sha256:59490aec182dd84f4c16df554bea857f774625f069c4fc546cab50592bf6868a"
+        }
+      ]
+    },
+    {
+      "id": "claim_6f3eb55bbcf84ed2b13587b5c15ecdd5",
+      "statement": "The distribution rules: build with npm install/ci, npm run build, npm run verify; ship the compiled scripts/ and runtime/ so list/describe and normal actions run without node_modules or src/; keep src/ in the full handoff for repair. The scaffold starts intentionally unconfigured; --demo overlays a deterministic local inventory fixture with two example actions and a static localhost server and is a test skill, not verified automation for a public website. Never distribute .local, node_modules, browser profiles, cookies, credentials, or traces.",
+      "evidence": [
+        {
+          "resource": "repo://skills/website-automation-builder/SKILL.md",
+          "version": "repo-file-v1:sha256:90f6bfcee21012450a3ac636e48e8e2537ff11b0bc0b8409abe0fe0de7044d05"
+        },
+        {
+          "resource": "repo://skills/website-automation-builder/references/generated-skill-contract.md",
+          "version": "repo-file-v1:sha256:70a9fc353821ff3ff1645bd898aab91a49276764834a7517b35334c7ce44b604"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-06T13:03:24.416Z"
+  }
+}

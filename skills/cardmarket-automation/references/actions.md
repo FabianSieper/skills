@@ -12,7 +12,10 @@ Actions are read-only except `user.offer.update`, which is a guarded write actio
 | `nav.versions` | read | `detail` → `versions` | – | `{ status, state }` |
 | `nav.artwork` | read | `versions` → `detail` | `index` (int, req) | `{ status, state }` |
 | `nav.filter` | read | `detail` → `detail` | filter fields (all optional) | `{ status, state }` |
-| `info` | read | auto-detect | `limit`, `sellers`, `minQty` | state-specific payload |
+| `nav.own-offers` | read | logged-in any → `own-offers` | – | `{ status, state }` |
+| `nav.own-offers.filter` | read | `own-offers` → `own-offers` | stock filter fields (all optional) | `{ status, state }` |
+| `nav.own-offers.open` | read | `own-offers` → `detail` | `index` (int, req) | `{ status, state }` |
+| `info` | read | auto-detect | `limit`, `sellers`, `minQty`, `all`, seller-filter fields | state-specific payload |
 | `user.offers` | read | `detail` | `limit` | own-offer payload |
 | `user.offer.update` | write | `detail` | `articleId` + changes | update payload |
 
@@ -25,7 +28,7 @@ Actions are read-only except `user.offer.update`, which is a guarded write actio
 - `not_available` – expected page affordance is missing
 - `wrong_state` – command precondition is not met
 
-`state` values: `start`, `results`, `detail`, `versions`.
+`state` values: `start`, `results`, `detail`, `versions`, `own-offers`.
 
 ## Parameters
 
@@ -44,6 +47,27 @@ Actions are read-only except `user.offer.update`, which is a guarded write actio
 
 ### `nav.artwork`
 - `index`: artwork/version tile position. Required, 0–1000.
+
+### `nav.own-offers`
+- Requires a logged-in Cardmarket session.
+- Opens `/en/Magic/Stock/Offers/Singles`, the destination of Selling → My Offers → Singles.
+
+### `nav.own-offers.filter`
+Every field is optional; omitted fields retain the page's current value. Use `cardName` for card-name searches.
+
+| field | type / values | meaning |
+|---|---|---|
+| `cardName`, `comments` | string | text fields |
+| `expansion`, `rarity`, `condition`, `language`, `sort` | visible option label | select one current UI option exactly |
+| `minPrice`, `maxPrice` | number, 0–1,000,000 | EUR price bounds |
+| `minQuantity` | integer, 0–1,000,000 | minimum availability |
+| `foil`, `signed`, `altered` | `any`, `yes`, `no` | stock variant filters |
+
+The action submits the stock filter only if its values changed.
+
+### `nav.own-offers.open`
+- `index`: offer-row position on the current stock page. Required, 0–100.
+- Opens the listing's card-name link, then enters `detail`.
 
 ### `nav.filter`
 All fields are optional and default to the current canonical filter:
@@ -66,6 +90,13 @@ All fields are optional and default to the current canonical filter:
 | `limit` | 30 | 1–150 |
 | `sellers` | 50 | 0–500 |
 | `minQty` | 0 | 0–1000 |
+| `all` | `false` | boolean; on `own-offers`, follow all bottom next-page controls until the last page |
+| `condition` | `excellent` | same values as `nav.filter`; applied before detail seller rows are read |
+| `language` | `english` | same values as `nav.filter`; applied before detail seller rows are read |
+| `location` | `germany` | same values as `nav.filter`; applied before detail seller rows are read |
+| `sellerType`, `foil`, `signed`, `altered` | seller defaults | same values as `nav.filter`; applied before detail seller rows are read |
+
+When `info` reads `detail`, it verifies the active seller filter equals these defaults or the supplied override. This prevents a comparison from accidentally using stale page filters.
 
 ### `user.offers`
 | field | default | range |
@@ -163,6 +194,46 @@ At least one change field is required; `prepare` fails with `INVALID_INPUT` when
 }
 ```
 
+### `own-offers`
+```json
+{
+  "state": "own-offers",
+  "url": "https://www.cardmarket.com/en/Magic/Stock/Offers/Singles",
+  "filter": {
+    "cardName": "Forest",
+    "expansion": "All",
+    "rarity": "All",
+    "condition": "Excellent",
+    "language": "English",
+    "comments": "",
+    "minPrice": "",
+    "maxPrice": "",
+    "minQuantity": "",
+    "foil": "Any",
+    "signed": "Any",
+    "altered": "Any",
+    "sort": "Name"
+  },
+  "count": 1,
+  "offers": [
+    {
+      "articleId": 2108603357,
+      "card": "Forest",
+      "cardUrl": "https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest",
+      "condition": "Excellent",
+      "language": "English",
+      "price": "0,25 €",
+      "quantity": 1
+    }
+  ],
+  "pagesVisited": 1,
+  "complete": true,
+  "auth": { "loggedIn": true }
+}
+```
+
+With `all: true`, `offers` contains deduplicated rows from every visited page and `complete` is true only after the final page. The browser is left on that page.
+
 When `minQty > 0`, each artwork additionally contains:
 - `maxSellerQuantity`
 - `sellersAtLeast`
@@ -236,6 +307,8 @@ When `minQty > 0`, each artwork additionally contains:
 - `examples/input-artworks.json` – `info` versions
 - `examples/input-user-offers.json` – `user.offers`
 - `examples/input-user-offer-update.json` – `user.offer.update` schema example
+- `examples/input-own-offers-filter.json` – filter own stock by card name
+- `examples/input-own-offers-all.json` – list all own stock pages
 - `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, `info`, and `user.offers`
 - Every CLI `run`/`plan` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
@@ -247,6 +320,9 @@ When `minQty > 0`, each artwork additionally contains:
 - `nav.versions.next`: `['info', 'nav.artwork']`
 - `nav.artwork.next`: `['info', 'nav.versions', 'nav.filter', 'user.offers']`
 - `nav.filter.next`: `['info', 'user.offers']`
-- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'user.offers']`
+- `nav.own-offers.next`: `['info', 'nav.own-offers.filter', 'nav.own-offers.open']`
+- `nav.own-offers.filter.next`: `['info', 'nav.own-offers.open']`
+- `nav.own-offers.open.next`: `['info', 'nav.filter', 'nav.versions', 'user.offers']`
+- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'user.offers']`
 - `user.offers.next`: `['info', 'user.offer.update']`
 - `user.offer.update.next`: `['info', 'user.offers']`

@@ -1,6 +1,6 @@
 # Cardmarket Skill – Verifikation & Status
 
-> **Status: `own-offers ready`** – State-Machine und Login-State live validiert (2026-09-06); neue Own-Offer-Reads und guardierte Offer-Updates browserlos sowie in echter User-Session live validiert.
+> **Status: detail-level own offers ready; stock-listing live verification pending** – State machine, login state, own offers on a card detail page, and guarded updates were validated on 2026-09-06. The new Selling → My Offers → Singles listing has browser-free contract coverage but needs one authenticated live run.
 
 ## Browserlos (erledigt)
 - Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/`, `examples/`.
@@ -116,6 +116,13 @@
 - **Known Gap:** `editAmount` bietet im getesteten Eintrag nur `1`; Mengen-Änderungen
   brauchen einen Eintrag mit mehreren verfügbaren `editAmount`-Optionen.
 
+## 2026-09-06: Own Offers Listing State
+- **Feature:** `own-offers` is the authenticated Selling → My Offers → Singles state (`/en/Magic/Stock/Offers/Singles`). `nav.own-offers` opens it, `nav.own-offers.filter` changes the left-side stock filters (especially `cardName`), and `nav.own-offers.open` follows one listing's card-name link to `detail`.
+- **Pagination:** `info { all: true }` follows each enabled bottom next control until there is no next page, deduplicates by article ID, leaves the browser on the final page, and rejects a filter that Cardmarket drops during pagination.
+- **Comparison guard:** `info` on a `detail` page now applies and verifies the canonical seller default or the caller's explicit seller-filter arguments before it returns other seller rows.
+- **Browser-free:** `npm run typecheck` ✔; 38 non-browser tests ✔, including action registration, input validation, output guards, CLI list/describe, and existing write-safety tests.
+- **Live:** not run — `npm run cli -- doctor` returned `BROWSER_REQUIRED`; no authenticated attached Chrome session was available. Verify navigation, all named filter controls, a multi-page filtered listing, and opening a row before marking this state live verified.
+
 ## Known Gaps
 - Neue State-Machine-Oberfläche live validiert (2026-09-06);
   `nav.versions` nutzt direkte Versions-URL-Navigation.
@@ -126,3 +133,4 @@
 - Login-Detection im Logged-Out- und Logged-In-Zustand live validiert.
 - Mengen-Update im Esix-Testfall nicht weiter prüfbar, weil `editAmount`
   nur die Option `1` liefert.
+- `own-offers` needs the authenticated live verification described above. The browserless filter fields cover the current Magic stock UI; unexpected per-game controls deliberately return `UI_DRIFT` instead of choosing a fallback.

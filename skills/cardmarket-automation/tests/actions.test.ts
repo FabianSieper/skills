@@ -83,7 +83,7 @@ const artwork = (over: Record<string, unknown> = {}) => ({
 test('registry has the state-machine and user-offer actions', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.search', 'nav.versions', 'user.offer.update', 'user.offers'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'nav.search', 'nav.versions', 'user.offer.update', 'user.offers'],
   );
   for (const a of actions) {
     if (a.kind === 'write') assert.ok('prepare' in a && 'execute' in a);
@@ -131,14 +131,48 @@ test('validateInput happy + sad for nav actions', () => {
   assert.equal(code(() => validateInput(filter.parameters, { condition: 'unknown' })), 'INVALID_INPUT');
   assert.equal(code(() => validateInput(filter.parameters, { location: 'unknown' })), 'INVALID_INPUT');
   assert.equal(code(() => validateInput(filter.parameters, { unknown: 1 })), 'INVALID_INPUT');
+
+  const ownOffers = byId('nav.own-offers');
+  assert.deepEqual(validateInput(ownOffers.parameters, {}), plain({}));
+  assert.equal(code(() => validateInput(ownOffers.parameters, { cardName: 'Forest' })), 'INVALID_INPUT');
+
+  const ownOffersFilter = byId('nav.own-offers.filter');
+  assert.deepEqual(validateInput(ownOffersFilter.parameters, { cardName: 'Forest', minPrice: 1, foil: 'yes' }), plain({ cardName: 'Forest', minPrice: 1, foil: 'yes' }));
+  assert.deepEqual(validateInput(ownOffersFilter.parameters, { cardName: '' }), plain({ cardName: '' }));
+  assert.equal(code(() => validateInput(ownOffersFilter.parameters, { foil: 'maybe' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(ownOffersFilter.parameters, { minQuantity: -1 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(ownOffersFilter.parameters, { unknown: 1 })), 'INVALID_INPUT');
+
+  const ownOffersOpen = byId('nav.own-offers.open');
+  assert.deepEqual(validateInput(ownOffersOpen.parameters, { index: 0 }), plain({ index: 0 }));
+  assert.equal(code(() => validateInput(ownOffersOpen.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(ownOffersOpen.parameters, { index: 101 })), 'INVALID_INPUT');
 });
 
 test('validateInput happy + sad for info', () => {
   const infoAction = byId('info');
-  assert.deepEqual(validateInput(infoAction.parameters, {}), plain({ limit: 30, sellers: 50, minQty: 0 }));
+  assert.deepEqual(validateInput(infoAction.parameters, {}), plain({
+    limit: 30,
+    sellers: 50,
+    minQty: 0,
+    all: false,
+    condition: 'excellent',
+    language: 'english',
+    location: 'germany',
+    sellerType: 'any',
+    foil: 'any',
+    signed: 'any',
+    altered: 'any',
+  }));
   assert.equal(code(() => validateInput(infoAction.parameters, { limit: 151 })), 'INVALID_INPUT');
   assert.equal(code(() => validateInput(infoAction.parameters, { sellers: 501 })), 'INVALID_INPUT');
   assert.equal(code(() => validateInput(infoAction.parameters, { minQty: 1001 })), 'INVALID_INPUT');
+  assert.deepEqual(validateInput(infoAction.parameters, { all: true, language: 'german' }), plain({
+    limit: 30, sellers: 50, minQty: 0, all: true, condition: 'excellent', language: 'german',
+    location: 'germany', sellerType: 'any', foil: 'any', signed: 'any', altered: 'any',
+  }));
+  assert.equal(code(() => validateInput(infoAction.parameters, { all: 'yes' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(infoAction.parameters, { language: 'klingon' })), 'INVALID_INPUT');
   assert.equal(code(() => validateInput(infoAction.parameters, { unknown: 1 })), 'INVALID_INPUT');
 });
 
@@ -153,6 +187,15 @@ test('validateOutput happy + sad for nav actions', () => {
     assert.doesNotThrow(() => a.validateOutput({ status: 'ok', state: 'detail' }));
     assert.equal(code(() => a.validateOutput({ status: 'ok', state: 'somewhere' })), 'POSTCONDITION_FAILED');
     assert.equal(code(() => a.validateOutput({ status: 'boom', state: 'detail' })), 'POSTCONDITION_FAILED');
+  }
+
+  const ownOffers = byId('nav.own-offers');
+  assert.doesNotThrow(() => ownOffers.validateOutput({ status: 'ok', state: 'own-offers' }));
+  assert.equal(code(() => ownOffers.validateOutput({ status: 'ok', state: 'detail' })), 'POSTCONDITION_FAILED');
+  for (const id of ['nav.own-offers.filter', 'nav.own-offers.open']) {
+    const action = byId(id);
+    assert.doesNotThrow(() => action.validateOutput({ status: 'wrong_state', state: 'versions' }));
+    assert.equal(code(() => action.validateOutput({ status: 'boom', state: 'own-offers' })), 'POSTCONDITION_FAILED');
   }
 });
 
@@ -204,6 +247,24 @@ test('validateOutput happy + sad for info', () => {
   };
   assert.doesNotThrow(() => infoAction.validateOutput(versionsMin));
   assert.equal(code(() => infoAction.validateOutput({ ...versionsMin, artworks: [artwork({ sellersAtLeast: 1, qualifies: true })] })), 'POSTCONDITION_FAILED');
+
+  const ownOffers = {
+    state: 'own-offers',
+    url: 'https://www.cardmarket.com/en/Magic/Stock/Offers/Singles',
+    filter: {
+      cardName: 'Forest', expansion: 'All', rarity: 'All', condition: 'Excellent', language: 'English',
+      comments: '', minPrice: '', maxPrice: '', minQuantity: '', foil: 'Any', signed: 'Any', altered: 'Any', sort: 'Name',
+    },
+    count: 1,
+    offers: [{ articleId: 1, card: 'Forest', cardUrl: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest', condition: 'Excellent', language: 'English', price: '1,23 €', quantity: 1 }],
+    pagesVisited: 2,
+    complete: true,
+    auth: auth({ loggedIn: true }),
+  };
+  assert.doesNotThrow(() => infoAction.validateOutput(ownOffers));
+  assert.equal(code(() => infoAction.validateOutput({ ...ownOffers, count: 2 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ ...ownOffers, filter: { ...ownOffers.filter, cardName: 1 } })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ ...ownOffers, pagesVisited: 0 })), 'POSTCONDITION_FAILED');
 
   assert.equal(code(() => infoAction.validateOutput({ state: 'nope' })), 'POSTCONDITION_FAILED');
 });

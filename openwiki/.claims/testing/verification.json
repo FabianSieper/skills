@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b012c1525fc3371615a3d0858a7cfeb14739f73ebb188d8147d71198f36cde9c",
+  "claims": [
+    {
+      "id": "claim_8a2efd2afd394ede8b34f028e46d23dd",
+      "statement": "The `task test` Taskfile task runs the two browser-free builder regression scripts in sequence — `test-scaffold.mjs` then `test-demo.mjs` — as the repository's automated verification entry point.",
+      "evidence": [
+        {
+          "resource": "repo://Taskfile.yml",
+          "version": "repo-file-v1:sha256:7dce52c12cc755a10aeed73fe8557cc35f63f751195e13e206e7611e43fdfbbf"
+        }
+      ]
+    },
+    {
+      "id": "claim_9bdb80c4ab164c518e8c885d9ec4a8cd",
+      "statement": "Each generated skill ships a `verify` script that chains the four local automated checks — `typecheck`, `build`, `test` (node --test over tests/*.test.ts), and `validate` (build validation) — all browser-free.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/package.json",
+          "version": "repo-file-v1:sha256:303a4864ee4cd16bd1e56fd2e5db08a1eaef49def1255b7a2e745143a47c13e8"
+        }
+      ]
+    },
+    {
+      "id": "claim_f44be1d9650943acae75df9824b6b188",
+      "statement": "GitHub Actions CI (.github/workflows/test.yml, on push and pull_request) is browser-free: it runs test-scaffold.mjs, scaffolds a throwaway skill, then runs format:check, typecheck, and the skill's test with no Playwright CLI install and no browser.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/test.yml",
+          "version": "repo-file-v1:sha256:d87a9c27803a57364b3bc5d5db6dacbb79909b20088671cab689be37ddb0374e"
+        }
+      ]
+    },
+    {
+      "id": "claim_9074e5e8aaf842db863d1937abba22e3",
+      "statement": "runtime.integration.test.ts proves the portable compiled Runtime through an executable playwright-cli protocol fixture, copying runtime/scripts/tests into a temp dir and asserting the copy has no src or node_modules, driving the real site-runtime.mjs CLI end-to-end over the pinned CLI call surface.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/tests/runtime.integration.test.ts",
+          "version": "repo-file-v1:sha256:00d1d574a3ac94d101e0f5b49d2893f0a62ffbdc04f382c913123ff653fea785"
+        }
+      ]
+    },
+    {
+      "id": "claim_360da71faad94e50b309b181d17d67df",
+      "statement": "fake-playwright-cli.mjs is a test-only executable protocol fixture that implements only the pinned CLI surface (--version, list, attach, run-code --raw), executes the real compiled POM wrapper against an in-memory DOM double, rejects any other command with 'Forbidden command', and is wired in only by the integration test's configuration.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/tests/fake-playwright-cli.mjs",
+          "version": "repo-file-v1:sha256:554ca7fada376245e0508d494bcc2b3d7ad90bb10b5990625cb7a0cc8da561c2"
+        }
+      ]
+    },
+    {
+      "id": "claim_ebd7a2ba7c11476981cc5f543ae386da",
+      "statement": "fake-process-list.mjs is a process-inventory double installed only on the integration test's private PATH (as ps); it prints the exact Chrome main binary path only when the scenario is not no-browser, so the runtime's browser-presence check distinguishes a running browser from none.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/tests/fake-process-list.mjs",
+          "version": "repo-file-v1:sha256:3cb405112c51c94ad50e59d56b9bbd34bd4559aff2ddf0a467e279ea6b61a43b"
+        }
+      ]
+    },
+    {
+      "id": "claim_ecc5493f675d45d3902c75daa2a582b7",
+      "statement": "fixture-server.mjs is a localhost HTTP server that serves the demo's inventory.html at / (404 elsewhere) and emits the bound port as JSON; it is the target for live-browser evidence and is asserted by the integration test to serve its HTML.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/scripts/fixture-server.mjs",
+          "version": "repo-file-v1:sha256:de185b155fc70815a4f59553ec8d982e7c0e89098f2dff580720dfcd83491a1c"
+        }
+      ]
+    },
+    {
+      "id": "claim_acae70969f494b69bb86ea4086d7a611",
+      "statement": "Live-browser verification is a separate manual step recorded in the generated skill's references/verification.md: it notes the checks passed on a real browser against the localhost fixture, that execute was intentionally not called so no real browser write occurred, and that this local fixture is not evidence for an external production website.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/references/verification.md",
+          "version": "repo-file-v1:sha256:c33c0c4f45c90a8e756d6b5c79a9e11e99ba399733e5fe0ce420542062ebe86a"
+        }
+      ]
+    },
+    {
+      "id": "claim_5fb322aa5cd74494bbc622bc85e95623",
+      "statement": "The browser-free suite pins load-bearing invariants a safe change must preserve: attach-only and attach-once (never launch/replace/close the browser), pinned Playwright CLI 0.1.19 (version mismatch is a protocol failure), pre-browser failure (invalid input, unknown action, raw mutation, mode escape fail before any browser/write), input/byte budgets failing closed, compact non-mutating observation, the write-safety lifecycle (hash-bound one-shot plans with PLAN_CHANGED/PLAN_EXPIRED/PLAN_USED/UNKNOWN_COMMIT never replayed), precompiled-artifact integrity (BUILD_REQUIRED before transport), and implementation-fingerprint invalidation on source or lockfile change.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/tests/fingerprint.test.ts",
+          "version": "repo-file-v1:sha256:4bb8f650f64948ca0db8169a7e2d2176d34900e8f9dbeac4aeb37d07562007fe"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/guards.test.ts",
+          "version": "repo-file-v1:sha256:c8544b4b3149116dc623a831f6c606b24f9f0782cb988389d3ca8fb86ca382b7"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/input.test.ts",
+          "version": "repo-file-v1:sha256:04fe9e7fb127557340a7315af1189561c5902e0c47c82b2b5dd81b072c3b4e20"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/runtime.integration.test.ts",
+          "version": "repo-file-v1:sha256:00d1d574a3ac94d101e0f5b49d2893f0a62ffbdc04f382c913123ff653fea785"
+        }
+      ]
+    },
+    {
+      "id": "claim_d528c1dd77884633a62d1eec8bf95684",
+      "statement": "The cardmarket-automation skill ships browser-free unit tests — actions, cli, engine, fingerprint, guards, input, parse, and seller-filters — where the runtime-derived tests (engine, fingerprint, guards, input, cli) guard the same shared site-template components as the generated demo, and the site-specific tests cover its POM actions, result parsing, and seller-offer filter logic.",
+      "evidence": [
+        {
+          "resource": "repo://artifacts/demo-automation/tests/engine.test.ts",
+          "version": "repo-file-v1:sha256:32755b6975874295c7c025305da45ca831f4a29c2e3f9871f79da5efd00edd4d"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/fingerprint.test.ts",
+          "version": "repo-file-v1:sha256:4bb8f650f64948ca0db8169a7e2d2176d34900e8f9dbeac4aeb37d07562007fe"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/guards.test.ts",
+          "version": "repo-file-v1:sha256:c8544b4b3149116dc623a831f6c606b24f9f0782cb988389d3ca8fb86ca382b7"
+        },
+        {
+          "resource": "repo://artifacts/demo-automation/tests/input.test.ts",
+          "version": "repo-file-v1:sha256:04fe9e7fb127557340a7315af1189561c5902e0c47c82b2b5dd81b072c3b4e20"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-06T13:03:24.416Z"
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:989ad18cf329aba720bbd50550f0b96af759366d541502408776071fdba5a848",
+  "claims": [
+    {
+      "id": "claim_8fbbe96b77ee466484c12eea88eb6af5",
+      "statement": "The /setup skill follows an audit-then-install contract: run a read-only audit first, install only the items the audit reports as missing or incompatible, in dependency order, then re-audit to confirm all required findings are ok, and finally report installed versions, blocked items, and whether tests ran.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L11-L68",
+          "version": "repo-lines-v1:sha256:95b0c921ebe004e51993a0f5ae2de9f8a33c74a926324b84e2a4bf97116da608:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyZjYyZGE3Y2JlNjQ2MGYwZDI2YmVjYmFmODJhZDVjODY2YzQzNTI3YjcwNDcyYmFiMzU0M2FlOGJmMGUwOTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk1ODFiZjE5MGQ3YzkyN2ZiOWVlNWNmNDNlNTgzYWYyMThiZGZiNzlmMzJmOWExNjEzOWE5ZTA0MWNmYzRhNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhZWJlMTgyYjEyZTdlZjhhNDk4MTg2NTUwNDZiNDg1ZGJlYTRmNmU3NTRlYWQ2NDA2MDgwYTZjOGE2Y2QyNzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjYTBjNTdmYmVmZDY5YjFhMTAwYmM2ZDY0ODk0YzkzYTc5Mzg2ZjQzOTE2MjJmYjhkODIwYWZkMjQzOTQ1MmIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3dc1008cd3f5409cb3d80b430d66b938",
+      "statement": "The setup contract contains hard prohibitions: it must never automatically run openwiki --init, any OpenWiki authentication/integration command, playwright-cli attach, or browser/extension installation, and it must never launch, replace, restart, or close a browser; network access, global npm installs, package-manager changes, and writes outside the checkout are approval-bearing, and setup preserves dirty worktrees while not rewriting manifests, lockfiles, generated skills, or user changes.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L11-L25",
+          "version": "repo-lines-v1:sha256:1431fd81b532b9cabc5d6ecbd11ceb4193eacb8a3171759ae70dd941454fdbe9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyZjYyZGE3Y2JlNjQ2MGYwZDI2YmVjYmFmODJhZDVjODY2YzQzNTI3YjcwNDcyYmFiMzU0M2FlOGJmMGUwOTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViODZlYjc5OTU0OTA2OTg3MDE1NDFkZDZhMDIzMzU5YmFmNDc0Yjg5NTFmNWYwZWViYzE4MWVlMmI0ZTU0MjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhZWJlMTgyYjEyZTdlZjhhNDk4MTg2NTUwNDZiNDg1ZGJlYTRmNmU3NTRlYWQ2NDA2MDgwYTZjOGE2Y2QyNzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2NWEyMzAzOTA3ZTZlZWFlMTUwMWVlOTQ1MzkyMDY3NzgyNTU4MTg3NjMwZDVhOWQzZTY3NTBlYTg4ZTYxODcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b1b1cbb8274c46429e18df7427857500",
+      "statement": "The read-only audit script check.mjs locates the repository root (by Taskfile.yml, README.md, skills/website-automation-builder, and skills/cardmarket-automation/package.json), emits one finding per prerequisite with a status (ok, missing, incompatible, blocked, unknown, not-configured), a required flag, expected and found values, and a suggested fix; the report is ok when every required finding is ok, and the process exits 1 otherwise (2 if no root is found), with a --json flag for structured output.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L261-L384",
+          "version": "repo-lines-v1:sha256:80ce1d41673552479d4de34beb65987fc28542c04cbcc2125a2f76965517046e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmZWU0NGM4ZmVlNWU3MTQzZjE1ODYyNzBmZjFhZjA3NDc0NGNkMTlhYjgyZTQ0NDBhOTBhNGMzNThlM2FkYWVkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkMzg5NmQyNGRmMGMyMWFkYmIyNzIwODljZjEzNWEwOTE5MzkwZWI0OTQ0MmU1ZmY3MGIwZmE5ZjBmOGIwNTIzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwOTRmYzBjMTczZDFlYzNmYzUwMWQ3ZGZhOTI4NTUwMWM1MjdjZmI0NzEyNTgzZGEzY2MzNjE4MDU2NmI0YmUzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L75-L94",
+          "version": "repo-lines-v1:sha256:6296dee92f291c6eb72f3742f4c30737c2687b40439a9032beeac6400821c52f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3NzFiNzkyZTNmMmIyMmFkMDA0NjM1YjBhNzUwN2VmNGY2ZDExNjE5NDcxZjBjNGJmNjc0YTAwNGEwMDQwYTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyMDQwZTA5NWE5NGUyYWRhNzRlNDIxZjM3MTg3NTFhOTFhODEwYmZkNjZmNDhmNGU5MzljN2I3NDgwZWI2NzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzMmY3MDI3OWMxMWUxMjg5Nzc3ZTc2ODllOTFiNWFiMjBlYmNlYjNiNjZjN2Y2Y2IzOTZmNTgzMGYyNTQ1ZGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f4e4d695fca747a4a8c8b4808873daff",
+      "statement": "The audit compares the running Node.js version against the minimum 22.16.0 via numeric major/minor/patch comparison, treating a lower or unparseable version as incompatible.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L14-L37",
+          "version": "repo-lines-v1:sha256:2d73959f386951b3964e736c0bd36ac98eccce25f5ee75e4381431ce089812c4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2ZTFmMmUxMmJlZjczOTA2YjkxYWY2OWU5NDdmMTdlZjc0OTMwM2Q2MDEwZGU1MzU5OTMxYWE1NGUyMGZlNTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMzAxYTNmMmNhMmEwNGRiNzA3NWFiZThhNDA5MTBmYzQ5ZTA4ZjU1MjI0NTE5MjliMGFiZDM2Mjk5YzdkODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdlMjU5MDMzYjE5ZTI2MTBmMzEzNmNkMGM0OWVjNzhmMWFkOWE4ZDQ5ZDAxNDZhY2FjYzdhNDYwMTAxZjkzMWEifQ"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L285-L297",
+          "version": "repo-lines-v1:sha256:2010c617f44ec6e6f1cae241199a42201639ee3acb5883b255f652dd51366543:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiNGM0YTFjYjdjNWY0ZjAzMzgwNmJmZTFkMTRlYjUxOTUyYTMzYWY5NTY4NDkzZGQwNTkwNmUwMTJmZGYxYzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTY3ZWMxZWQzODM2ZjhlYjE3YWZmMTcyYjViZmVmN2RlNjA0ODVhNDM5YzZjYTExYzU5MWUxNzU1NzM5YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ1OTllNjFkZTUzZjg5ZmE1YThkMzI4OTQ1NjFiMTdjNTUxZjE5YWYyMzZkMDI1NTZmMzI2NmRkMzk5YzhhN2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxNzdjMjMxZTFlODU0ZDY1MGEyNjIxZjI3MTdmMjc0MTFlZDZiMjRlYTk3NzIxMGE3NzM4MmNhYzRlZjdkMzAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c0022f65fcc14bad9ec2e2ca90668030",
+      "statement": "The Playwright CLI is version-pinned to exactly 0.1.19; the audit uses an exact string match against 0.1.19 so any other version is incompatible, and an unexpected playwright-cli version is treated as incompatible rather than as an invitation to silently upgrade, because this checkout pins CLI protocol behavior to 0.1.19.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L79-L81",
+          "version": "repo-lines-v1:sha256:d1e9313a33b7080f025719d9a49f80b0509de0ef6639390c1805c1258b36a7e5:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmVjODExZGQzMTljYmFhOGZhZjQxNGVjMTE3NmZiNjE4MTc1M2ExMDU4MWJhNDBjMGZlYzUzODg4ZTQ4NDU5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWYxYmM5MTM3NGE1ZmZlNTY0NDdmOGRlM2U5NzJmNjExNDkyNDk4MGFlZWYzNDIyYWEwOTJiMDJiMmE5MDBjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDMwZDdiODMxNTIzNWVmNGU0Y2M1OWExZjAwMGI1NzdiMGYxNTE5ZDk3ZjYzMWQ0YmU4OTQzNjNmYWU5NzBlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzRkYTIxN2YyZTM1OTRkMmRkOGM2NGYwZjM1YTdhYThkNWI1ZDBhOGEwMzY2NzcyZTBlNjViNjJmZGZiNmYwOSJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/references/requirements.md#L11-L11",
+          "version": "repo-lines-v1:sha256:ec3ab62ac87b30a72cabc38872549fa47b674ffcc151822673a789286236b325:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWMzYWI2MmFjODdiMzBhNzJjYWJjMzg4NzI1NDlmYTQ3YjY3NGZmY2MxNTE4MjI2NzNhNzg5Mjg2MjM2YjMyNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWMzYWI2MmFjODdiMzBhNzJjYWJjMzg4NzI1NDlmYTQ3YjY3NGZmY2MxNTE4MjI2NzNhNzg5Mjg2MjM2YjMyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODgzYmYyMzlmNGZiMjE5Zjg2MjU3YjQ0NmNhZTQwM2NiZDdkYzczODhjNjk4N2FlZjQ4MDNkMjE1NmZlM2M5NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjM1ZWZiZDkyZmZiNDY4OGQyODk4ZTY5Njk2ZGYzMjg3ZDYxMWZhNjcyYmVlOTQxYzhiYWU2MzkzYjQxYzA4NiJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L14-L15",
+          "version": "repo-lines-v1:sha256:1a528b9ffca5516ba65a112c48e65ece0993cb49aef062360cc4514313798930:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDZlMWYyZTEyYmVmNzM5MDZiOTFhZjY5ZTk0N2YxN2VmNzQ5MzAzZDYwMTBkZTUzNTk5MzFhYTU0ZTIwZmU1NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTRjZTBiMmEyOTQ3NTYzOWQwYzQ2YmY3MmEwYjJmOGIyZTEzODg3YTY1YjU4ZWI4NGI5ZmYwYjRjM2E4YjM1NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTEzMDFhM2YyY2EyYTA0ZGI3MDc1YWJlOGE0MDkxMGZjNDllMDhmNTUyMjQ1MTkyOWIwYWJkMzYyOTljN2Q4NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmFiNmFhMjg2ZTU4YTY0MGE2NDdjOGE1ZTI3MzJmMmQyZTUyYjhiNzhkZDJkYzdmYmFiNjVlMWQ0YTczM2MwMiJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L335-L344",
+          "version": "repo-lines-v1:sha256:8823eb37ea0132d4b8d7634c03a50d245c25100c0205e342934bcb2c9ae36b9c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3MTY0OGI5ZjBlZWNiYTgxZDk4OGJkNjI4ODUyYzVlMTlkYmQ2NDZiZTYzNjAzMTU5YTRiMGE0OTNlYTBkODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTY3ZWMxZWQzODM2ZjhlYjE3YWZmMTcyYjViZmVmN2RlNjA0ODVhNDM5YzZjYTExYzU5MWUxNzU1NzM5YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2NGM4Mzc4ZmY1Y2QzODNjMzFlOTRhYzcyMmEzYzNmNWQ3N2IyZjMwNGQ5NDM3ZjYwZGEzOTU3M2M1MGRjMGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1YWM2M2RhMGU5ZWFmNDEwYWNiZDA4MTE4ZTFiNWQwOTQ4ZGQ1MmE3ZGRkOGU4NjM3YjQzNDU2NzljNDBkNGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c930499672a4c07b6f9a9c265dffa7e",
+      "statement": "The audit reports OpenWiki as ok only when both its global npm package (read from npm ls -g --depth=0 --json) and its executable on PATH are present, and setup must not execute OpenWiki's interactive CLI as a health check.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L82-L83",
+          "version": "repo-lines-v1:sha256:34da217f2e3594d2dd8c64f0f35a7aa8d5b5d0a8a0366772e0e65b62fdfb6f09:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTQ3YzY5OWE5ZjY4ZDdjN2IyM2U0Y2RmMmI0NTE5ZWFhMjE1NTk2MmM4MGMyZTViNDk2ZjE2NTAyOTdjMTEwNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQ0ZWU4ODQ4YmRkMTRmYWU3ODRlNTUwZGIzOWIxZGU5MDhmNzRkYWUxZjYwYjNlZjdiNWE1YWRlODU5YjJhMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDFlOTMxM2EzM2I3MDgwZjAyNTcxOWQ5YTQ5ZjgwYjA1MDlkZTBlZjY2MzkzOTBjMTgwNWMxMjU4YjM2YTdlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L346-L366",
+          "version": "repo-lines-v1:sha256:2485df1edfc0685a885fafad2cf86d958605d886779b7443d263f037e78598e2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2ZDEwMjQ2ZjMzMzJlMTYzMWQ0YTNmOGFkMDlkNzNjZTI2MThmZmJiYzM1ZGJlYTQ3ZmI5OGJhMmU1Yzg3ZWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5OTY3ZWMxZWQzODM2ZjhlYjE3YWZmMTcyYjViZmVmN2RlNjA0ODVhNDM5YzZjYTExYzU5MWUxNzU1NzM5YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyMWQ2MDc3ZDQ4YzBkZTAwNmY0ZjNhZGMwNWQ5ZTBkMzc2YTg4MjVkMDYxMGVmYWM1NTZkODI5OTFhNTk1YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkNGE1ZTc5NDE4N2ZjOTlkZWVkZGU3ODI2YjI2YjYzNGYxZGU0Y2IzMjZmNGU1ZjZlNjJkNjJkODJhY2FjZTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f969948ce26454c9de922a83ce07c24",
+      "statement": "The audit checks Cardmarket npm dependencies by running npm ls --depth=0 --json in skills/cardmarket-automation (a failure is missing, or blocked when npm is unavailable); npm ci is intentionally limited to that maintained source package, while the builder regression suite installs a fresh demo's dependencies in a temporary directory and template packages and artifacts/demo-automation do not need persistent node_modules for repository setup.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/references/requirements.md#L15-L18",
+          "version": "repo-lines-v1:sha256:0177b6e046c45de51b1db69bf20411968d829f2a66558c38f16582902efd0219:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDA5YjhhY2Y1MDYzNzZiN2JhY2NiMjM0MjcyYTU1MzQ4YTc1M2YxODZjMzE5ZmQyMzhkZGI2ODRlYmNmYTNkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjcyMGNkYjI1ZjJiYjMzODliZjUzZjAzNTc4NzMyNjcxYmRlNGQ5YWI1Yzg5YzQwNTFjMWNiZjcxNTZjMGRmYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjM1ZWZiZDkyZmZiNDY4OGQyODk4ZTY5Njk2ZGYzMjg3ZDYxMWZhNjcyYmVlOTQxYzhiYWU2MzkzYjQxYzA4NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2Q5NGNmMzMyMjhkZTU4MDFmYmM3MjNhMGM5MmQ5OGI4NmU4YzdkOGU1MzliODY2YTRiMjNhN2ZhZTUyM2ZmNCJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L165-L194",
+          "version": "repo-lines-v1:sha256:cb84d5676ed764ceb4c3cfc9ea29d5bffeb80ab745570cd3d5c83c7e82ffcb54:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5YzVlOGY3NTA4ZTE2NTdiYzVkNGUyZmNlMWU5ZmMxYTQxMDZiMTNjYjY4ZjZkMmM4NTVmMjIzNGRkOWNkMTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVmYmZkNjVhYjc0YzdmNThiNTUxMWM2Mjc1ZGZkZjY5YzQzM2FjYzg3OWUyYzM2Mzc2NmJkMDUzY2FmZDAxNmQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d9134c5cee4c42c8a165ddeca4cf7249",
+      "statement": "The Chrome browser and Playwright CLI extension are conditional (required: false) prerequisites checked via playwright-cli list --json --all; their absence does not fail core setup, and installation is a manual user/browser action that setup must not open or modify automatically.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/references/requirements.md#L22-L26",
+          "version": "repo-lines-v1:sha256:efabb8f10f6a8c7ab6d7566eed33ca1c77f8188572490212f9bd39de891b80ee:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTFjMTNhMmY2MzNlMjkxODZlNmZlMDI0ZjZlZjVjOTUxNzg1NjBiMmYyNTdmZmYxM2I4NjcwYjQ2ZjVjYTJhYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGExNTQwZDFjYTY3M2E1OGRhNTMwNjVjMjU5MjhkYmI2NDIxNTQwOTNlZDllYTE4NGRhNzYxNzQwMzAyMDgzNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2Q5NGNmMzMyMjhkZTU4MDFmYmM3MjNhMGM5MmQ5OGI4NmU4YzdkOGU1MzliODY2YTRiMjNhN2ZhZTUyM2ZmNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzFiYzljYmQ0MTg2NWY1NWZjZTA4MDEwNDg2MzkyMTlmMDFlODQ4YmRlN2JjZTM1Mzc2MzQwYzk1YmYyNmQzZCJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/scripts/check.mjs#L196-L243",
+          "version": "repo-lines-v1:sha256:c94d9918f8a984b883ec6524017baafeccd600a3055c2c4d679e31272d1b3e3b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxYjE0YjVmZjRjNTM4MmE0ZDAwNDQ5ODFlMTg1MDQ4NDM5NzNlZjk4ZTVhNjg0M2EzZDgxNjIxYTgxYzgxODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMGYyZDNhM2FhZGEyNzU4NjQ1NzhkMGE0MzkxNTYzOGQ1NDNmZWNhMmM5NDg1OGRiOTQxMjExZTg2Y2VmMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0OGJlMDIwYTA2NWFhNDc4NzgyMWQ0Y2RiZDMyYjhhZDViMWQzZTExM2E3ZjM5MTMxNWUxNjVlZWFjZmY3ZDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bddc3603f8e04a2ca649490ddccc4c64",
+      "statement": "Taskfile.yml (Task v3) defines four tasks: setup:check (runs the check.mjs audit without changing the system), test (runs the browser-free builder scaffold and demo regression scripts), install:opencode (installs all skills globally for OpenCode via the npx skills command), and openwiki:update (runs openwiki --update).",
+      "evidence": [
+        {
+          "resource": "repo://Taskfile.yml#L1-L20",
+          "version": "repo-lines-v1:sha256:7dce52c12cc755a10aeed73fe8557cc35f63f751195e13e206e7611e43fdfbbf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmYmIwNTJlNjMyOWEyY2FiYmU0ZjQ2ODJjZjI2N2YzNjg5ZjBkMmEwZTk5ZmY2NzAzYWQwYWIwNzEyN2MwNTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOGVjNzJkZjJlZWJmM2IxNWJlZmY4MmMxMzZhMmZmYjJlOGM0NDVjNWU2NWRkMjRmOTcwMTVjNjUzYWM2MjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3aa6214cb9b7461e9edd516a7edbfc32",
+      "statement": "The openwiki:update task runs openwiki --update to regenerate the repository's openwiki/ documentation; generated wiki pages under openwiki/ are owned by the OpenWiki generation run and must not be hand-edited, because manual edits are overwritten on the next update.",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L22-L26",
+          "version": "repo-lines-v1:sha256:9b53f30306c5f8f621cc4b694f364a08ac9c687a96148209cfe5025100937a68:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODBmYTg0ZmZjMzliMTdkZDM4MzA5YjhhNDUwNmU0MjY1MjgyNmE3YWRmNGE0ZTM2NWVkYzYxNTdjZTBlNzA3ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDdjMDZjNTYxZDVjMzI3MzQzNjg1MjY4YTQ2YjMzOTFmMzk5OGVlZTg5MGQyYmU1MWYwZDIxY2M0YTUzYWU2ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMThjY2E2YzI5ZmZhOWQzNmFjMjhkZWM0NDE5NTA2ZTkyMDRhYzZhYWM5ZmI0ZjNiYWU2NTlhMDUzMWNiMjhmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGQwMDI0ZDkwNzViNDM4Y2ZiOWNkNTcwNzI2MGIzYjExNjZmY2ZiZWYxYTdjNzJjZmJmNTE3OWE1OGVlODNiNCJ9"
+        },
+        {
+          "resource": "repo://Taskfile.yml#L17-L20",
+          "version": "repo-lines-v1:sha256:41dc6bbfd51b56a9fa22cf60d04500941fbff1e7f876faa581d27279ffcc15a3:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTNjNWMxNzg0OGE3MTJhOWZkNGY4OWEzNjkzNTEwNTQzZTQxZWVkOWUxODAzMWM2ZmU0MWM2NThiMzEwZDNmNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWQ4ZWM3MmRmMmVlYmYzYjE1YmVmZjgyYzEzNmEyZmZiMmU4YzQ0NWM1ZTY1ZGQyNGY5NzAxNWM2NTNhYzYyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGRjMDk1NjFmNGU0NmMzYzE2N2QyZTFhNmMxZGIxNDQzZTg5ZDQ1YzkyMGIwOTkzMzExYjYwMWNhNjcxZDc2MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_cd12f06e7b864f7eb8d41bc5cb53c2dd",
+      "statement": "The GitHub Actions workflow .github/workflows/test.yml documents the browser-free CI path: on every push and pull request a builder job runs on ubuntu-latest with Node 22, executing the scaffold test and then building a fixture in a fresh temporary directory and running its format:check, typecheck, and test commands, never installing the Chrome extension or attaching to a browser.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/test.yml#L1-L17",
+          "version": "repo-lines-v1:sha256:d87a9c27803a57364b3bc5d5db6dacbb79909b20088671cab689be37ddb0374e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0Yjc4NWVlNTE5Y2ViNmEyODRmOTljMWVjM2I3ODc0ZTc1YThhYTg2MzBiNzUxNmNiN2VhMWU0OWRiOTkwODciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhYzdlNDk2ZjZlNWEwYWJjNTJiODliYmI4MTk4ZmZmYjQzY2Q2NjVmOTFjYTEwMDg1ODA3MWI4NjViNWUxNjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_33443bae2dfb4ba0b1855dc6e1908855",
+      "statement": "Git and Node are treated as platform packages: setup uses the existing platform or version manager rather than guessing a universal install command, and it does not introduce a new version manager without explaining the choice.",
+      "evidence": [
+        {
+          "resource": "repo://.agents/skills/setup/SKILL.md#L38-L42",
+          "version": "repo-lines-v1:sha256:a91bb28f24461fea4062f806a42b336bd78fa45c497b44010968fcf41855368c:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmVmNWU2MGFkY2E3MmUyYjc3ZmEwZGY5NjFmNmNjMjhkZjYxY2QzYzJmNzA3ZTY2YmJlZjlkNWNhMDc2MTEyMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjc3MWVmMmJkNTQ1NmI5N2E0YTgwMWI1NDQ0YmU3Zjk2YzA0MjRiMDczNmU2MWM1ZDhjMzQ3MDg4MjY2MGQ0MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGRhMjhmZGI3ZTRmMWZlNzNlNDRjOTFmZTU0ZDRmYWM5YzQyYzViNTBiZGZlZGE4OWUxYmVhZGUwZGE4ZThkZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWVjNDkzNzcyMzIzNjljODBhOGZkNGYzNzczZmI5ZjZkYjhiNzRkZGYzY2FiNjk4YzQwY2E0ZTk3YWVlODgzZCJ9"
+        },
+        {
+          "resource": "repo://.agents/skills/setup/references/requirements.md#L7-L8",
+          "version": "repo-lines-v1:sha256:bb0d7a4d2a5974ccd525b9dd26ad7cb92f8c9602676d8466dec1fc10e76c4cd1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjg2ZWExMDNhM2NkNWNmODNjYjkwNzY0ZmEzZDI4YWE1MzkxZjE2M2YxZjY0MmUwNjg4NzRhMzFmNTU2MjZlMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWE5MzgyNzhjOTNjNDAwOGViMzFjMDEwNThhZTk2MGI0YjA2NjRlZTJmNTM4M2EyNWNlOGFhMmZhY2JhNzFhMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzY0NGQzZTAxYmY5Y2JlN2IxMDk5NzMzNTI4YmYzNGVlZDAyM2Y0MTE1ZjZkYzA1ZDc1Y2Y2ZTI5MjI1OWIwOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWFhNmUxZjJkNDA3OTk0MDJmMDEwMzlmNTQ5MTA3ZGU2NTlkM2I4YzI0N2UyNmZlN2FlOWZjY2FkY2ExZDQzZCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.0",
+    "at": "2026-09-06T13:03:24.416Z"
+  }
+}

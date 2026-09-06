@@ -20,9 +20,9 @@
 
 ## Read Card Detail
 1. `nav.open { index }`
-2. `info`
-3. optional `nav.filter { ... }`
-4. `info`
+2. `info { ...requested seller filter }` – `info {}` applies the canonical seller default.
+
+`info` applies and verifies the exact seller filter before it reads other offers. Do not use a seller list whose returned `filter` differs from the requested comparison filter.
 
 ## Read Versions
 1. `nav.versions`
@@ -40,6 +40,19 @@
 2. Navigate to the required card detail state.
 3. `user.offers`
 4. Inspect `offers[]`, especially `articleId`, `condition`, `language`, `price`, and `quantity`.
+
+## Read Own Offers Listing
+1. Ensure the browser is logged in (`info` → `auth.loggedIn: true`).
+2. `nav.own-offers` – Selling → My Offers → Singles.
+3. For a card search, `nav.own-offers.filter { cardName: "Forest" }`.
+4. `info` – read the current page and active stock filter.
+5. To list all offers, call `info { all: true }`. It follows every enabled bottom next-page control, checks the filter remains unchanged, and stops only after the last page (`complete: true`).
+
+## Compare an Own Offer with Other Sellers
+1. On `own-offers`, filter by `cardName` when appropriate and run `info` to identify the current-page row index.
+2. `nav.own-offers.open { index }` – opens the listing's card-name detail link.
+3. `info { ...requested seller filter }` – omit the filter fields for the canonical seller default; otherwise pass all requested values.
+4. Compare the stock row's `price` with `sellers[]`. The returned `filter` is the exact filter used for that comparison. If relevant, use `nav.versions` from the detail page to inspect other print variants.
 
 ## Update One Own Offer
 1. `user.offers`

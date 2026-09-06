@@ -4,9 +4,25 @@ import { action as navOpenAction } from './nav-open.action.ts';
 import { action as navVersionsAction } from './nav-versions.action.ts';
 import { action as navArtworkAction } from './nav-artwork.action.ts';
 import { action as navFilterAction } from './nav-filter.action.ts';
+import { action as navOwnOffersAction } from './nav-own-offers.action.ts';
+import { action as navOwnOffersFilterAction } from './nav-own-offers-filter.action.ts';
+import { action as navOwnOffersOpenAction } from './nav-own-offers-open.action.ts';
 import { action as infoAction } from './info.action.ts';
 import { action as userOffersAction } from './user-offers.action.ts';
 import { action as userOfferUpdateAction } from './user-offer-update.action.ts';
 import type { Action } from '../runtime/engine.ts';
 
-export const actions: Action[] = [navHomeAction, navSearchAction, navOpenAction, navVersionsAction, navArtworkAction, navFilterAction, infoAction, userOffersAction, userOfferUpdateAction];
+export const actions: Action[] = [
+  navHomeAction,
+  navSearchAction,
+  navOpenAction,
+  navVersionsAction,
+  navArtworkAction,
+  navFilterAction,
+  navOwnOffersAction,
+  navOwnOffersFilterAction,
+  navOwnOffersOpenAction,
+  infoAction,
+  userOffersAction,
+  userOfferUpdateAction,
+];
