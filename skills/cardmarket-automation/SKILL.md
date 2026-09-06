@@ -47,13 +47,13 @@ Run `info` to read the current state.
 ## Recommended Loop
 
 1. `npm run cli -- doctor` – verify browser attachment.
-2. Run `info` – detect the current state.
-3. Choose one transition from the state:
+2. Run `info` if you wish to detect the current state.
+3. Choose one or more transition from the state, then run the corresponding nav command(s):
    - need a card? `nav.search`
    - in results? `info`, then `nav.open`
    - in detail? `info`, `nav.filter`, or `nav.versions`
    - in versions? `info`, then `nav.artwork`
-4. After each nav command, run `info` again.
+4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 
 ## Execution
 
