@@ -141,4 +141,5 @@
 - Login-Detection im Logged-Out- und Logged-In-Zustand live validiert.
 - Mengen-Update im Esix-Testfall nicht weiter prüfbar, weil `editAmount`
   nur die Option `1` liefert.
-- `own-offers` needs the authenticated live verification described above. The browserless filter fields cover the current Magic stock UI; unexpected per-game controls deliberately return `UI_DRIFT` instead of choosing a fallback.
+- `own-offers` live-verified on 2026-09-07 (filter-form identified by content, 20 own offers read). The browserless filter fields cover the current Magic stock UI; unexpected per-game controls deliberately return `UI_DRIFT` instead of choosing a fallback.
+- Auto-login waits for a human inside one `run-code` call (up to `loginWaitMs`); if the user is slow the command returns `AUTH_REQUIRED`/`login-timeout` and the same command must be re-run once the form is filled.

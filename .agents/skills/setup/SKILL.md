@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Audit and prepare this skills repository for development and runtime use. Use when the user invokes /setup or asks to bootstrap the repository, check prerequisites, or install missing project tooling, including OpenWiki.
+description: Audit and prepare this skills repository for development and runtime use. Use when the user invokes /setup or asks to bootstrap the repository or install missing project tooling.
 ---
 
 # /setup
@@ -18,8 +18,8 @@ configuration as a side effect of setup.
 - Treat network access, global npm installs, package-manager changes, and writes
   outside the checkout as approval-bearing operations in environments that
   require approval.
-- Never run `openwiki --init`, OpenWiki authentication/integration commands,
-  `playwright-cli attach`, or browser/extension installation automatically.
+- Never run `playwright-cli attach` or browser/extension installation
+  automatically.
   Those operations change repository, user, or browser state and need a separate
   explicit request.
 - Never launch, replace, restart, or close a browser during setup.
@@ -50,7 +50,6 @@ configuration as a side effect of setup.
    ```bash
    npm install -g @go-task/cli
    npm install -g @playwright/cli@0.1.19
-   npm install -g openwiki@latest
    npm ci --prefix "<REPOSITORY_ROOT>/skills/cardmarket-automation"
    ```
 
@@ -79,5 +78,3 @@ configuration as a side effect of setup.
 - An unexpected `playwright-cli` version is incompatible, not an invitation to
   silently upgrade the repository. This checkout pins CLI protocol behavior to
   0.1.19.
-- OpenWiki is installed when both its global npm package and executable are
-  present. Do not execute its interactive CLI as a health check.

@@ -150,18 +150,6 @@ function commandFinding({
   });
 }
 
-function globalNpmPackage(npmAvailable, packageName) {
-  if (!npmAvailable) return null;
-  const result = run("npm", ["ls", "-g", "--depth=0", "--json"]);
-  const raw = result.stdout;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw).dependencies?.[packageName]?.version ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function localDependencies(root, npmAvailable) {
   const relative = join("skills", "cardmarket-automation");
   const directory = join(root, relative);
@@ -344,26 +332,7 @@ findings.push(
 );
 
 const npmAvailable = Boolean(npmPath);
-const openwikiPath = executableOnPath("openwiki");
-const openwikiVersion = globalNpmPackage(npmAvailable, "openwiki");
-findings.push(
-  finding({
-    id: "openwiki",
-    label: "OpenWiki",
-    status: openwikiPath && openwikiVersion ? "ok" : "missing",
-    expected: "global npm package and executable on PATH",
-    found:
-      openwikiPath && openwikiVersion
-        ? `${openwikiVersion} (${openwikiPath})`
-        : openwikiVersion,
-    fix: "npm install -g openwiki@latest",
-    detail:
-      !openwikiPath && openwikiVersion
-        ? "The package is installed, but its executable is not on PATH"
-        : null,
-  }),
-  localDependencies(root, npmAvailable),
-);
+findings.push(localDependencies(root, npmAvailable));
 
 const playwright = findings.find((item) => item.id === "playwright-cli");
 findings.push(chromeExtensionFinding(playwright?.status === "ok"));
