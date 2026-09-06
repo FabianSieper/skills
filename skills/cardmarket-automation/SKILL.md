@@ -1,6 +1,6 @@
 ---
 name: cardmarket-automation
-description: Read-only Cardmarket state-machine automation (search, detail, sellers, versions, artworks). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, or print variants.
+description: Read-only Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, or print variants.
 ---
 
 # Cardmarket Automation
@@ -11,17 +11,20 @@ description: Read-only Cardmarket state-machine automation (search, detail, sell
 
 | state | meaning | use for |
 |---|---|---|
-| `start` | game/search entry | begin a new task |
+| `start` | site/game/search entry | begin a new task, reach the login prompt |
 | `results` | search result tiles | identify a card, open one result |
 | `detail` | one card page | read top block, sellers, current filter, apply filter, open versions |
 | `versions` | artwork/version list | read versions, open one artwork |
 
-The `info` command detects the current state and returns `{ state, ... }`.
+The `info` command detects the current state and returns `{ state, ..., auth }`.
+
+All states are reachable without login. `auth.loggedIn` is `false` when the page shows a username/password login form at the top.
 
 ## Transitions
 
 | from | command | parameters | to |
 |---|---|---|---|
+| any | `nav.home` | – | `start` |
 | `start` / any | `nav.search` | `query` | `results` |
 | `results` | `nav.open` | `index` | `detail` |
 | `detail` | `nav.versions` | – | `versions` |
@@ -42,7 +45,7 @@ Run `info` to read the current state.
 | `sellers` | 50 | 0–500 | `detail` |
 | `minQty` | 0 | 0–1000 | `versions` seller-quantity check |
 
-`info` output is state-specific. See `references/actions.md`.
+`info` output is state-specific and includes `auth: { loggedIn }`. See `references/actions.md`.
 
 ## Recommended Loop
 
@@ -53,6 +56,7 @@ Run `info` to read the current state.
    - in results? `info`, then `nav.open`
    - in detail? `info`, `nav.filter`, or `nav.versions`
    - in versions? `info`, then `nav.artwork`
+   - `auth.loggedIn === false` and a logged-in session is needed? `nav.home`, then ask the user to enter username/password in the attached browser
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 
 ## Execution

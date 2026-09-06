@@ -1,6 +1,6 @@
 # Cardmarket Skill – Verifikation & Status
 
-> **Status: `state-machine live_verified`** – Code, Tests und Doku fertig; die neue State-Machine-Oberfläche wurde live validiert (2026-09-06).
+> **Status: `login-state ready`** – State-Machine live validiert (2026-09-06); neues Login-State-Feature browserlos validiert und im Logged-Out-Zustand live validiert; Logged-In-Check wartet auf User-Session.
 
 ## Browserlos (erledigt)
 - Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/`, `examples/`.
@@ -83,6 +83,16 @@
   navigiert.
 - **Browserlos:** `npm run typecheck` ✔, `npm test` 38/38 ✔.
 
+## 2026-09-06: Login-State
+- **Feature:** `info` liefert in allen States `auth: { loggedIn }`;
+  neue Aktion `nav.home` navigiert zu `https://www.cardmarket.com/en`.
+- **Detection:** sichtbare `form#header-login`, `form#offcanvas-login`,
+  `input[name="username"]` oder `input[name="userPassword"]` bedeuten `loggedIn: false`.
+- **Browserlos:** `npm run typecheck` ✔, `npm test` 38/38 ✔.
+- **Live:** `nav.home` validiert; `info` in `start`, `results`, `detail`
+  und `versions` liefert `auth.loggedIn: false`.
+- **Pending:** `loggedIn: true` braucht eine echte angemeldete User-Session.
+
 ## Known Gaps
 - Neue State-Machine-Oberfläche live validiert (2026-09-06);
   `nav.versions` nutzt direkte Versions-URL-Navigation.
@@ -90,3 +100,5 @@
 - Such-Einstieg hängt an `searchEntry` = `/en/Magic`; entfernt Cardmarket das
   Top-Bar-Form auch von Game-Seiten, wieder `UI_DRIFT` → Einstieg per read-only
   `run-code`-Diagnose neu bestimmen.
+- Login-Detection im Logged-Out-Zustand live validiert; Logged-In-Detection
+  bleibt ohne echte User-Session unverifiziert.

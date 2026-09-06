@@ -7,6 +7,7 @@ export const config = {
   // (/en); it remains on game pages, which also serve the global search.
   // This is the entry page every flow (search/price/artworks) starts from.
   searchEntry: '/en/Magic',
+  homeEntry: '/en',
   allowedOrigins: ['https://www.cardmarket.com'],
   requiresLogin: false,
   locale: 'en-GB',

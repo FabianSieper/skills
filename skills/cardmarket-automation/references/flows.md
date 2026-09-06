@@ -1,7 +1,15 @@
 # Flows
 
 ## Detect Current State
-1. `info` – returns `state`.
+1. `info` – returns `state` and `auth.loggedIn`.
+
+## Require Login
+1. `info` – read `auth.loggedIn`.
+2. If `auth.loggedIn` is `false` and the task needs a logged-in session:
+   1. `nav.home`
+   2. ask the user to enter username/password in the attached browser
+   3. `info` – verify `auth.loggedIn` is `true`
+   4. continue from the required state.
 
 ## Find a Card
 1. `nav.search { query }`

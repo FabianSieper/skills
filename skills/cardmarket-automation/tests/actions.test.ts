@@ -22,6 +22,8 @@ function code(fn: () => unknown): string {
   return 'OK';
 }
 
+const auth = (over: Record<string, unknown> = {}) => ({ loggedIn: false, ...over });
+
 const card = (over: Record<string, unknown> = {}) => ({
   name: 'Forest',
   set: 'Magic: The Gathering – Marvel Super Heroes',
@@ -78,10 +80,10 @@ const artwork = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-test('registry has the six state-machine actions, all read-only', () => {
+test('registry has the seven state-machine actions, all read-only', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['info', 'nav.artwork', 'nav.filter', 'nav.open', 'nav.search', 'nav.versions'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.search', 'nav.versions'],
   );
   for (const a of actions) {
     assert.equal(a.kind, 'read');
@@ -91,6 +93,10 @@ test('registry has the six state-machine actions, all read-only', () => {
 });
 
 test('validateInput happy + sad for nav actions', () => {
+  const home = byId('nav.home');
+  assert.deepEqual(validateInput(home.parameters, {}), plain({}));
+  assert.equal(code(() => validateInput(home.parameters, { index: 0 })), 'INVALID_INPUT');
+
   const search = byId('nav.search');
   assert.deepEqual(validateInput(search.parameters, { query: 'Forest' }), plain({ query: 'Forest' }));
   assert.equal(code(() => validateInput(search.parameters, {})), 'INVALID_INPUT');
@@ -137,6 +143,11 @@ test('validateInput happy + sad for info', () => {
 });
 
 test('validateOutput happy + sad for nav actions', () => {
+  const home = byId('nav.home');
+  assert.doesNotThrow(() => home.validateOutput({ status: 'ok', state: 'start' }));
+  assert.equal(code(() => home.validateOutput({ status: 'ok', state: 'detail' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => home.validateOutput({ status: 'boom', state: 'start' })), 'POSTCONDITION_FAILED');
+
   for (const id of ['nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']) {
     const a = byId(id);
     assert.doesNotThrow(() => a.validateOutput({ status: 'ok', state: 'detail' }));
@@ -148,13 +159,16 @@ test('validateOutput happy + sad for nav actions', () => {
 test('validateOutput happy + sad for info', () => {
   const infoAction = byId('info');
 
-  assert.doesNotThrow(() => infoAction.validateOutput({ state: 'start', ready: true }));
+  const start = { state: 'start', ready: true, auth: auth() };
+  assert.doesNotThrow(() => infoAction.validateOutput(start));
   assert.equal(code(() => infoAction.validateOutput({ state: 'start' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ state: 'start', ready: true })), 'POSTCONDITION_FAILED');
 
-  const results = { state: 'results', query: 'Forest', count: 2, cards: [card(), card({ name: 'Bose' })] };
+  const results = { state: 'results', query: 'Forest', count: 2, cards: [card(), card({ name: 'Bose' })], auth: auth() };
   assert.doesNotThrow(() => infoAction.validateOutput(results));
   assert.equal(code(() => infoAction.validateOutput({ ...results, count: 3 })), 'POSTCONDITION_FAILED');
   assert.equal(code(() => infoAction.validateOutput({ ...results, cards: [card({ fromPrice: 5 })] })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ state: 'results', query: 'Forest', count: 0, cards: [] })), 'POSTCONDITION_FAILED');
 
   const detail = {
     state: 'detail',
@@ -164,6 +178,7 @@ test('validateOutput happy + sad for info', () => {
     info: infoFixture(),
     sellerCount: 1,
     sellers: [seller()],
+    auth: auth(),
   };
   assert.doesNotThrow(() => infoAction.validateOutput(detail));
   assert.equal(code(() => infoAction.validateOutput({ ...detail, sellerCount: 0 })), 'POSTCONDITION_FAILED');
@@ -177,6 +192,7 @@ test('validateOutput happy + sad for info', () => {
     shown: 1,
     minQuantity: 0,
     artworks: [artwork()],
+    auth: auth(),
   };
   assert.doesNotThrow(() => infoAction.validateOutput(versions));
   assert.equal(code(() => infoAction.validateOutput({ ...versions, shown: 2 })), 'POSTCONDITION_FAILED');

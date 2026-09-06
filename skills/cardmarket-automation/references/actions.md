@@ -6,6 +6,7 @@ All actions are **read-only**.
 
 | ID | State | Parameters | Output |
 |---|---|---|---|
+| `nav.home` | any → `start` | – | `{ status, state }` |
 | `nav.search` | any → `results` | `query` (str, req) | `{ status, state }` |
 | `nav.open` | `results` → `detail` | `index` (int, req) | `{ status, state }` |
 | `nav.versions` | `detail` → `versions` | – | `{ status, state }` |
@@ -25,6 +26,10 @@ All actions are **read-only**.
 `state` values: `start`, `results`, `detail`, `versions`.
 
 ## Parameters
+
+### `nav.home`
+- No parameters.
+- Navigates to `https://www.cardmarket.com/en`.
 
 ### `nav.search`
 - `query`: card name or search string. Required, 1–100 chars.
@@ -64,7 +69,7 @@ All fields are optional and default to the current canonical filter:
 
 ### `start`
 ```json
-{ "state": "start", "ready": true }
+{ "state": "start", "ready": true, "auth": { "loggedIn": false } }
 ```
 
 ### `results`
@@ -75,7 +80,8 @@ All fields are optional and default to the current canonical filter:
   "count": 2,
   "cards": [
     { "name": "Forest", "set": "Marvel", "image": "https://...", "fromPrice": "From 0,02 €", "url": "https://..." }
-  ]
+  ],
+  "auth": { "loggedIn": false }
 }
 ```
 
@@ -112,7 +118,8 @@ All fields are optional and default to the current canonical filter:
   "sellerCount": 1,
   "sellers": [
     { "seller": "S1", "location": "DE", "condition": "Near Mint", "language": "German", "price": "1,23 €", "quantity": "15" }
-  ]
+  ],
+  "auth": { "loggedIn": false }
 }
 ```
 
@@ -127,7 +134,8 @@ All fields are optional and default to the current canonical filter:
   "minQuantity": 0,
   "artworks": [
     { "card": "Forest", "set": "Marvel", "version": "Version 1", "available": "10 Available", "fromPrice": "From 1,00 €", "image": "https://...", "url": "https://..." }
-  ]
+  ],
+  "auth": { "loggedIn": false }
 }
 ```
 
@@ -144,13 +152,14 @@ When `minQty > 0`, each artwork additionally contains:
 - `examples/input-price.json` – `info` sellers
 - `examples/input-versions.json` – `info` `minQty`
 - `examples/input-artworks.json` – `info` versions
-- `examples/input-empty.json` – no parameters
+- `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, and `info`
 
 ## Static Next Hints
 
+- `nav.home.next`: `['info', 'nav.search']`
 - `nav.search.next`: `['info', 'nav.open']`
 - `nav.open.next`: `['info', 'nav.versions', 'nav.filter']`
 - `nav.versions.next`: `['info', 'nav.artwork']`
 - `nav.artwork.next`: `['info', 'nav.versions', 'nav.filter']`
 - `nav.filter.next`: `['info']`
-- `info.next`: `['nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']`
+- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']`
