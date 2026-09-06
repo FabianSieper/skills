@@ -5,6 +5,43 @@ import { navigate } from '../runtime/guards.ts';
 import { resolveHref } from '../lib/url.ts';
 import { readAccount } from '../lib/auth.ts';
 
+/** Inlined: evaluated in the browser, must not reference module scope. */
+function consentOverlayGone(): boolean {
+  const acceptPattern = /accept all cookies|alle akzeptieren/i;
+  const isVisible = (el: Element): boolean => {
+    let node: Element | null = el;
+    while (node && node !== document.documentElement) {
+      const cs = getComputedStyle(node);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      node = node.parentElement;
+    }
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+  return !buttons.some((b) => acceptPattern.test(b.textContent || '') && isVisible(b));
+}
+
+/** Inlined: evaluated in the browser, must not reference module scope. */
+function clickConsentAccept(): boolean {
+  const acceptPattern = /accept all cookies|alle akzeptieren/i;
+  const isVisible = (el: Element): boolean => {
+    let node: Element | null = el;
+    while (node && node !== document.documentElement) {
+      const cs = getComputedStyle(node);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      node = node.parentElement;
+    }
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+  const accept = buttons.find((b) => acceptPattern.test(b.textContent || '') && isVisible(b));
+  if (!accept) return false;
+  (accept as HTMLElement).click();
+  return true;
+}
+
 /**
  * Cardmarket base page: origin guard + Cloudflare detection.
  *
@@ -30,6 +67,7 @@ export class SitePage {
       await navigate(this.page, config.baseURL, config.allowedOrigins);
     }
     await this.waitForCloudflare();
+    await this.dismissConsentOverlay();
     return { accountKey: await readAccount(this.page) };
   }
 
@@ -38,6 +76,19 @@ export class SitePage {
     const target = resolveHref(url);
     await navigate(this.page, target, config.allowedOrigins);
     await this.waitForCloudflare();
+    await this.dismissConsentOverlay();
+  }
+
+  /**
+   * Best-effort dismissal of a cookie-consent overlay. The overlay blocks
+   * page reading and clicks; it does not reappear once a choice is stored.
+   * Never throws.
+   */
+  async dismissConsentOverlay(timeoutMs = 5_000): Promise<void> {
+    await this.page.evaluate(clickConsentAccept).catch(() => {});
+    await this.page
+      .waitForFunction(consentOverlayGone, null, { timeout: timeoutMs })
+      .catch(() => {});
   }
 
   /**

@@ -225,7 +225,9 @@ export class CardDetailPage extends SitePage {
         const count = await expand.count();
         if (count === 0) throw new AutomationError('UI_DRIFT', 'country-expand');
         if (count > 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'country-expand');
-        await expand.click({ timeout: 15_000 });
+        await expand.click({ timeout: 5_000 }).catch(() =>
+          expand.first().evaluate((el) => (el as HTMLElement).click()),
+        );
         await this.page
           .waitForFunction(
             (v: string) => Boolean(document.querySelector(`form[action*="Product_Filter_FilterProduct"] input[name="sellerCountry[${v}]"]`)),
@@ -248,20 +250,27 @@ export class CardDetailPage extends SitePage {
     };
 
     const setCheckboxGroup = async (name: string, value: string) => {
-      const boxes = this.filterForm.locator(`input[type="checkbox"][name^="${name}["]`);
-      const count = await boxes.count();
-      const wanted = value ? [value] : [];
-      for (let i = 0; i < count; i++) {
-        const box = boxes.nth(i);
-        const boxValue = (await box.getAttribute('value')) ?? '';
-        const isChecked = await box.isChecked();
-        const shouldCheck = wanted.includes(boxValue);
-        if (isChecked !== shouldCheck) {
-          if (shouldCheck) await box.check();
-          else await box.uncheck();
-          changed = true;
-        }
-      }
+      const changedBoxes = await this.page.evaluate(
+        ({ group, wanted }: { group: string; wanted: string[] }) => {
+          const form = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
+          if (!form) return 0;
+          const boxes = Array.from(
+            form.querySelectorAll(`input[type="checkbox"][name^="${group}["]`),
+          ) as HTMLInputElement[];
+          let n = 0;
+          for (const box of boxes) {
+            const shouldCheck = wanted.includes(box.value);
+            if (box.checked !== shouldCheck) {
+              box.checked = shouldCheck;
+              box.dispatchEvent(new Event('change', { bubbles: true }));
+              n += 1;
+            }
+          }
+          return n;
+        },
+        { group: name, wanted: value ? [value] : [] },
+      );
+      if (changedBoxes > 0) changed = true;
     };
 
     await setSelect('minCondition', targets.minCondition);
@@ -278,7 +287,6 @@ export class CardDetailPage extends SitePage {
   async submitSellerFilters(): Promise<void> {
     if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
     const button = this.page.locator('form input[type="submit"][name="apply"]');
-    await uniqueVisible(button, 'filter-apply');
     const [nav] = await Promise.all([
       this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null),
       button.click({ timeout: 200 }).catch(() => null),
@@ -286,7 +294,9 @@ export class CardDetailPage extends SitePage {
     if (!nav) {
       await this.page.evaluate(() => {
         const el = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
-        if (el instanceof HTMLFormElement) el.requestSubmit();
+        if (!(el instanceof HTMLFormElement)) return;
+        const submitter = el.querySelector('input[type="submit"][name="apply"]');
+        el.requestSubmit(submitter instanceof HTMLElement ? submitter : null);
       });
       await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null);
     }
