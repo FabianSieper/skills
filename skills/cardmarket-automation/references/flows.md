@@ -4,14 +4,11 @@
 1. `info` – returns `state` and `auth.loggedIn`.
 
 ## Require Login
-1. `info` – read `auth.loggedIn`.
-2. If `auth.loggedIn` is `false` and the task needs a logged-in session:
-   1. `nav.home` – navigates to the Cardmarket login page.
-   2. ask the user to enter username/password in the attached browser.
-   3. `info` – verify `auth.loggedIn` is `true`.
-   4. continue from the required state.
-3. If an action returns `AUTH_REQUIRED`, automatically call `nav.home` and prompt the user to log in, then retry the action.
-3. If an action returns `AUTH_REQUIRED`, automatically call `nav.home` and prompt the user to log in, then retry the action.
+The user never signs in "first": login-required actions handle login on their own.
+1. Run the needed action directly (e.g. `nav.own-offers`).
+2. If the attached browser is logged out, the runtime automatically opens the Cardmarket login form, waits up to 2 minutes for the user's credentials, and re-runs the same action.
+3. If `AUTH_REQUIRED` still comes back (step `login-timeout`): the login page is open in the user's browser — tell them to log in, then re-run the exact same command.
+4. `info` – verify `auth.loggedIn` is `true`, then continue from the required state.
 
 ## Find a Card
 1. `nav.search { query }`

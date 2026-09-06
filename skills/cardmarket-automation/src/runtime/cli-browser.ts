@@ -81,36 +81,55 @@ export async function invokeBrowser(
 
   const actionPath = resolve(action.modulePath.startsWith('file:') ? fileURLToPath(action.modulePath) : action.modulePath);
   const sitePagePath = resolve(project, 'src/pages/SitePage.ts');
+  const authPath = resolve(project, 'src/lib/auth.ts');
   const inputLiteral = JSON.stringify(input);
   const previewLiteral = preview === undefined ? 'undefined' : JSON.stringify(preview);
   const source = `
     import { action } from ${JSON.stringify(actionPath)};
     import { SitePage } from ${JSON.stringify(sitePagePath)};
+    import { autoLogin, readAuth } from ${JSON.stringify(authPath)};
+    const toError = (error) => {
+      const message = error && typeof error.message === 'string' ? error.message : '';
+      const code = error && typeof error.code === 'string' ? error.code
+        : /strict mode violation/i.test(message) ? 'AMBIGUOUS_SELECTOR'
+        : error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'INTERNAL';
+      const step = error && typeof error.step === 'string' ? error.step : undefined;
+      return {code,...(step?{step}:{})};
+    };
     export async function invoke(page) {
       try {
         const ready = await new SitePage(page).assertReady();
         if (!ready || typeof ready.accountKey !== 'string' || !ready.accountKey) return {ok:false,error:{code:'AUTH_REQUIRED'}};
         const input = ${inputLiteral};
         const preview = ${previewLiteral};
-        let value;
-        if (${JSON.stringify(phase)} === 'run') {
-          if (action.kind !== 'read') return {ok:false,error:{code:'INTERNAL',step:'action-kind'}};
-          value = await action.run(page, input);
-        } else if (${JSON.stringify(phase)} === 'prepare') {
-          if (action.kind !== 'write') return {ok:false,error:{code:'INTERNAL',step:'action-kind'}};
-          value = await action.prepare(page, input);
-        } else {
-          if (action.kind !== 'write') return {ok:false,error:{code:'INTERNAL',step:'action-kind'}};
-          value = await action.execute(page, input, preview);
+        const runPhase = async () => {
+          if (${JSON.stringify(phase)} === 'run') {
+            if (action.kind !== 'read') throw {code:'INTERNAL',step:'action-kind'};
+            return await action.run(page, input);
+          }
+          if (${JSON.stringify(phase)} === 'prepare') {
+            if (action.kind !== 'write') throw {code:'INTERNAL',step:'action-kind'};
+            return await action.prepare(page, input);
+          }
+          if (action.kind !== 'write') throw {code:'INTERNAL',step:'action-kind'};
+          return await action.execute(page, input, preview);
+        };
+        try {
+          const value = await runPhase();
+          return {ok:true,accountKey:ready.accountKey,value};
+        } catch (error) {
+          const payload = toError(error);
+          if (payload.code !== 'AUTH_REQUIRED') return {ok:false,error:payload};
+          const login = await autoLogin(page, ${JSON.stringify(config.loginWaitMs)});
+          const fresh = await new SitePage(page).assertReady();
+          const loggedIn = login === 'logged-in' && (await readAuth(page).catch(() => ({loggedIn:false}))).loggedIn;
+          if (!fresh || typeof fresh.accountKey !== 'string' || !fresh.accountKey || !loggedIn)
+            return {ok:false,error:{code:'AUTH_REQUIRED',step:loggedIn?'login-verify':'login-timeout'}};
+          const value = await runPhase();
+          return {ok:true,accountKey:fresh.accountKey,value};
         }
-        return {ok:true,accountKey:ready.accountKey,value};
       } catch (error) {
-        const message = error && typeof error.message === 'string' ? error.message : '';
-        const code = error && typeof error.code === 'string' ? error.code
-          : /strict mode violation/i.test(message) ? 'AMBIGUOUS_SELECTOR'
-          : error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'INTERNAL';
-        const step = error && typeof error.step === 'string' ? error.step : undefined;
-        return {ok:false,error:{code,...(step?{step}:{})}};
+        return {ok:false,error:toError(error)};
       }
     }
   `;

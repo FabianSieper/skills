@@ -16,7 +16,10 @@ export const config = {
   locale: 'en-GB',
   timezoneId: 'Europe/Berlin',
   timeoutMs: 15_000,
-  actionBudgetMs: 90_000,
+  // Covers auto-login waits (loginWaitMs) plus Cloudflare handling in one run-code call.
+  actionBudgetMs: 240_000,
+  // Max time the runtime waits for a human to log in after an AUTH_REQUIRED failure.
+  loginWaitMs: 120_000,
   planTtlMs: 600_000,
   maxInputBytes: 65_536,
 

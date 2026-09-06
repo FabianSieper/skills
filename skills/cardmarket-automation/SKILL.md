@@ -25,11 +25,11 @@ The `info` command detects the current state and returns `{ state, ..., auth }`.
 
 ## Automatic Login Handling
 
-When any action returns `AUTH_REQUIRED`, the skill **automatically** calls `nav.home` to navigate the attached browser to the Cardmarket login page, then prompts the user to enter credentials. After the user logs in, retry the original action. This happens without user intervention — you do not need to manually call `nav.home` after an `AUTH_REQUIRED` error.
+The user never has to sign in "first". When a login-required action (`nav.own-offers`, `info` on the `own-offers` page, `user.offer.update`, `stock.market-comparison`, `stock.bulk-price-update`) is run while the attached browser is logged out, the runtime **automatically** opens the Cardmarket login form in the user's browser, waits up to 2 minutes for the user to enter credentials, and then **re-runs the same action** so the command succeeds in one call.
 
-## Automatic Login Handling
+If the command still returns `AUTH_REQUIRED` (step `login-timeout`), the login page is already open in the user's browser. Tell the user the form is open and waiting, let them log in, then re-run the exact same command. Do not start a different flow.
 
-When any action returns `AUTH_REQUIRED`, the skill **automatically** calls `nav.home` to navigate the attached browser to the Cardmarket login page, then prompts the user to enter credentials. After the user logs in, retry the original action. This happens without user intervention — you do not need to manually call `nav.home` after an `AUTH_REQUIRED` error.
+After a successful login, verify with `info` that `auth.loggedIn` is `true` before relying on own-offer data.
 
 ## Transitions
 
@@ -157,7 +157,7 @@ npm run cli -- plan stock.bulk-price-update --input /tmp/cm-bulk.json
    - in versions? `info`, then `nav.artwork`
    - need own stock? `nav.own-offers`, then `nav.own-offers.filter` and `info`
    - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
-    - `auth.loggedIn === false` and a logged-in session is needed? `nav.home` navigates to the login page automatically; ask the user to enter credentials, then retry
+    - `auth.loggedIn === false` and a logged-in session is needed? Just run the action — the runtime opens the login form and waits for the user automatically (see Automatic Login Handling); on `AUTH_REQUIRED`/`login-timeout`, re-run the same command after the user logs in
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 
 ## Execution
@@ -177,7 +177,7 @@ npm run cli -- doctor                       # Check browser attachment
 
 ## CLI & Diagnostics
 
-- **Timeouts:** Use the calling tool's own timeout in ms; stock macOS has no Bash `timeout` command. Budgets: `run`/`plan`/`execute` ≥ `180000`, `doctor` ≈ `3000`.
+- **Timeouts:** Use the calling tool's own timeout in ms; stock macOS has no Bash `timeout` command. Budgets: `run`/`plan`/`execute` ≥ `240000` (login-required actions can wait up to 2 min for a human login), `doctor` ≈ `3000`.
 - **Debug:** `playwright-cli -s=cardmarket-automation --raw run-code --filename=<diag.ts>` (read-only DOM snippets only).
 - **Lock:** `BUSY` = stale lock in `.local/runtime.lock`. Check PID before removing.
 
@@ -189,7 +189,7 @@ npm run cli -- doctor                       # Check browser attachment
 | `HUMAN_REQUIRED` | Cloudflare challenge > 90s (solve manually) |
 | `UI_DRIFT` | Selector missing/ambiguous (report to builder) |
 | `INVALID_INPUT` | Param out of range/enum |
-| `AUTH_REQUIRED` | Write requires a logged-in session |
+| `AUTH_REQUIRED` | Login required; the runtime already opened the login form and waited. If `login-timeout`, re-run the same command after the user logs in |
 | `APPROVAL_REQUIRED` | Exact stored plan/approval missing |
 | `PLAN_CHANGED` | Account/target/state changed; review a new plan |
 | `PLAN_USED` | Plan already attempted; verify business state |

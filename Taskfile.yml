@@ -15,7 +15,3 @@ tasks:
     cmds:
       - npx --yes skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
       - node scripts/install-deps.mjs
-  openwiki:update:
-    desc: Update the repository OpenWiki documentation
-    cmds:
-      - openwiki --update

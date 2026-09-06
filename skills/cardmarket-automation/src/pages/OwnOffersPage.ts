@@ -46,9 +46,13 @@ export class OwnOffersPage extends SitePage {
     return this.table.locator('.table-body .article-row');
   }
 
-  /** The page has one stock-filter form (index 3); the global header search is form index 2. */
+  /**
+   * Identify the stock-filter form by its content, not by index: the logged-in
+   * page holds only `form#searchForm` and the (id-less) stock-filter form, so a
+   * fixed form index is wrong as soon as the logged-out login form disappears.
+   */
   private get filterForm(): Locator {
-    return this.page.locator('form').nth(3);
+    return this.page.locator('form').filter({ has: this.page.locator('select[name="idLanguage"]') });
   }
 
   /** Cardmarket's next control at the bottom of the stock table. */
