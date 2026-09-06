@@ -93,6 +93,13 @@
   und `versions` liefert `auth.loggedIn: false`.
 - **Pending:** `loggedIn: true` braucht eine echte angemeldete User-Session.
 
+## 2026-09-06: CLI-Hinweise
+- `run` benötigt immer `--input <file.json>`; `examples/input-empty.json`
+  enthält `{}` für Parameterlose Kommandos.
+- Doku empfiehlt den Timeout der aufrufenden Tool-Umgebung in ms und
+  nimmt das auf stock macOS fehlende Bash-`timeout` nicht mehr an.
+- **Browserlos:** `npm run typecheck` ✔, `npm test` 39/39 ✔.
+
 ## Known Gaps
 - Neue State-Machine-Oberfläche live validiert (2026-09-06);
   `nav.versions` nutzt direkte Versions-URL-Navigation.

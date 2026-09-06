@@ -153,6 +153,7 @@ When `minQty > 0`, each artwork additionally contains:
 - `examples/input-versions.json` – `info` `minQty`
 - `examples/input-artworks.json` – `info` versions
 - `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, and `info`
+- Every CLI `run` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
 ## Static Next Hints
 

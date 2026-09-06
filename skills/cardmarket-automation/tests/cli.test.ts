@@ -18,6 +18,10 @@ test('invalid CLI flags return structured INVALID_INPUT',()=>{
   const result=run(['list','--typo']);assert.equal(result.status,2);
   assert.equal(result.json.error.code,'INVALID_INPUT');
 });
+test('run requires an input file',()=>{
+  const result=run(['run','info']);assert.equal(result.status,2);
+  assert.equal(result.json.error.code,'INVALID_INPUT');
+});
 test('missing execute approval fails before a browser or write',()=>{
   const result=run(['execute']);assert.equal(result.status,3);
   assert.equal(result.json.error.code,'APPROVAL_REQUIRED');

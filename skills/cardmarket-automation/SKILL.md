@@ -64,17 +64,17 @@ Run `info` to read the current state.
 ```bash
 npm run cli -- list                         # List IDs
 npm run cli -- describe <id>                # Show params + output schema
-npm run cli -- run <id> --input <file.json> # Execute (file = naked JSON object)
+npm run cli -- run <id> --input <file.json> # Execute (input file required; naked JSON object)
 npm run cli -- doctor                       # Check browser attachment
 ```
 
-**Input Format:** Naked JSON object (e.g., `{ "query": "Forest" }`). No wrappers.
+**Input Format:** `--input <file.json>` is required for every `run`. The file contains a naked JSON object (e.g., `{ "query": "Forest" }`); use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
 **Result Envelope:** The action payload is in `data.result`; suggested follow-ups are in `data.allowedNextActions`.
 
 ## CLI & Diagnostics
 
-- **Timeouts:** Bash `timeout` is in ms. `run` ≥ `180000`, `doctor` ≈ `3000`.
+- **Timeouts:** Use the calling tool's own timeout in ms; stock macOS has no Bash `timeout` command. Budgets: `run` ≥ `180000`, `doctor` ≈ `3000`.
 - **Debug:** `playwright-cli -s=cardmarket-automation --raw run-code --filename=<diag.ts>` (read-only DOM snippets only).
 - **Lock:** `BUSY` = stale lock in `.local/runtime.lock`. Check PID before removing.
 
