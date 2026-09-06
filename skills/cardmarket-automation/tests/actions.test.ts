@@ -80,13 +80,13 @@ const artwork = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-test('registry has the seven state-machine actions, all read-only', () => {
+test('registry has the state-machine and user-offer actions', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.search', 'nav.versions'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.search', 'nav.versions', 'user.offer.update', 'user.offers'],
   );
   for (const a of actions) {
-    assert.equal(a.kind, 'read');
+    if (a.kind === 'write') assert.ok('prepare' in a && 'execute' in a);
     for (const n of a.next)
       assert.ok(actions.some((x) => x.id === n), `next ${n} registered`);
   }
@@ -206,4 +206,57 @@ test('validateOutput happy + sad for info', () => {
   assert.equal(code(() => infoAction.validateOutput({ ...versionsMin, artworks: [artwork({ sellersAtLeast: 1, qualifies: true })] })), 'POSTCONDITION_FAILED');
 
   assert.equal(code(() => infoAction.validateOutput({ state: 'nope' })), 'POSTCONDITION_FAILED');
+});
+
+const userOffer = (over: Record<string, unknown> = {}) => ({
+  articleId: 1,
+  seller: 'S1',
+  card: 'Forest',
+  set: 'Marvel',
+  condition: 'Near Mint',
+  language: 'German',
+  price: '1,23 €',
+  quantity: 15,
+  ...over,
+});
+
+test('validateInput happy + sad for user.offers', () => {
+  const a = byId('user.offers');
+  assert.deepEqual(validateInput(a.parameters, {}), plain({ limit: 20 }));
+  assert.deepEqual(validateInput(a.parameters, { limit: 0 }), plain({ limit: 0 }));
+  assert.equal(code(() => validateInput(a.parameters, { limit: 101 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { unknown: 1 })), 'INVALID_INPUT');
+});
+
+test('validateInput happy + sad for user.offer.update', () => {
+  const a = byId('user.offer.update');
+  assert.deepEqual(validateInput(a.parameters, { articleId: 1, price: 1.23 }), plain({ articleId: 1, price: 1.23 }));
+  assert.deepEqual(validateInput(a.parameters, { articleId: 1 }), plain({ articleId: 1 }));
+  assert.equal(code(() => validateInput(a.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleId: 0, price: 1 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleId: 1, price: 0 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleId: 1, condition: 'unknown' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleId: 1, language: 'any' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleId: 1, unknown: 1 })), 'INVALID_INPUT');
+});
+
+test('validateOutput happy + sad for user.offers', () => {
+  const a = byId('user.offers');
+  const found = { state: 'detail', card: 'Forest', set: 'Marvel', url: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest', found: true, count: 1, offers: [userOffer()], auth: auth() };
+  assert.doesNotThrow(() => a.validateOutput(found));
+  assert.doesNotThrow(() => a.validateOutput({ ...found, found: false, count: 0, offers: [] }));
+  assert.equal(code(() => a.validateOutput({ ...found, count: 0 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...found, offers: [userOffer({ price: 5 })] })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ state: 'nope', card: '', set: '', url: '', found: false, count: 0, offers: [], auth: auth() })), 'POSTCONDITION_FAILED');
+});
+
+test('validateOutput happy + sad for user.offer.update', () => {
+  const a = byId('user.offer.update');
+  const ok = { state: 'detail', articleId: 1, card: 'Forest', set: 'Marvel', url: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest', offer: userOffer(), changes: { price: 1.23 }, verified: true, auth: auth() };
+  assert.doesNotThrow(() => a.validateOutput(ok));
+  assert.equal(code(() => a.validateOutput({ ...ok, state: 'versions' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, changes: {} })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, changes: { unknown: 1 } })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, verified: 'yes' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, offer: userOffer({ quantity: '15' }) })), 'POSTCONDITION_FAILED');
 });

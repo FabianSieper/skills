@@ -3,6 +3,7 @@ import { config } from '../../site.config.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { navigate } from '../runtime/guards.ts';
 import { resolveHref } from '../lib/url.ts';
+import { readAccount } from '../lib/auth.ts';
 
 /**
  * Cardmarket base page: origin guard + Cloudflare detection.
@@ -29,7 +30,7 @@ export class SitePage {
       await navigate(this.page, config.baseURL, config.allowedOrigins);
     }
     await this.waitForCloudflare();
-    return { accountKey: 'public' };
+    return { accountKey: await readAccount(this.page) };
   }
 
   /** Navigate to an absolute/relative Cardmarket URL with origin + Cloudflare guards. */

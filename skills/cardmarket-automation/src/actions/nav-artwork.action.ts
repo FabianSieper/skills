@@ -37,5 +37,5 @@ export const action: Action = {
     return { status: 'ok', state: detectState(page) };
   },
   modulePath: import.meta.url,
-  next: ['info', 'nav.versions', 'nav.filter'],
+  next: ['info', 'nav.versions', 'nav.filter', 'user.offers'],
 };

@@ -121,5 +121,5 @@ export const action: Action = {
     return { state: 'versions', card: await versions.cardFromUrl(), versionsUrl, total, shown, minQuantity: minQty, artworks, auth };
   },
   modulePath: import.meta.url,
-  next: ['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter'],
+  next: ['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'user.offers'],
 };

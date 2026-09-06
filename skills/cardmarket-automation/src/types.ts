@@ -27,11 +27,49 @@ export type SellerOffer = {
   quantity: string;
 };
 
+export type UserOffer = {
+  articleId: number;
+  seller: string;
+  card: string;
+  set: string;
+  condition: string;
+  language: string;
+  price: string;
+  quantity: number;
+};
+
+export type UserOffersOutput = {
+  state: StateId;
+  card: string;
+  set: string;
+  url: string;
+  found: boolean;
+  count: number;
+  offers: UserOffer[];
+  auth: AuthInfo;
+};
+
+export type UserOfferChanges = Record<string, string | number | boolean>;
+
+export type UserOfferUpdateOutput = {
+  state: 'detail';
+  articleId: number;
+  card: string;
+  set: string;
+  url: string;
+  offer: UserOffer;
+  changes: UserOfferChanges;
+  verified: boolean;
+  auth: AuthInfo;
+};
+
 /** Seller-filter value types (card detail page filter form). */
 export type FilterCondition = 'any' | 'poor' | 'played' | 'light-played' | 'good' | 'excellent' | 'near-mint' | 'mint';
 export type FilterLanguage = 'any' | 'english' | 'french' | 'german' | 'spanish' | 'italian' | 's-chinese' | 'japanese' | 'portuguese' | 'russian' | 't-chinese';
 export type FilterYesNo = 'any' | 'yes' | 'no';
 export type FilterSellerType = 'any' | 'private' | 'professional' | 'powerseller';
+export type OfferCondition = 'mint' | 'near-mint' | 'excellent' | 'good' | 'light-played' | 'played' | 'poor';
+export type OfferLanguage = Exclude<FilterLanguage, 'any'>;
 
 /** Resolved (fully defaulted) seller filter applied before reading seller rows. */
 export type ResolvedSellerFilter = {

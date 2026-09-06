@@ -1,11 +1,52 @@
-import type { Page } from 'playwright';
+import type { Locator, Page } from 'playwright';
 import { config } from '../../site.config.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { uniqueVisible, clickUnique } from '../runtime/guards.ts';
 import { SitePage } from './SitePage.ts';
-import type { CardInfo, ResolvedSellerFilter, SellerOffer } from '../types.ts';
+import { parsePrice, parseQty } from '../lib/parse.ts';
+import type { CardInfo, OfferCondition, OfferLanguage, ResolvedSellerFilter, SellerOffer, UserOffer, UserOfferChanges } from '../types.ts';
 import { buildFilterTargets, type FilterTargets, SELLER_FILTER_DEFAULTS, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry } from './seller-filters.ts';
+import { OFFER_CONDITION_LABELS, OFFER_CONDITION_VALUES, OFFER_LANGUAGE_LABELS, OFFER_LANGUAGE_VALUES } from './user-offer-filters.ts';
 import { resolveHref } from '../lib/url.ts';
+import type { Preview } from '../runtime/engine.ts';
+
+type OfferFormState = {
+  idArticle: number;
+  condition: string;
+  language: string;
+  foil: boolean;
+  signed: boolean;
+  altered: boolean;
+  comments: string;
+  price: string;
+  quantity: number;
+  quantityOptions: number[];
+};
+
+function sameFormState(current: OfferFormState, saved: unknown): boolean {
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return false;
+  const o = saved as Record<string, unknown>;
+  return (
+    current.idArticle === (o.idArticle as number) &&
+    current.condition === (o.condition as string) &&
+    current.language === (o.language as string) &&
+    current.foil === (o.foil as boolean) &&
+    current.signed === (o.signed as boolean) &&
+    current.altered === (o.altered as boolean) &&
+    current.comments === (o.comments as string) &&
+    current.price === (o.price as string) &&
+    current.quantity === (o.quantity as number) &&
+    JSON.stringify(current.quantityOptions) === JSON.stringify(o.quantityOptions)
+  );
+}
+
+async function setOfferCheckbox(locator: Locator, checked: boolean): Promise<void> {
+  if ((await locator.count()) !== 1) throw new AutomationError('UI_DRIFT', 'offer-checkbox');
+  if ((await locator.isChecked()) !== checked) {
+    if (checked) await locator.check({ timeout: 15_000 });
+    else await locator.uncheck({ timeout: 15_000 });
+  }
+}
 
 /**
  * Card detail page:
@@ -260,5 +301,203 @@ export class CardDetailPage extends SitePage {
         { timeout: timeoutMs },
       )
       .catch(() => {});
+  }
+
+  private userOfferRow(articleId: number): Locator {
+    return this.page.locator(`main .article-row#stockRow${articleId}`);
+  }
+
+  private userOfferEditLink(articleId: number): Locator {
+    return this.userOfferRow(articleId).locator('div[aria-label="Edit"] a[data-modal*="Article_EditArticleModal"]');
+  }
+
+  private userOfferModal(): Locator {
+    return this.page.locator('#modal .modal-content');
+  }
+
+  private userOfferForm(): Locator {
+    return this.page.locator('#modal form[data-ajax-action="Article_EditSingleArticle"]');
+  }
+
+  async readUserOffers(card: string, set: string, limit: number): Promise<UserOffer[]> {
+    await this.assertReady();
+    const rows = this.page.locator('main .article-row[id^="stockRow"]');
+    const total = await rows.count();
+    const offers: UserOffer[] = [];
+    for (let i = 0; i < Math.min(limit, total); i++) {
+      const row = await rows.nth(i).evaluate((el) => {
+        const q = (sel: string) => el.querySelector(sel);
+        const idMatch = el.id.match(/^stockRow(\d+)$/);
+        const condition = q('.article-condition');
+        return {
+          articleId: Number(idMatch?.[1] ?? '0'),
+          seller: q('.seller-info .seller-name a[href]')?.textContent?.trim() ?? '',
+          condition: condition?.getAttribute('data-bs-original-title') ?? condition?.textContent?.trim() ?? '',
+          language: q('.product-attributes span[aria-label]')?.getAttribute('aria-label') ?? '',
+          price: q('.col-offer span.color-primary')?.textContent?.trim() ?? '',
+          quantity: q('.item-count')?.textContent?.trim() ?? '',
+        };
+      });
+      if (row.articleId <= 0) throw new AutomationError('UI_DRIFT', 'user-offer-id');
+      offers.push({ ...row, quantity: parseQty(row.quantity), card, set });
+    }
+    return offers;
+  }
+
+  async readUserStockOffer(articleId: number, card: string, set: string): Promise<UserOffer> {
+    await this.assertReady();
+    const row = this.userOfferRow(articleId);
+    if ((await row.count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-row');
+    await row.waitFor({ state: 'visible', timeout: 15_000 });
+    await this.page
+      .waitForFunction((id: string) => {
+        const el = document.getElementById(id);
+        return el !== null && !el.querySelector('.loader, .spinner');
+      }, `stockRow${articleId}`, { timeout: 15_000 })
+      .catch(() => {});
+    const rowOffer = await row.evaluate((el) => {
+      const q = (sel: string) => el.querySelector(sel);
+      const idMatch = el.id.match(/^stockRow(\d+)$/);
+      const condition = q('.article-condition');
+      return {
+        articleId: Number(idMatch?.[1] ?? '0'),
+        seller: q('.seller-info .seller-name a[href]')?.textContent?.trim() ?? '',
+        condition: condition?.getAttribute('data-bs-original-title') ?? condition?.textContent?.trim() ?? '',
+        language: q('.product-attributes span[aria-label]')?.getAttribute('aria-label') ?? '',
+        price: q('.col-offer span.color-primary')?.textContent?.trim() ?? '',
+        quantity: q('.item-count')?.textContent?.trim() ?? '',
+      };
+    });
+    if (rowOffer.articleId !== articleId) throw new AutomationError('UI_DRIFT', 'user-offer-id');
+    return { ...rowOffer, quantity: parseQty(rowOffer.quantity), card, set };
+  }
+
+  async openUserOfferEditForm(articleId: number): Promise<void> {
+    await this.assertReady();
+    const row = this.userOfferRow(articleId);
+    if ((await row.count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-row');
+    const link = this.userOfferEditLink(articleId);
+    if ((await link.count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-edit-link');
+    await link.click({ timeout: 15_000 });
+    await uniqueVisible(this.userOfferModal(), 'user-offer-modal', 30_000);
+    await uniqueVisible(this.userOfferForm(), 'user-offer-form', 30_000);
+    await this.page
+      .waitForFunction(
+        () => Boolean(document.querySelector('#modal form[data-ajax-action="Article_EditSingleArticle"] input[name="price"]')),
+        null,
+        { timeout: 30_000 },
+      )
+      .catch(() => {});
+    const hidden = await this.userOfferForm().locator('input[name="idArticle"]').first().inputValue();
+    if (Number(hidden) !== articleId) throw new AutomationError('UI_DRIFT', 'user-offer-form-id');
+  }
+
+  async readUserOfferEditForm(): Promise<OfferFormState> {
+    await this.assertReady();
+    if ((await this.userOfferForm().count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-form');
+    return this.userOfferForm().evaluate((form: Element) => {
+      const select = (name: string) => (form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null);
+      const input = (name: string) => (form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null);
+      const amount = select('editAmount');
+      return {
+        idArticle: Number(input('idArticle')?.value ?? '0'),
+        condition: select('condition')?.value ?? '',
+        language: select('idLanguage')?.value ?? '',
+        foil: input('isFoil')?.checked ?? false,
+        signed: input('isSigned')?.checked ?? false,
+        altered: input('isAltered')?.checked ?? false,
+        comments: input('comments')?.value ?? '',
+        price: input('price')?.value ?? '',
+        quantity: Number(amount?.value ?? '0'),
+        quantityOptions: amount ? Array.from(amount.querySelectorAll('option')).map((option) => Number(option.value)) : [],
+      };
+    });
+  }
+
+  async closeUserOfferEditForm(): Promise<void> {
+    await this.page.keyboard.press('Escape');
+    await this.userOfferModal().waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {});
+    if (await this.userOfferModal().isVisible().catch(() => false)) throw new AutomationError('UI_DRIFT', 'user-offer-modal-close');
+  }
+
+  async applyUserOfferChanges(changes: UserOfferChanges): Promise<void> {
+    await this.assertReady();
+    if ((await this.userOfferForm().count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-form');
+    const form = this.userOfferForm();
+    if (typeof changes.condition === 'string') {
+      const key = changes.condition as OfferCondition;
+      if (!Object.hasOwn(OFFER_CONDITION_VALUES, key)) throw new AutomationError('INVALID_INPUT', 'condition');
+      await form.locator('select[name="condition"]').selectOption(OFFER_CONDITION_VALUES[key], { timeout: 15_000 });
+    }
+    if (typeof changes.language === 'string') {
+      const key = changes.language as OfferLanguage;
+      if (!Object.hasOwn(OFFER_LANGUAGE_VALUES, key)) throw new AutomationError('INVALID_INPUT', 'language');
+      await form.locator('select[name="idLanguage"]').selectOption(OFFER_LANGUAGE_VALUES[key], { timeout: 15_000 });
+    }
+    if (typeof changes.foil === 'boolean') await setOfferCheckbox(form.locator('input[name="isFoil"]'), changes.foil);
+    if (typeof changes.signed === 'boolean') await setOfferCheckbox(form.locator('input[name="isSigned"]'), changes.signed);
+    if (typeof changes.altered === 'boolean') await setOfferCheckbox(form.locator('input[name="isAltered"]'), changes.altered);
+    if (typeof changes.comments === 'string') await form.locator('input[name="comments"]').fill(changes.comments, { timeout: 15_000 });
+    if (typeof changes.price === 'number') await form.locator('input[name="price"]').fill(String(changes.price), { timeout: 15_000 });
+    if (typeof changes.quantity === 'number') {
+      const select = form.locator('select[name="editAmount"]');
+      const options = await select.locator('option').evaluateAll((nodes) => nodes.map((node) => Number((node as HTMLOptionElement).value)));
+      if (!options.includes(changes.quantity)) throw new AutomationError('INVALID_INPUT', 'quantity');
+      await select.selectOption(String(changes.quantity), { timeout: 15_000 });
+    }
+  }
+
+  async submitUserOfferEditForm(): Promise<void> {
+    await this.assertReady();
+    if ((await this.userOfferForm().count()) !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-form');
+    const button = this.userOfferForm().locator('button[type="submit"]');
+    if ((await button.count()) !== 1) throw new AutomationError('UI_DRIFT', 'offer-submit-button');
+    const navigation = this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+    await button.click({ timeout: 15_000 }).catch(() => {});
+    const nav = await navigation;
+    if (nav) await this.waitForCloudflare();
+    await this.userOfferModal().waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    if (await this.userOfferModal().isVisible().catch(() => false)) {
+      const invalid = await this.userOfferForm().locator('.invalid-feedback').first().isVisible().catch(() => false);
+      if (invalid) throw new AutomationError('INVALID_INPUT', 'offer-form');
+      throw new AutomationError('TIMEOUT', 'offer-submit');
+    }
+    await this.page.waitForTimeout(500);
+  }
+
+  async prepareUserOfferUpdate(articleId: number, changes: UserOfferChanges, card: string, set: string): Promise<Preview> {
+    await this.openUserOfferEditForm(articleId);
+    const current = await this.readUserOfferEditForm();
+    if (current.idArticle !== articleId) throw new AutomationError('UI_DRIFT', 'user-offer-form-id');
+    if (typeof changes.quantity === 'number' && !current.quantityOptions.includes(changes.quantity))
+      throw new AutomationError('INVALID_INPUT', 'quantity');
+    await this.closeUserOfferEditForm();
+    return {
+      identity: { articleId, card, set, url: this.page.url(), current },
+      changes,
+    };
+  }
+
+  async executeUserOfferUpdate(articleId: number, changes: UserOfferChanges, card: string, set: string, preview: Preview): Promise<UserOffer> {
+    await this.openUserOfferEditForm(articleId);
+    const current = await this.readUserOfferEditForm();
+    if (current.idArticle !== articleId || !sameFormState(current, preview.identity.current))
+      throw new AutomationError('PLAN_CHANGED', 'user-offer-form');
+    await this.applyUserOfferChanges(changes);
+    await this.submitUserOfferEditForm();
+    const offer = await this.readUserStockOffer(articleId, card, set);
+    if (typeof changes.price === 'number' && parsePrice(offer.price) !== changes.price)
+      throw new AutomationError('POSTCONDITION_FAILED', 'price');
+    if (typeof changes.quantity === 'number' && offer.quantity !== changes.quantity)
+      throw new AutomationError('POSTCONDITION_FAILED', 'quantity');
+    if (typeof changes.condition === 'string') {
+      const label = OFFER_CONDITION_LABELS[changes.condition as OfferCondition];
+      if (label && offer.condition !== label) throw new AutomationError('POSTCONDITION_FAILED', 'condition');
+    }
+    if (typeof changes.language === 'string') {
+      const label = OFFER_LANGUAGE_LABELS[changes.language as OfferLanguage];
+      if (label && offer.language !== label) throw new AutomationError('POSTCONDITION_FAILED', 'language');
+    }
+    return offer;
   }
 }

@@ -1,11 +1,11 @@
 ---
 name: cardmarket-automation
-description: Read-only Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, or print variants.
+description: Guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, print variants, or explicit own-offer changes.
 ---
 
 # Cardmarket Automation
 
-> **CONTRACT:** Attach to existing Chrome (`playwright-cli attach --extension=chrome --session=cardmarket-automation`). **NEVER** open/replace/close the browser. Missing browser = `BROWSER_REQUIRED` (hard stop).
+> **CONTRACT:** Attach to existing Chrome (`playwright-cli attach --extension=chrome --session=cardmarket-automation`). **NEVER** open/replace/close the browser. Missing browser = `BROWSER_REQUIRED` (hard stop). Writes require `plan`, exact user review, and `execute` approval; never modify an offer without an explicit instruction.
 
 ## States
 
@@ -13,7 +13,7 @@ description: Read-only Cardmarket state-machine automation (login state, search,
 |---|---|---|
 | `start` | site/game/search entry | begin a new task, reach the login prompt |
 | `results` | search result tiles | identify a card, open one result |
-| `detail` | one card page | read top block, sellers, current filter, apply filter, open versions |
+| `detail` | one card page | read top block, sellers, own offers, current filter, apply filter, open versions, update one own offer |
 | `versions` | artwork/version list | read versions, open one artwork |
 
 The `info` command detects the current state and returns `{ state, ..., auth }`.
@@ -47,6 +47,19 @@ Run `info` to read the current state.
 
 `info` output is state-specific and includes `auth: { loggedIn }`. See `references/actions.md`.
 
+## User Offers
+
+`user.offers` reads the logged-in user's own stock rows on a detail page. Each offer includes a stable `articleId`.
+
+`user.offer.update` is a write action. Use it only after the user explicitly asks for a change:
+1. Run `user.offers`.
+2. If multiple offers exist, ask the user which `articleId` should change.
+3. Create a plan with exactly one `articleId` and the requested changes.
+4. Show the plan and obtain approval.
+5. Execute the stored plan, then verify with `user.offers`.
+
+Supported changes: `price`, `quantity`, `condition`, `language`, `foil`, `signed`, `altered`, `comments`. Image upload is not supported.
+
 ## Recommended Loop
 
 1. `npm run cli -- doctor` – verify browser attachment.
@@ -64,17 +77,19 @@ Run `info` to read the current state.
 ```bash
 npm run cli -- list                         # List IDs
 npm run cli -- describe <id>                # Show params + output schema
-npm run cli -- run <id> --input <file.json> # Execute (input file required; naked JSON object)
+npm run cli -- run <id> --input <file.json> # Read action (input file required; naked JSON object)
+npm run cli -- plan <id> --input <file.json> # Write action: create exact plan
+npm run cli -- execute --plan <id> --approve <hash> # Write action: execute approved plan
 npm run cli -- doctor                       # Check browser attachment
 ```
 
-**Input Format:** `--input <file.json>` is required for every `run`. The file contains a naked JSON object (e.g., `{ "query": "Forest" }`); use `examples/input-empty.json` (`{}`) when no parameters are needed.
+**Input Format:** `--input <file.json>` is required for `run` and `plan`. The file contains a naked JSON object (e.g., `{ "query": "Forest" }`); use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
-**Result Envelope:** The action payload is in `data.result`; suggested follow-ups are in `data.allowedNextActions`.
+**Result Envelope:** The action payload is in `data.result`; suggested follow-ups are in `data.allowedNextActions`. Plans return `planId`, `approvalHash`, `preview`, and `instruction`.
 
 ## CLI & Diagnostics
 
-- **Timeouts:** Use the calling tool's own timeout in ms; stock macOS has no Bash `timeout` command. Budgets: `run` ≥ `180000`, `doctor` ≈ `3000`.
+- **Timeouts:** Use the calling tool's own timeout in ms; stock macOS has no Bash `timeout` command. Budgets: `run`/`plan`/`execute` ≥ `180000`, `doctor` ≈ `3000`.
 - **Debug:** `playwright-cli -s=cardmarket-automation --raw run-code --filename=<diag.ts>` (read-only DOM snippets only).
 - **Lock:** `BUSY` = stale lock in `.local/runtime.lock`. Check PID before removing.
 
@@ -86,6 +101,11 @@ npm run cli -- doctor                       # Check browser attachment
 | `HUMAN_REQUIRED` | Cloudflare challenge > 90s (solve manually) |
 | `UI_DRIFT` | Selector missing/ambiguous (report to builder) |
 | `INVALID_INPUT` | Param out of range/enum |
+| `AUTH_REQUIRED` | Write requires a logged-in session |
+| `APPROVAL_REQUIRED` | Exact stored plan/approval missing |
+| `PLAN_CHANGED` | Account/target/state changed; review a new plan |
+| `PLAN_USED` | Plan already attempted; verify business state |
+| `UNKNOWN_COMMIT` | Write may have happened; do not retry, verify with read |
 | `wrong_state` | Command cannot run in the current state |
 | `not_available` | Expected page affordance is missing |
 

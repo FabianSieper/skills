@@ -55,5 +55,5 @@ export const action: Action = {
     return { status: 'ok', state: detectState(page) };
   },
   modulePath: import.meta.url,
-  next: ['info'],
+  next: ['info', 'user.offers'],
 };

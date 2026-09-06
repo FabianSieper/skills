@@ -1,18 +1,20 @@
 # Actions Reference
 
-All actions are **read-only**.
+Actions are read-only except `user.offer.update`, which is a guarded write action requiring `plan` and `execute` approval.
 
 ## Command Table
 
-| ID | State | Parameters | Output |
-|---|---|---|---|
-| `nav.home` | any → `start` | – | `{ status, state }` |
-| `nav.search` | any → `results` | `query` (str, req) | `{ status, state }` |
-| `nav.open` | `results` → `detail` | `index` (int, req) | `{ status, state }` |
-| `nav.versions` | `detail` → `versions` | – | `{ status, state }` |
-| `nav.artwork` | `versions` → `detail` | `index` (int, req) | `{ status, state }` |
-| `nav.filter` | `detail` → `detail` | filter fields (all optional) | `{ status, state }` |
-| `info` | auto-detect | `limit`, `sellers`, `minQty` | state-specific payload |
+| ID | Kind | State | Parameters | Output |
+|---|---|---|---|---|
+| `nav.home` | read | any → `start` | – | `{ status, state }` |
+| `nav.search` | read | any → `results` | `query` (str, req) | `{ status, state }` |
+| `nav.open` | read | `results` → `detail` | `index` (int, req) | `{ status, state }` |
+| `nav.versions` | read | `detail` → `versions` | – | `{ status, state }` |
+| `nav.artwork` | read | `versions` → `detail` | `index` (int, req) | `{ status, state }` |
+| `nav.filter` | read | `detail` → `detail` | filter fields (all optional) | `{ status, state }` |
+| `info` | read | auto-detect | `limit`, `sellers`, `minQty` | state-specific payload |
+| `user.offers` | read | `detail` | `limit` | own-offer payload |
+| `user.offer.update` | write | `detail` | `articleId` + changes | update payload |
 
 ## Nav Status
 
@@ -64,6 +66,28 @@ All fields are optional and default to the current canonical filter:
 | `limit` | 30 | 1–150 |
 | `sellers` | 50 | 0–500 |
 | `minQty` | 0 | 0–1000 |
+
+### `user.offers`
+| field | default | range |
+|---|---:|---:|
+| `limit` | 20 | 0–100 |
+
+Only own `stockRow` entries are returned. The action is empty outside `detail`.
+
+### `user.offer.update`
+| field | required | type / values |
+|---|---|---|
+| `articleId` | yes | integer from `user.offers` |
+| `price` | no | number, 0.01–1,000,000 EUR |
+| `quantity` | no | integer, 1–1,000,000; must exist as an option in the edit modal |
+| `condition` | no | `mint`, `near-mint`, `excellent`, `good`, `light-played`, `played`, `poor` |
+| `language` | no | `english`, `french`, `german`, `spanish`, `italian`, `s-chinese`, `japanese`, `portuguese`, `russian`, `t-chinese` |
+| `foil` | no | boolean |
+| `signed` | no | boolean |
+| `altered` | no | boolean |
+| `comments` | no | string, 0–100 chars |
+
+At least one change field is required; `prepare` fails with `INVALID_INPUT` when only `articleId` is supplied. Image upload is not part of the action.
 
 ## `info` Output Shapes
 
@@ -144,6 +168,64 @@ When `minQty > 0`, each artwork additionally contains:
 - `sellersAtLeast`
 - `qualifies`
 
+### `user.offers`
+```json
+{
+  "state": "detail",
+  "card": "Esix, Fractal Bloom",
+  "set": "Commander: Murders at Karlov Manor",
+  "url": "https://...",
+  "found": true,
+  "count": 1,
+  "offers": [
+    {
+      "articleId": 2108603357,
+      "seller": "Hayrus",
+      "card": "Esix, Fractal Bloom",
+      "set": "Commander: Murders at Karlov Manor",
+      "condition": "Excellent",
+      "language": "English",
+      "price": "0,25 €",
+      "quantity": 1
+    }
+  ],
+  "auth": { "loggedIn": true }
+}
+```
+
+### `user.offer.update`
+```json
+{
+  "state": "detail",
+  "articleId": 2108603357,
+  "card": "Esix, Fractal Bloom",
+  "set": "Commander: Murders at Karlov Manor",
+  "url": "https://...",
+  "offer": {
+    "articleId": 2108603357,
+    "seller": "Hayrus",
+    "card": "Esix, Fractal Bloom",
+    "set": "Commander: Murders at Karlov Manor",
+    "condition": "Excellent",
+    "language": "English",
+    "price": "0,26 €",
+    "quantity": 1
+  },
+  "changes": { "price": 0.26 },
+  "verified": true,
+  "auth": { "loggedIn": true }
+}
+```
+
+## Write Safety
+
+`user.offer.update` uses the engine write contract:
+- `plan` opens and reads the edit modal, then closes it without saving.
+- The plan binds account, URL, card, article ID, current form values, requested changes, input, implementation, and TTL.
+- `execute` re-prepares the same target and blocks on account or form drift.
+- A used plan cannot be replayed.
+- A lost response after submit becomes `UNKNOWN_COMMIT`; verify with `user.offers` instead of retrying.
+
 ## Examples
 
 - `examples/input.json` – `nav.search`
@@ -152,15 +234,19 @@ When `minQty > 0`, each artwork additionally contains:
 - `examples/input-price.json` – `info` sellers
 - `examples/input-versions.json` – `info` `minQty`
 - `examples/input-artworks.json` – `info` versions
-- `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, and `info`
-- Every CLI `run` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
+- `examples/input-user-offers.json` – `user.offers`
+- `examples/input-user-offer-update.json` – `user.offer.update` schema example
+- `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, `info`, and `user.offers`
+- Every CLI `run`/`plan` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
 ## Static Next Hints
 
 - `nav.home.next`: `['info', 'nav.search']`
 - `nav.search.next`: `['info', 'nav.open']`
-- `nav.open.next`: `['info', 'nav.versions', 'nav.filter']`
+- `nav.open.next`: `['info', 'nav.versions', 'nav.filter', 'user.offers']`
 - `nav.versions.next`: `['info', 'nav.artwork']`
-- `nav.artwork.next`: `['info', 'nav.versions', 'nav.filter']`
-- `nav.filter.next`: `['info']`
-- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']`
+- `nav.artwork.next`: `['info', 'nav.versions', 'nav.filter', 'user.offers']`
+- `nav.filter.next`: `['info', 'user.offers']`
+- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'user.offers']`
+- `user.offers.next`: `['info', 'user.offer.update']`
+- `user.offer.update.next`: `['info', 'user.offers']`

@@ -1,6 +1,6 @@
 # Cardmarket Skill – Verifikation & Status
 
-> **Status: `login-state ready`** – State-Machine live validiert (2026-09-06); neues Login-State-Feature browserlos validiert und im Logged-Out-Zustand live validiert; Logged-In-Check wartet auf User-Session.
+> **Status: `own-offers ready`** – State-Machine und Login-State live validiert (2026-09-06); neue Own-Offer-Reads und guardierte Offer-Updates browserlos sowie in echter User-Session live validiert.
 
 ## Browserlos (erledigt)
 - Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/`, `examples/`.
@@ -100,6 +100,22 @@
   nimmt das auf stock macOS fehlende Bash-`timeout` nicht mehr an.
 - **Browserlos:** `npm run typecheck` ✔, `npm test` 39/39 ✔.
 
+## 2026-09-06: Own Offers & Guarded Offer Updates
+- **Feature:** `user.offers` liest eigene `stockRow`-Angebote auf der Detailseite;
+  `user.offer.update` ändert genau ein Angebot über das `Article_EditArticleModal`.
+- **Modal-Felder:** `condition`, `idLanguage`, `isFoil`, `isSigned`, `isAltered`,
+  `scan`, `comments`, `price`, `editAmount`; Submit-Button `Edit article`.
+- **Sicherheit:** Write-Aktion mit `plan`, Account-/Form-Drift-Check, Approval,
+  Plan-Reuse-Blockade und Post-Submit-Verifikation; `prepare` schließt das Modal
+  ohne Speichern.
+- **Browserlos:** `npm run typecheck` ✔, `npm test` 43/43 ✔.
+- **Live:** `user.offers` liefert den Esix-Eintrag `articleId=2108603357`,
+  Preis `0,25 €`, Menge `1`, Zustand `Excellent`, Sprache `English`.
+- **Live-Write:** mit expliziter Freigabe Preis auf `0,26 €` geändert und verifiziert,
+  anschließend auf `0,25 €` zurückgesetzt und verifiziert.
+- **Known Gap:** `editAmount` bietet im getesteten Eintrag nur `1`; Mengen-Änderungen
+  brauchen einen Eintrag mit mehreren verfügbaren `editAmount`-Optionen.
+
 ## Known Gaps
 - Neue State-Machine-Oberfläche live validiert (2026-09-06);
   `nav.versions` nutzt direkte Versions-URL-Navigation.
@@ -107,5 +123,6 @@
 - Such-Einstieg hängt an `searchEntry` = `/en/Magic`; entfernt Cardmarket das
   Top-Bar-Form auch von Game-Seiten, wieder `UI_DRIFT` → Einstieg per read-only
   `run-code`-Diagnose neu bestimmen.
-- Login-Detection im Logged-Out-Zustand live validiert; Logged-In-Detection
-  bleibt ohne echte User-Session unverifiziert.
+- Login-Detection im Logged-Out- und Logged-In-Zustand live validiert.
+- Mengen-Update im Esix-Testfall nicht weiter prüfbar, weil `editAmount`
+  nur die Option `1` liefert.
