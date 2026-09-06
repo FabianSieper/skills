@@ -214,3 +214,38 @@ export type OwnOffersInfo = {
   auth: AuthInfo;
 };
 export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo | OwnOffersInfo;
+
+/** One row in the stock market comparison result (compact). */
+export type MarketComparisonRow = {
+  articleId: number;
+  card: string;
+  price: string;
+  marketFrom: string;
+  marketSellers: number;
+  belowMarket: boolean;
+};
+
+/** Output of stock.market-comparison */
+export type StockMarketComparisonOutput = {
+  state: 'own-offers';
+  count: number;
+  offers: MarketComparisonRow[];
+  auth: AuthInfo;
+};
+
+/** One item in the bulk price update result. */
+export type BulkPriceUpdateItem = {
+  articleId: number;
+  card: string;
+  oldPrice: string;
+  newPrice: number;
+  verified: boolean;
+};
+
+/** Output of stock.bulk-price-update */
+export type StockBulkPriceUpdateOutput = {
+  state: 'own-offers';
+  count: number;
+  updated: BulkPriceUpdateItem[];
+  auth: AuthInfo;
+};

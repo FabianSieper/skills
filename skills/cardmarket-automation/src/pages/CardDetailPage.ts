@@ -226,7 +226,13 @@ export class CardDetailPage extends SitePage {
         if (count === 0) throw new AutomationError('UI_DRIFT', 'country-expand');
         if (count > 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'country-expand');
         await expand.click({ timeout: 15_000 });
-        await this.page.waitForTimeout(500);
+        await this.page
+          .waitForFunction(
+            (v: string) => Boolean(document.querySelector(`form[action*="Product_Filter_FilterProduct"] input[name="sellerCountry[${v}]"]`)),
+            targets.sellerCountry,
+            { timeout: 15_000 },
+          )
+          .catch(() => {});
       }
     }
     let changed = false;
@@ -274,15 +280,15 @@ export class CardDetailPage extends SitePage {
     const button = this.page.locator('form input[type="submit"][name="apply"]');
     await uniqueVisible(button, 'filter-apply');
     const [nav] = await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null),
-      button.click({ timeout: 15_000 }).catch(() => null),
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null),
+      button.click({ timeout: 200 }).catch(() => null),
     ]);
     if (!nav) {
       await this.page.evaluate(() => {
         const el = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
         if (el instanceof HTMLFormElement) el.requestSubmit();
       });
-      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null);
     }
     await this.waitForCloudflare();
   }
@@ -462,7 +468,6 @@ export class CardDetailPage extends SitePage {
       if (invalid) throw new AutomationError('INVALID_INPUT', 'offer-form');
       throw new AutomationError('TIMEOUT', 'offer-submit');
     }
-    await this.page.waitForTimeout(500);
   }
 
   async prepareUserOfferUpdate(articleId: number, changes: UserOfferChanges, card: string, set: string): Promise<Preview> {

@@ -83,7 +83,7 @@ const artwork = (over: Record<string, unknown> = {}) => ({
 test('registry has the state-machine and user-offer actions', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'nav.search', 'nav.versions', 'user.offer.update', 'user.offers'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'nav.search', 'nav.versions', 'stock.bulk-price-update', 'stock.market-comparison', 'user.offer.update', 'user.offers'],
   );
   for (const a of actions) {
     if (a.kind === 'write') assert.ok('prepare' in a && 'execute' in a);
@@ -320,4 +320,62 @@ test('validateOutput happy + sad for user.offer.update', () => {
   assert.equal(code(() => a.validateOutput({ ...ok, changes: { unknown: 1 } })), 'POSTCONDITION_FAILED');
   assert.equal(code(() => a.validateOutput({ ...ok, verified: 'yes' })), 'POSTCONDITION_FAILED');
   assert.equal(code(() => a.validateOutput({ ...ok, offer: userOffer({ quantity: '15' }) })), 'POSTCONDITION_FAILED');
+});
+
+test('validateInput happy + sad for stock.market-comparison', () => {
+  const a = byId('stock.market-comparison');
+  assert.deepEqual(validateInput(a.parameters, {}), plain({
+    limit: 0,
+    location: 'germany',
+    sellerType: 'any',
+    foil: 'any',
+    signed: 'any',
+    altered: 'any',
+  }));
+  assert.equal(code(() => validateInput(a.parameters, { limit: 1001 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { location: 'klingon' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { unknown: 1 })), 'INVALID_INPUT');
+});
+
+test('validateOutput happy + sad for stock.market-comparison', () => {
+  const a = byId('stock.market-comparison');
+  const ok = {
+    state: 'own-offers',
+    count: 1,
+    offers: [{ articleId: 1, card: 'Forest', price: '1,23 €', marketFrom: '0,50 €', marketSellers: 3, belowMarket: false }],
+    auth: auth({ loggedIn: true }),
+  };
+  assert.doesNotThrow(() => a.validateOutput(ok));
+  assert.equal(code(() => a.validateOutput({ ...ok, state: 'detail' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, count: 2 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, offers: [{ articleId: 1, card: 'Forest', price: 5, marketFrom: '0,50 €', marketSellers: 3, belowMarket: false }] })), 'POSTCONDITION_FAILED');
+});
+
+test('validateInput happy + sad for stock.bulk-price-update', () => {
+  const a = byId('stock.bulk-price-update');
+  assert.deepEqual(validateInput(a.parameters, { articleIds: ['1', '2'], prices: ['1.23', '2.50'] }),
+    plain({ articleIds: ['1', '2'], prices: ['1.23', '2.50'] }));
+  assert.equal(code(() => validateInput(a.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleIds: ['1'] })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleIds: [], prices: [] })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleIds: '1', prices: ['1.23'] })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(a.parameters, { articleIds: ['1', '2'], prices: ['1.23', '2.50'], unknown: 1 })), 'INVALID_INPUT');
+});
+
+test('validateOutput happy + sad for stock.bulk-price-update', () => {
+  const a = byId('stock.bulk-price-update');
+  const ok = {
+    state: 'own-offers',
+    count: 2,
+    updated: [
+      { articleId: 1, card: 'Forest', oldPrice: '1,00 €', newPrice: 1.23, verified: true },
+      { articleId: 2, card: 'Bose', oldPrice: '2,00 €', newPrice: 2.50, verified: true },
+    ],
+    auth: auth({ loggedIn: true }),
+  };
+  assert.doesNotThrow(() => a.validateOutput(ok));
+  assert.equal(code(() => a.validateOutput({ ...ok, state: 'detail' })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, count: 1 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, updated: [{ articleId: 1, card: 'Forest', oldPrice: '1,00 €', newPrice: '1.23', verified: true }, { articleId: 2, card: 'Bose', oldPrice: '2,00 €', newPrice: 2.50, verified: true }] })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => a.validateOutput({ ...ok, updated: [{ articleId: 1, card: 'Forest', oldPrice: '1,00 €', newPrice: 1.23, verified: 'yes' }, { articleId: 2, card: 'Bose', oldPrice: '2,00 €', newPrice: 2.50, verified: true }] })), 'POSTCONDITION_FAILED');
 });

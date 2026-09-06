@@ -10,6 +10,8 @@ import { action as navOwnOffersOpenAction } from './nav-own-offers-open.action.t
 import { action as infoAction } from './info.action.ts';
 import { action as userOffersAction } from './user-offers.action.ts';
 import { action as userOfferUpdateAction } from './user-offer-update.action.ts';
+import { action as stockMarketComparisonAction } from './stock-market-comparison.action.ts';
+import { action as stockBulkPriceUpdateAction } from './stock-bulk-price-update.action.ts';
 import type { Action } from '../runtime/engine.ts';
 
 export const actions: Action[] = [
@@ -25,4 +27,6 @@ export const actions: Action[] = [
   infoAction,
   userOffersAction,
   userOfferUpdateAction,
+  stockMarketComparisonAction,
+  stockBulkPriceUpdateAction,
 ];

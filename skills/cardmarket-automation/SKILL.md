@@ -86,6 +86,66 @@ To compare an own listing's price, filter/read the listing, run `nav.own-offers.
 
 Supported changes: `price`, `quantity`, `condition`, `language`, `foil`, `signed`, `altered`, `comments`. Image upload is not supported.
 
+## Stock Market Comparison
+
+`stock.market-comparison` is a batch action that compares **all** (or a subset of) your own offers against the current market. For each offer it:
+
+1. Opens the card detail page.
+2. **Derives the seller filter from the offer's own condition and language** — e.g. an "Excellent / English" offer is compared against Excellent+ English sellers; a "Good / German" offer is compared against Good+ German sellers. The location (country) comes from the input parameter.
+3. Reads the lowest matching seller price (`marketFrom`) and the number of matching sellers (`marketSellers`).
+4. Sets `belowMarket: true` when your price is at or below the lowest market price.
+5. Navigates back to the own-offers page and continues with the next offer.
+
+The action returns a single consolidated result with all offers and their market comparison. The browser is left on the `own-offers` page.
+
+**Parameters:**
+
+| parameter | default | range | meaning |
+|---|---:|---:|---|
+| `limit` | 0 | 0–1000 | Max offers to check (0 = all) |
+| `location` | `germany` | seller filter values | Seller location for market comparison |
+| `sellerType`, `foil`, `signed`, `altered` | `any` | seller filter values | Additional seller filters |
+
+**Output:** `{ state: "own-offers", count, offers: [{ articleId, card, price, marketFrom, marketSellers, belowMarket }], auth }`
+
+**Example:** Compare all offers against German dealers (condition/language derived per card):
+```bash
+echo '{}' | npm run cli -- run stock.market-comparison --input /dev/stdin
+```
+
+Compare only the first 20 offers against Austrian dealers:
+```bash
+echo '{"limit": 20, "location": "austria"}' > /tmp/cm-compare.json
+npm run cli -- run stock.market-comparison --input /tmp/cm-compare.json
+```
+
+## Bulk Price Update
+
+`stock.bulk-price-update` is a write action that updates the price of multiple own offers in a single approved plan. It takes two parallel arrays: `articleIds` (strings) and `prices` (strings, index-aligned). Each card detail page is opened, the edit form is read, and the new price is set after approval.
+
+**Parameters:**
+
+| parameter | required | range | meaning |
+|---|---|---|---|
+| `articleIds` | yes | 1–1000 elements | Article IDs from `user.offers` or `info` own-offers |
+| `prices` | yes | 1–1000 elements | New prices in EUR, e.g. `"1.23"` or `"1,23"` |
+
+**Workflow:**
+1. Run `info` with `{ "all": true }` on the own-offers page to get all article IDs.
+2. Build the input with the desired `articleIds` and new `prices`.
+3. Create a plan: `npm run cli -- plan stock.bulk-price-update --input <file.json>`.
+4. Review the plan preview (shows each card and its current form state) and obtain user approval.
+5. Execute the stored plan.
+6. Verify with `info` on the own-offers page.
+
+**Example:** Update two offers:
+```bash
+echo '{"articleIds": ["12345", "67890"], "prices": ["1.50", "2.00"]}' > /tmp/cm-bulk.json
+npm run cli -- plan stock.bulk-price-update --input /tmp/cm-bulk.json
+```
+
+**Output:** `{ state: "own-offers", count, updated: [{ articleId, card, oldPrice, newPrice, verified }], auth }`
+
 ## Recommended Loop
 
 1. `npm run cli -- doctor` – verify browser attachment.

@@ -72,7 +72,7 @@ export class OwnOffersPage extends SitePage {
   async readCurrentFilter(): Promise<OwnOfferFilterState> {
     if (!(await this.hasFilterForm())) throw new AutomationError('UI_DRIFT', 'own-offers-filter-form');
     const values = await this.filterForm.locator(FIELD_SELECTORS.cardName).all();
-    const cardName = values.length > 0 ? await values[0].inputValue() : '';
+    const cardName = values.length > 0 && values[0] ? await values[0].inputValue() : '';
     const expansion = (await this.filterForm.locator(FIELD_SELECTORS.expansion).first().innerText()) ?? '';
     const rarity = (await this.filterForm.locator(FIELD_SELECTORS.rarity).first().innerText()) ?? '';
     const condition = (await this.filterForm.locator(FIELD_SELECTORS.condition).first().innerText()) ?? '';
@@ -160,7 +160,11 @@ export class OwnOffersPage extends SitePage {
       this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null),
       clickUnique(button, 'own-offers-filter-submit', 15_000),
     ]);
-    if (!navigation) await this.page.waitForTimeout(300);
+    if (!navigation) {
+      await this.page
+        .waitForFunction(() => !Boolean(document.querySelector('#UserOffersTable .loader, #UserOffersTable .spinner')), null, { timeout: 15_000, polling: 250 })
+        .catch(() => {});
+    }
     await this.waitForCloudflare();
     await uniqueVisible(this.table, 'own-offers-table', 30_000);
   }

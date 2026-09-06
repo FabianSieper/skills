@@ -47,19 +47,11 @@ export class SitePage {
    * manually in the attached browser).
    */
   async waitForCloudflare(timeoutMs = 90_000): Promise<void> {
-    const start = Date.now();
-    for (;;) {
-      let title = '';
-      try {
-        title = await this.page.title();
-      } catch {
-        title = '';
-      }
-      if (!/just a moment|attention required|cloudflare/i.test(title)) return;
-      if (Date.now() - start > timeoutMs) {
-        throw new AutomationError('HUMAN_REQUIRED', 'cloudflare-challenge');
-      }
-      await this.page.waitForTimeout(2_000);
-    }
+    await this.page
+      .waitForFunction(() => !/just a moment|attention required|cloudflare/i.test(document.title), null, { timeout: timeoutMs })
+      .catch(() => {});
+    const title = await this.page.title().catch(() => '');
+    if (/just a moment|attention required|cloudflare/i.test(title))
+      throw new AutomationError('HUMAN_REQUIRED', 'cloudflare-challenge');
   }
 }
