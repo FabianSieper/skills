@@ -95,4 +95,13 @@ export class CardVersionsPage extends SitePage {
     if (!m) return 0;
     return parseInt(m[1]!.replace(/\s+/g, ''), 10) || 0;
   }
+
+  async tileCount(): Promise<number> {
+    return this.tiles.count();
+  }
+
+  async cardFromUrl(): Promise<string> {
+    const match = this.page.url().match(/\/Cards\/([^/]+)\/Versions/);
+    return match ? decodeURIComponent(match[1]!) : '';
+  }
 }

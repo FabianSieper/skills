@@ -4,7 +4,7 @@ import { AutomationError } from '../runtime/errors.ts';
 import { uniqueVisible, clickUnique } from '../runtime/guards.ts';
 import { SitePage } from './SitePage.ts';
 import type { CardInfo, ResolvedSellerFilter, SellerOffer } from '../types.ts';
-import { buildFilterTargets, type FilterTargets } from './seller-filters.ts';
+import { buildFilterTargets, type FilterTargets, SELLER_FILTER_DEFAULTS, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry } from './seller-filters.ts';
 import { resolveHref } from '../lib/url.ts';
 
 /**
@@ -121,12 +121,47 @@ export class CardDetailPage extends SitePage {
     return (await this.page.locator('a:has-text("Show Versions")').count()) > 0;
   }
 
-  /** Click the "Show Versions" link and wait for the Versions page. */
+  /** Open the "Show Versions" target and wait for the Versions page. */
   async openVersions(): Promise<void> {
     const link = this.page.locator('a:has-text("Show Versions")');
-    await clickUnique(link, 'versions-link');
-    await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
-    await this.waitForCloudflare();
+    const url = await this.versionsUrl();
+    if (!url) {
+      await clickUnique(link, 'versions-link');
+      await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
+      await this.waitForCloudflare();
+      return;
+    }
+    await this.gotoAllowed(url);
+  }
+
+  async hasFilterForm(): Promise<boolean> {
+    return (await this.filterForm.count()) === 1;
+  }
+
+  async readCurrentFilter(): Promise<ResolvedSellerFilter> {
+    if ((await this.filterForm.count()) !== 1) return { ...SELLER_FILTER_DEFAULTS };
+    const raw = await this.filterForm.evaluate((form: Element) => {
+      const select = (name: string) => (form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null)?.value ?? '';
+      const checked = (prefix: string) => (form.querySelector(`input[type="checkbox"][name^="${prefix}["]:checked`) as HTMLInputElement | null)?.value ?? '';
+      return {
+        minCondition: select('minCondition') || '7',
+        language: checked('language'),
+        sellerCountry: checked('sellerCountry'),
+        sellerType: checked('sellerType'),
+        isFoil: select('extra[isFoil]') || '0',
+        isSigned: select('extra[isSigned]') || '0',
+        isAltered: select('extra[isAltered]') || '0',
+      };
+    });
+    return {
+      condition: reverseCondition(raw.minCondition),
+      language: reverseLanguage(raw.language),
+      location: reverseCountry(raw.sellerCountry),
+      sellerType: reverseSellerType(raw.sellerType),
+      foil: reverseYesNo(raw.isFoil),
+      signed: reverseYesNo(raw.isSigned),
+      altered: reverseYesNo(raw.isAltered),
+    };
   }
 
   private get filterForm() {

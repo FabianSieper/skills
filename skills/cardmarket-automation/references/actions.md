@@ -2,33 +2,155 @@
 
 All actions are **read-only**.
 
-| ID | Keywords | Parameters | Output |
+## Command Table
+
+| ID | State | Parameters | Output |
 |---|---|---|---|
-| `cards.search` | search, find, look up | `query` (str, req), `limit` (int=20) | `{ query, count, cards: [{ name, set, image, fromPrice, url }] }` |
-| `cards.price` | price, sellers, availability, stock, cost | `name` (str, req), `sellers` (int=50), `condition`, `language`, `location`, `sellerType`, `foil`, `signed`, `altered` | `{ found, card, url, filter, info, sellerCount, sellers: [{ seller, location, condition, language, price, quantity }] }` |
-| `cards.artworks` | versions, artworks, reprints, variants | `name` (str, req), `minQty` (int=0), `limit` (int=40) | `{ found, card, versionsUrl, total, shown, minQuantity, artworks: [{ card, set, version, available, fromPrice, image, url, maxSellerQuantity?, sellersAtLeast?, qualifies? }] }` |
+| `nav.search` | any → `results` | `query` (str, req) | `{ status, state }` |
+| `nav.open` | `results` → `detail` | `index` (int, req) | `{ status, state }` |
+| `nav.versions` | `detail` → `versions` | – | `{ status, state }` |
+| `nav.artwork` | `versions` → `detail` | `index` (int, req) | `{ status, state }` |
+| `nav.filter` | `detail` → `detail` | filter fields (all optional) | `{ status, state }` |
+| `info` | auto-detect | `limit`, `sellers`, `minQty` | state-specific payload |
+
+## Nav Status
+
+`status` values:
+
+- `ok` – transition succeeded
+- `not_found` – requested `index` is out of range
+- `not_available` – expected page affordance is missing
+- `wrong_state` – command precondition is not met
+
+`state` values: `start`, `results`, `detail`, `versions`.
 
 ## Parameters
 
-### `cards.search`
-- `query`: Card name or search string.
-- `limit`: Max result tiles (1-50).
+### `nav.search`
+- `query`: card name or search string. Required, 1–100 chars.
 
-### `cards.price`
-- `name`: Card name.
-- `sellers`: Max seller rows (0 = top block only).
-- `condition`: `mint|near-mint|excellent|good|light-played|played|poor|any` (Default: `excellent`).
-- `language`: `english|french|german|spanish|italian|s-chinese|japanese|portuguese|russian|t-chinese|any` (Default: `english`).
-- `location`: Canonical key or alias (e.g., `germany`, `de`, `uk`, `any`). (Default: `germany`).
-- `sellerType`: `private|professional|powerseller|any` (Default: `any`).
-- `foil`, `signed`, `altered`: `any|yes|no` (Default: `any`).
+### `nav.open`
+- `index`: result tile position. Required, 0–100.
 
-### `cards.artworks`
-- `name`: Card name.
-- `minQty`: Seller quantity check threshold (0 = skip).
-- `limit`: Max artwork entries (1-200).
+### `nav.versions`
+- No parameters.
 
-## Output Details
-- `cards.price.filter`: Resolved canonical values applied before reading.
-- `cards.price.info`: Top block fields (rarity, number, printedIn, reprints, availableItems, from, priceTrend, avg30d, avg7d, avg1d, image).
-- `cards.artworks`: `maxSellerQuantity`, `sellersAtLeast`, `qualifies` only present if `minQty > 0`.
+### `nav.artwork`
+- `index`: artwork/version tile position. Required, 0–1000.
+
+### `nav.filter`
+All fields are optional and default to the current canonical filter:
+
+| field | default | values |
+|---|---|---|
+| `condition` | `excellent` | `mint`, `near-mint`, `excellent`, `good`, `light-played`, `played`, `poor`, `any` |
+| `language` | `english` | `english`, `french`, `german`, `spanish`, `italian`, `s-chinese`, `japanese`, `portuguese`, `russian`, `t-chinese`, `any` |
+| `location` | `germany` | canonical key or alias, e.g. `germany`, `de`, `uk`, `any` |
+| `sellerType` | `any` | `private`, `professional`, `powerseller`, `any` |
+| `foil` | `any` | `any`, `yes`, `no` |
+| `signed` | `any` | `any`, `yes`, `no` |
+| `altered` | `any` | `any`, `yes`, `no` |
+
+`nav.filter` submits the filter form and settles the seller list before returning.
+
+### `info`
+| field | default | range |
+|---|---:|---:|
+| `limit` | 30 | 1–150 |
+| `sellers` | 50 | 0–500 |
+| `minQty` | 0 | 0–1000 |
+
+## `info` Output Shapes
+
+### `start`
+```json
+{ "state": "start", "ready": true }
+```
+
+### `results`
+```json
+{
+  "state": "results",
+  "query": "Forest",
+  "count": 2,
+  "cards": [
+    { "name": "Forest", "set": "Marvel", "image": "https://...", "fromPrice": "From 0,02 €", "url": "https://..." }
+  ]
+}
+```
+
+### `detail`
+```json
+{
+  "state": "detail",
+  "card": "Forest",
+  "url": "https://...",
+  "filter": {
+    "condition": "excellent",
+    "language": "english",
+    "location": "germany",
+    "sellerType": "any",
+    "foil": "any",
+    "signed": "any",
+    "altered": "any"
+  },
+  "info": {
+    "title": "Forest",
+    "rarity": "Common",
+    "number": "332",
+    "printedIn": "1",
+    "reprints": "2",
+    "availableItems": "100",
+    "from": "0,02 €",
+    "priceTrend": "stable",
+    "avg30d": "1,00 €",
+    "avg7d": "1,00 €",
+    "avg1d": "1,00 €",
+    "image": "https://...",
+    "url": "https://..."
+  },
+  "sellerCount": 1,
+  "sellers": [
+    { "seller": "S1", "location": "DE", "condition": "Near Mint", "language": "German", "price": "1,23 €", "quantity": "15" }
+  ]
+}
+```
+
+### `versions`
+```json
+{
+  "state": "versions",
+  "card": "Forest",
+  "versionsUrl": "https://...",
+  "total": 842,
+  "shown": 1,
+  "minQuantity": 0,
+  "artworks": [
+    { "card": "Forest", "set": "Marvel", "version": "Version 1", "available": "10 Available", "fromPrice": "From 1,00 €", "image": "https://...", "url": "https://..." }
+  ]
+}
+```
+
+When `minQty > 0`, each artwork additionally contains:
+- `maxSellerQuantity`
+- `sellersAtLeast`
+- `qualifies`
+
+## Examples
+
+- `examples/input.json` – `nav.search`
+- `examples/input-index.json` – `nav.open` / `nav.artwork`
+- `examples/input-filter.json` – `nav.filter`
+- `examples/input-price.json` – `info` sellers
+- `examples/input-versions.json` – `info` `minQty`
+- `examples/input-artworks.json` – `info` versions
+- `examples/input-empty.json` – no parameters
+
+## Static Next Hints
+
+- `nav.search.next`: `['info', 'nav.open']`
+- `nav.open.next`: `['info', 'nav.versions', 'nav.filter']`
+- `nav.versions.next`: `['info', 'nav.artwork']`
+- `nav.artwork.next`: `['info', 'nav.versions', 'nav.filter']`
+- `nav.filter.next`: `['info']`
+- `info.next`: `['nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']`

@@ -111,3 +111,12 @@ export type ArtworksOutput = {
   minQuantity: number;
   artworks: (Artwork | ArtworkCheck)[];
 };
+
+export type StateId = 'start' | 'results' | 'detail' | 'versions';
+export type NavStatus = 'ok' | 'not_found' | 'not_available' | 'wrong_state';
+export type NavOutput = { status: NavStatus; state: StateId };
+export type StartInfo = { state: 'start'; ready: boolean };
+export type ResultsInfo = { state: 'results'; query: string; count: number; cards: SearchCard[] };
+export type DetailInfo = { state: 'detail'; card: string; url: string; filter: ResolvedSellerFilter; info: CardInfo; sellerCount: number; sellers: SellerOffer[] };
+export type VersionsInfo = { state: 'versions'; card: string; versionsUrl: string; total: number; shown: number; minQuantity: number; artworks: (Artwork | ArtworkCheck)[] };
+export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo;

@@ -254,3 +254,32 @@ export function isResolvedSellerFilter(value: unknown): value is ResolvedSellerF
     Object.hasOwn(YES_NO_VALUES, o.altered)
   );
 }
+
+export function reverseCondition(value: string): FilterCondition {
+  if (value === '7') return 'any';
+  const keys = Object.keys(CONDITION_VALUES) as FilterCondition[];
+  return keys.find((key) => CONDITION_VALUES[key] === value) ?? 'any';
+}
+
+export function reverseLanguage(value: string): FilterLanguage {
+  if (!value) return 'any';
+  const keys = Object.keys(LANGUAGE_VALUES) as FilterLanguage[];
+  return keys.find((key) => LANGUAGE_VALUES[key] === value) ?? 'any';
+}
+
+export function reverseSellerType(value: string): FilterSellerType {
+  if (!value) return 'any';
+  const keys = Object.keys(SELLER_TYPE_VALUES) as FilterSellerType[];
+  return keys.find((key) => SELLER_TYPE_VALUES[key] === value) ?? 'any';
+}
+
+export function reverseYesNo(value: string): FilterYesNo {
+  const keys = Object.keys(YES_NO_VALUES) as FilterYesNo[];
+  return keys.find((key) => YES_NO_VALUES[key] === value) ?? 'any';
+}
+
+export function reverseCountry(value: string): string {
+  if (!value) return 'any';
+  const keys = Object.keys(COUNTRY_VALUES);
+  return keys.find((key) => COUNTRY_VALUES[key] === value) ?? 'any';
+}

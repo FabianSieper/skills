@@ -4,8 +4,7 @@ import { actions } from '../src/actions/index.ts';
 import { AutomationError } from '../src/runtime/errors.ts';
 import { validateInput } from '../src/runtime/input.ts';
 
-const plain = (o: Record<string, unknown>) =>
-  Object.assign(Object.create(null), o);
+const plain = (o: Record<string, unknown>) => Object.assign(Object.create(null), o);
 
 function byId(id: string) {
   const a = actions.find((x) => x.id === id);
@@ -42,7 +41,7 @@ const seller = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const info = () => ({
+const infoFixture = () => ({
   title: 'Forest',
   rarity: 'Common',
   number: '332',
@@ -55,6 +54,17 @@ const info = () => ({
   avg7d: '1,00 €',
   avg1d: '1,00 €',
   image: 'https://www.cardmarket.com/img/y.jpg',
+  url: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest',
+});
+
+const filterFixture = () => ({
+  condition: 'excellent',
+  language: 'english',
+  location: 'germany',
+  sellerType: 'any',
+  foil: 'any',
+  signed: 'any',
+  altered: 'any',
 });
 
 const artwork = (over: Record<string, unknown> = {}) => ({
@@ -68,10 +78,10 @@ const artwork = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-test('registry has the three Cardmarket actions, all read-only', () => {
+test('registry has the six state-machine actions, all read-only', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['cards.artworks', 'cards.price', 'cards.search'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.open', 'nav.search', 'nav.versions'],
   );
   for (const a of actions) {
     assert.equal(a.kind, 'read');
@@ -80,112 +90,87 @@ test('registry has the three Cardmarket actions, all read-only', () => {
   }
 });
 
-test('validateInput happy + sad', () => {
-  const search = byId('cards.search');
-  assert.deepEqual(validateInput(search.parameters, { query: 'Forest' }), plain({
-    query: 'Forest',
-    limit: 20,
+test('validateInput happy + sad for nav actions', () => {
+  const search = byId('nav.search');
+  assert.deepEqual(validateInput(search.parameters, { query: 'Forest' }), plain({ query: 'Forest' }));
+  assert.equal(code(() => validateInput(search.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(search.parameters, { query: '' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(search.parameters, { query: 'Forest', unknown: 1 })), 'INVALID_INPUT');
+
+  const open = byId('nav.open');
+  assert.deepEqual(validateInput(open.parameters, { index: 0 }), plain({ index: 0 }));
+  assert.equal(code(() => validateInput(open.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(open.parameters, { index: 101 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(open.parameters, { index: -1 })), 'INVALID_INPUT');
+
+  const versions = byId('nav.versions');
+  assert.deepEqual(validateInput(versions.parameters, {}), plain({}));
+  assert.equal(code(() => validateInput(versions.parameters, { index: 0 })), 'INVALID_INPUT');
+
+  const artworkAction = byId('nav.artwork');
+  assert.deepEqual(validateInput(artworkAction.parameters, { index: 0 }), plain({ index: 0 }));
+  assert.equal(code(() => validateInput(artworkAction.parameters, {})), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(artworkAction.parameters, { index: 1001 })), 'INVALID_INPUT');
+
+  const filter = byId('nav.filter');
+  assert.deepEqual(validateInput(filter.parameters, {}), plain({
+    condition: 'excellent',
+    language: 'english',
+    location: 'germany',
+    sellerType: 'any',
+    foil: 'any',
+    signed: 'any',
+    altered: 'any',
   }));
-  assert.equal(
-    code(() => validateInput(search.parameters, {})),
-    'INVALID_INPUT',
-  );
-  assert.equal(
-    code(() =>
-      validateInput(search.parameters, { query: 'x', limit: 0 }),
-    ),
-    'INVALID_INPUT',
-  );
-  assert.equal(
-    code(() =>
-      validateInput(search.parameters, { query: 'x', unknown: 1 }),
-    ),
-    'INVALID_INPUT',
-  );
-
-  const price = byId('cards.price');
-  assert.deepEqual(
-    validateInput(price.parameters, { name: 'Forest' }),
-    plain({
-      name: 'Forest',
-      sellers: 50,
-      condition: 'excellent',
-      language: 'english',
-      location: 'germany',
-      sellerType: 'any',
-      foil: 'any',
-      signed: 'any',
-      altered: 'any',
-    }),
-  );
-  assert.equal(
-    code(() => validateInput(price.parameters, { name: '' })),
-    'INVALID_INPUT',
-  );
-
-  const arts = byId('cards.artworks');
-  assert.deepEqual(
-    validateInput(arts.parameters, { name: 'Forest' }),
-    plain({ name: 'Forest', minQty: 0, limit: 40 }),
-  );
-  assert.equal(
-    code(() =>
-      validateInput(arts.parameters, { name: 'Forest', minQty: 1001 }),
-    ),
-    'INVALID_INPUT',
-  );
+  assert.equal(code(() => validateInput(filter.parameters, { condition: 'unknown' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(filter.parameters, { location: 'unknown' })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(filter.parameters, { unknown: 1 })), 'INVALID_INPUT');
 });
 
-test('validateOutput happy + sad', () => {
-  const search = byId('cards.search');
-  const sOut = { query: 'Forest', count: 2, cards: [card(), card({ name: 'Bose' })] };
-  assert.doesNotThrow(() => search.validateOutput(sOut));
-  assert.equal(
-    code(() =>
-      search.validateOutput({ query: 'Forest', count: 3, cards: [card()] }),
-    ),
-    'POSTCONDITION_FAILED',
-  );
-  assert.equal(
-    code(() =>
-      search.validateOutput({ query: 'Forest', count: 1, cards: [card({ fromPrice: 5 })] }),
-    ),
-    'POSTCONDITION_FAILED',
-  );
+test('validateInput happy + sad for info', () => {
+  const infoAction = byId('info');
+  assert.deepEqual(validateInput(infoAction.parameters, {}), plain({ limit: 30, sellers: 50, minQty: 0 }));
+  assert.equal(code(() => validateInput(infoAction.parameters, { limit: 151 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(infoAction.parameters, { sellers: 501 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(infoAction.parameters, { minQty: 1001 })), 'INVALID_INPUT');
+  assert.equal(code(() => validateInput(infoAction.parameters, { unknown: 1 })), 'INVALID_INPUT');
+});
 
-  const price = byId('cards.price');
-  const pOut = {
-    found: true,
+test('validateOutput happy + sad for nav actions', () => {
+  for (const id of ['nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter']) {
+    const a = byId(id);
+    assert.doesNotThrow(() => a.validateOutput({ status: 'ok', state: 'detail' }));
+    assert.equal(code(() => a.validateOutput({ status: 'ok', state: 'somewhere' })), 'POSTCONDITION_FAILED');
+    assert.equal(code(() => a.validateOutput({ status: 'boom', state: 'detail' })), 'POSTCONDITION_FAILED');
+  }
+});
+
+test('validateOutput happy + sad for info', () => {
+  const infoAction = byId('info');
+
+  assert.doesNotThrow(() => infoAction.validateOutput({ state: 'start', ready: true }));
+  assert.equal(code(() => infoAction.validateOutput({ state: 'start' })), 'POSTCONDITION_FAILED');
+
+  const results = { state: 'results', query: 'Forest', count: 2, cards: [card(), card({ name: 'Bose' })] };
+  assert.doesNotThrow(() => infoAction.validateOutput(results));
+  assert.equal(code(() => infoAction.validateOutput({ ...results, count: 3 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ ...results, cards: [card({ fromPrice: 5 })] })), 'POSTCONDITION_FAILED');
+
+  const detail = {
+    state: 'detail',
     card: 'Forest',
     url: 'https://www.cardmarket.com/en/Magic/Products/Singles/Marvel/Forest',
-    filter: {
-      condition: 'excellent',
-      language: 'english',
-      location: 'germany',
-      sellerType: 'any',
-      foil: 'any',
-      signed: 'any',
-      altered: 'any',
-    },
-    info: info(),
+    filter: filterFixture(),
+    info: infoFixture(),
     sellerCount: 1,
     sellers: [seller()],
   };
-  assert.doesNotThrow(() => price.validateOutput(pOut));
-  assert.equal(
-    code(() =>
-      price.validateOutput({ ...pOut, sellers: [seller({ price: 5 })] }),
-    ),
-    'POSTCONDITION_FAILED',
-  );
-  assert.equal(
-    code(() => price.validateOutput({ ...pOut, sellerCount: 0 })),
-    'POSTCONDITION_FAILED',
-  );
+  assert.doesNotThrow(() => infoAction.validateOutput(detail));
+  assert.equal(code(() => infoAction.validateOutput({ ...detail, sellerCount: 0 })), 'POSTCONDITION_FAILED');
+  assert.equal(code(() => infoAction.validateOutput({ ...detail, sellers: [seller({ price: 5 })] })), 'POSTCONDITION_FAILED');
 
-  const arts = byId('cards.artworks');
-  const aOut = {
-    found: true,
+  const versions = {
+    state: 'versions',
     card: 'Forest',
     versionsUrl: 'https://www.cardmarket.com/en/Magic/Cards/Forest/Versions',
     total: 842,
@@ -193,20 +178,16 @@ test('validateOutput happy + sad', () => {
     minQuantity: 0,
     artworks: [artwork()],
   };
-  assert.doesNotThrow(() => arts.validateOutput(aOut));
-  const aOutMin = {
-    ...aOut,
+  assert.doesNotThrow(() => infoAction.validateOutput(versions));
+  assert.equal(code(() => infoAction.validateOutput({ ...versions, shown: 2 })), 'POSTCONDITION_FAILED');
+
+  const versionsMin = {
+    ...versions,
     minQuantity: 5,
     artworks: [artwork({ maxSellerQuantity: 15, sellersAtLeast: 1, qualifies: true })],
   };
-  assert.doesNotThrow(() => arts.validateOutput(aOutMin));
-  assert.equal(
-    code(() =>
-      arts.validateOutput({
-        ...aOutMin,
-        artworks: [artwork({ sellersAtLeast: 1, qualifies: true })],
-      }),
-    ),
-    'POSTCONDITION_FAILED',
-  );
+  assert.doesNotThrow(() => infoAction.validateOutput(versionsMin));
+  assert.equal(code(() => infoAction.validateOutput({ ...versionsMin, artworks: [artwork({ sellersAtLeast: 1, qualifies: true })] })), 'POSTCONDITION_FAILED');
+
+  assert.equal(code(() => infoAction.validateOutput({ state: 'nope' })), 'POSTCONDITION_FAILED');
 });

@@ -1,16 +1,36 @@
 # Flows
 
-## Standard (Price + Versions)
-1. `cards.search` (identify card)
-2. `cards.price` (apply filter, read prices/sellers)
-3. `cards.artworks` (list versions/variants)
+## Detect Current State
+1. `info` – returns `state`.
 
-## Artworks Only
-1. `cards.search`
-2. `cards.artworks` (optional `minQty` for seller check)
+## Find a Card
+1. `nav.search { query }`
+2. `info` – read result tiles
+3. choose a tile index from `cards`
+4. `nav.open { index }`
+5. `info` – read detail
+
+## Read Card Detail
+1. `nav.open { index }`
+2. `info`
+3. optional `nav.filter { ... }`
+4. `info`
+
+## Read Versions
+1. `nav.versions`
+2. `info`
+3. optional `nav.artwork { index }`
+4. `info`
+
+## Check Seller Quantities Across Versions
+1. `nav.versions`
+2. `info { limit, minQty }`
+3. inspect `artworks[].qualifies`, `maxSellerQuantity`, and `sellersAtLeast`
 
 ## Error Handling
-- `found: false`: No results (continue or stop).
-- `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: Stop, report to builder.
-- `BROWSER_REQUIRED`: Hard stop.
-- `HUMAN_REQUIRED`: Wait for manual Cloudflare solve.
+- `wrong_state`: run `info`, then choose a transition valid for the returned state.
+- `not_available`: report or choose another path.
+- `not_found`: re-run `info` and use an available index.
+- `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: stop and report to builder.
+- `BROWSER_REQUIRED`: hard stop.
+- `HUMAN_REQUIRED`: wait for manual Cloudflare solve.
