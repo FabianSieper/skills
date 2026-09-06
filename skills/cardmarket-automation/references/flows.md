@@ -6,10 +6,12 @@
 ## Require Login
 1. `info` – read `auth.loggedIn`.
 2. If `auth.loggedIn` is `false` and the task needs a logged-in session:
-   1. `nav.home`
-   2. ask the user to enter username/password in the attached browser
-   3. `info` – verify `auth.loggedIn` is `true`
+   1. `nav.home` – navigates to the Cardmarket login page.
+   2. ask the user to enter username/password in the attached browser.
+   3. `info` – verify `auth.loggedIn` is `true`.
    4. continue from the required state.
+3. If an action returns `AUTH_REQUIRED`, automatically call `nav.home` and prompt the user to log in, then retry the action.
+3. If an action returns `AUTH_REQUIRED`, automatically call `nav.home` and prompt the user to log in, then retry the action.
 
 ## Find a Card
 1. `nav.search { query }`
@@ -70,6 +72,6 @@
 - `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: stop and report to builder.
 - `BROWSER_REQUIRED`: hard stop.
 - `HUMAN_REQUIRED`: wait for manual Cloudflare solve.
-- `AUTH_REQUIRED`: ask the user to log in to the attached browser.
+- `AUTH_REQUIRED`: **automatic** — call `nav.home` to go to the login page, prompt the user to enter credentials, then retry the original action.
 - `PLAN_CHANGED`: create and review a new plan.
 - `PLAN_USED` / `UNKNOWN_COMMIT`: do not retry; verify with `user.offers`.

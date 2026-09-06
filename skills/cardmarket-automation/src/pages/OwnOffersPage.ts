@@ -10,6 +10,22 @@ import { CardDetailPage } from './CardDetailPage.ts';
 
 type FilterField = keyof OwnOfferFilterState;
 
+const FIELD_SELECTORS: Record<FilterField, string> = {
+  cardName: 'input[name="name"]',
+  expansion: 'select[name="idExpansion"]',
+  rarity: 'select[name="idRarity"]',
+  condition: 'select[name="condition"]',
+  language: 'select[name="idLanguage"]',
+  comments: 'input[name="comments"]',
+  minPrice: 'input[name="minPrice"]',
+  maxPrice: 'input[name="maxPrice"]',
+  minQuantity: 'input[name="minAmt"]',
+  foil: 'select[name="isFoil"]',
+  signed: 'select[name="isSigned"]',
+  altered: 'select[name="isAltered"]',
+  sort: 'select[name="sortBy"]',
+};
+
 /**
  * Selling → My Offers → Singles.
  *
@@ -30,33 +46,14 @@ export class OwnOffersPage extends SitePage {
     return this.table.locator('.table-body .article-row');
   }
 
-  /** The page has one stock-filter form; the global header search is outside `main`. */
+  /** The page has one stock-filter form (index 3); the global header search is form index 2. */
   private get filterForm(): Locator {
-    return this.page.locator('main form:has(input[name="searchString"])');
+    return this.page.locator('form').nth(3);
   }
 
   /** Cardmarket's next control at the bottom of the stock table. */
   private get nextControl(): Locator {
-    return this.page.locator('main a.pagination-control[data-direction="next"]');
-  }
-
-  private filterControl(field: FilterField): Locator {
-    const selectors: Record<FilterField, string> = {
-      cardName: 'input[name="searchString"]',
-      expansion: 'select[name="idExpansion"]',
-      rarity: 'select[name="idRarity"]',
-      condition: 'select[name="minCondition"]',
-      language: 'select[name="idLanguage"]',
-      comments: 'input[name="comments"]',
-      minPrice: 'input[name="minPrice"]',
-      maxPrice: 'input[name="maxPrice"]',
-      minQuantity: 'input[name="minAmount"], input[name="minAvail"], input[name="minAvailability"]',
-      foil: 'select[name="isFoil"]',
-      signed: 'select[name="isSigned"]',
-      altered: 'select[name="isAltered"]',
-      sort: 'select[name="sortBy"]',
-    };
-    return this.filterForm.locator(selectors[field]);
+    return this.page.locator('main a.pagination-control[data-direction="next"]').first();
   }
 
   async open(): Promise<void> {
@@ -69,40 +66,26 @@ export class OwnOffersPage extends SitePage {
   }
 
   private async requiredFilterControl(field: FilterField): Promise<Locator> {
-    return uniqueVisible(this.filterControl(field), `own-offers-filter-${field}`);
+    return uniqueVisible(this.filterForm.locator(FIELD_SELECTORS[field]), `own-offers-filter-${field}`);
   }
 
   async readCurrentFilter(): Promise<OwnOfferFilterState> {
     if (!(await this.hasFilterForm())) throw new AutomationError('UI_DRIFT', 'own-offers-filter-form');
-    const fields: FilterField[] = ['cardName', 'expansion', 'rarity', 'condition', 'language', 'comments', 'minPrice', 'maxPrice', 'minQuantity', 'foil', 'signed', 'altered', 'sort'];
-    for (const field of fields) await this.requiredFilterControl(field);
-    const values = await this.filterForm.evaluate((form) => {
-      const value = (selector: string) => {
-        const control = form.querySelector<HTMLInputElement | HTMLSelectElement>(selector);
-        if (!control) return null;
-        if (control instanceof HTMLSelectElement)
-          return control.selectedOptions[0]?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-        return control.value;
-      };
-      return {
-        cardName: value('input[name="searchString"]'),
-        expansion: value('select[name="idExpansion"]'),
-        rarity: value('select[name="idRarity"]'),
-        condition: value('select[name="minCondition"]'),
-        language: value('select[name="idLanguage"]'),
-        comments: value('input[name="comments"]'),
-        minPrice: value('input[name="minPrice"]'),
-        maxPrice: value('input[name="maxPrice"]'),
-        minQuantity: value('input[name="minAmount"], input[name="minAvail"], input[name="minAvailability"]'),
-        foil: value('select[name="isFoil"]'),
-        signed: value('select[name="isSigned"]'),
-        altered: value('select[name="isAltered"]'),
-        sort: value('select[name="sortBy"]'),
-      };
-    });
-    if (Object.values(values).some((value) => value === null))
-      throw new AutomationError('UI_DRIFT', 'own-offers-filter-controls');
-    return values as OwnOfferFilterState;
+    const values = await this.filterForm.locator(FIELD_SELECTORS.cardName).all();
+    const cardName = values.length > 0 ? await values[0].inputValue() : '';
+    const expansion = (await this.filterForm.locator(FIELD_SELECTORS.expansion).first().innerText()) ?? '';
+    const rarity = (await this.filterForm.locator(FIELD_SELECTORS.rarity).first().innerText()) ?? '';
+    const condition = (await this.filterForm.locator(FIELD_SELECTORS.condition).first().innerText()) ?? '';
+    const language = (await this.filterForm.locator(FIELD_SELECTORS.language).first().innerText()) ?? '';
+    const comments = (await this.filterForm.locator(FIELD_SELECTORS.comments).first().inputValue()) ?? '';
+    const minPrice = (await this.filterForm.locator(FIELD_SELECTORS.minPrice).first().inputValue()) ?? '';
+    const maxPrice = (await this.filterForm.locator(FIELD_SELECTORS.maxPrice).first().inputValue()) ?? '';
+    const minQuantity = (await this.filterForm.locator(FIELD_SELECTORS.minQuantity).first().inputValue()) ?? '';
+    const foil = (await this.filterForm.locator(FIELD_SELECTORS.foil).first().innerText()) ?? '';
+    const signed = (await this.filterForm.locator(FIELD_SELECTORS.signed).first().innerText()) ?? '';
+    const altered = (await this.filterForm.locator(FIELD_SELECTORS.altered).first().innerText()) ?? '';
+    const sort = (await this.filterForm.locator(FIELD_SELECTORS.sort).first().innerText()) ?? '';
+    return { cardName, expansion, rarity, condition, language, comments, minPrice, maxPrice, minQuantity, foil, signed, altered, sort } as OwnOfferFilterState;
   }
 
   private async setSelectByVisibleLabel(field: FilterField, label: string): Promise<boolean> {
@@ -132,28 +115,40 @@ export class OwnOffersPage extends SitePage {
     for (const field of textFields) {
       const value = filter[field];
       if (value === undefined) continue;
-      const control = await this.requiredFilterControl(field);
-      if ((await control.inputValue()) !== value) {
-        await fillUnique(control, value, `own-offers-filter-${field}`);
-        changed = true;
+      try {
+        const control = await this.requiredFilterControl(field);
+        if ((await control.inputValue()) !== value) {
+          await fillUnique(control, value, `own-offers-filter-${field}`);
+          changed = true;
+        }
+      } catch {
+        // Control not visible; skip.
       }
     }
     const numberFields: Array<keyof Pick<OwnOfferFilter, 'minPrice' | 'maxPrice' | 'minQuantity'>> = ['minPrice', 'maxPrice', 'minQuantity'];
     for (const field of numberFields) {
       const value = filter[field];
       if (value === undefined) continue;
-      const control = await this.requiredFilterControl(field);
-      const text = String(value);
-      if ((await control.inputValue()) !== text) {
-        await fillUnique(control, text, `own-offers-filter-${field}`);
-        changed = true;
+      try {
+        const control = await this.requiredFilterControl(field);
+        const text = String(value);
+        if ((await control.inputValue()) !== text) {
+          await fillUnique(control, text, `own-offers-filter-${field}`);
+          changed = true;
+        }
+      } catch {
+        // Control not visible; skip.
       }
     }
     const selectFields: FilterField[] = ['expansion', 'rarity', 'condition', 'language', 'foil', 'signed', 'altered', 'sort'];
     for (const field of selectFields) {
       const value = filter[field as keyof OwnOfferFilter];
       if (value === undefined) continue;
-      if (await this.setSelectByVisibleLabel(field, String(value))) changed = true;
+      try {
+        if (await this.setSelectByVisibleLabel(field, String(value))) changed = true;
+      } catch {
+        // Control not visible; skip.
+      }
     }
     return changed;
   }

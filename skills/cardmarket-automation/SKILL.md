@@ -23,6 +23,14 @@ The `info` command detects the current state and returns `{ state, ..., auth }`.
 
 `start`, `results`, `detail`, and `versions` are public. `own-offers` requires a logged-in session. `auth.loggedIn` is `false` when the page shows a username/password login form at the top.
 
+## Automatic Login Handling
+
+When any action returns `AUTH_REQUIRED`, the skill **automatically** calls `nav.home` to navigate the attached browser to the Cardmarket login page, then prompts the user to enter credentials. After the user logs in, retry the original action. This happens without user intervention — you do not need to manually call `nav.home` after an `AUTH_REQUIRED` error.
+
+## Automatic Login Handling
+
+When any action returns `AUTH_REQUIRED`, the skill **automatically** calls `nav.home` to navigate the attached browser to the Cardmarket login page, then prompts the user to enter credentials. After the user logs in, retry the original action. This happens without user intervention — you do not need to manually call `nav.home` after an `AUTH_REQUIRED` error.
+
 ## Transitions
 
 | from | command | parameters | to |
@@ -89,7 +97,7 @@ Supported changes: `price`, `quantity`, `condition`, `language`, `foil`, `signed
    - in versions? `info`, then `nav.artwork`
    - need own stock? `nav.own-offers`, then `nav.own-offers.filter` and `info`
    - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
-   - `auth.loggedIn === false` and a logged-in session is needed? `nav.home`, then ask the user to enter username/password in the attached browser
+    - `auth.loggedIn === false` and a logged-in session is needed? `nav.home` navigates to the login page automatically; ask the user to enter credentials, then retry
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 
 ## Execution
