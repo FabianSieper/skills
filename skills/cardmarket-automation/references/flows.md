@@ -1,36 +1,16 @@
-# Cardmarket Skill – Flows
+# Flows
 
-## Standard-Flow
+## Standard (Price + Versions)
+1. `cards.search` (identify card)
+2. `cards.price` (apply filter, read prices/sellers)
+3. `cards.artworks` (list versions/variants)
 
-```
-Such-Einstieg (Game-Seite, config.searchEntry = /en/Magic)
-  → Suche (query)
-  → Result-Kachel (erste)
-  → Detailseite: Seller-Filter setzen + „Filter"-Submit + Top-Block + Seller-Angebote
-  → "Show Versions"
-  → Versionen-/Artwork-Liste
-```
+## Artworks Only
+1. `cards.search`
+2. `cards.artworks` (optional `minQty` for seller check)
 
-> Einstieg ist eine Game-Seite (nicht die Startseite `/en`), weil „Search 2.0"
-> (2026-09) das Such-UI von der Startseite entfernt hat.
-
-1. `cards.search` → Karte identifizieren (Set, ab-Preis, Detail-URL)
-2. `cards.price` → Seller-Filter (Default excellent/English/Germany, optional override)
-   anwenden, „Filter" klicken, Seite neu laden, dann Verfügbarkeit + Preise lesen
-3. `cards.artworks` → Druckvarianten / Artworks (optional mit `minQty` für Seller-Mengen)
-
-## Variante: nur Artworks
-
-Nur Versionen/Druckvarianten suchen:
-1. `cards.search` → `cards.artworks` (`minQty=0`, nur Auflisten)
-2. Optional: `cards.artworks` mit `minQty>0` → Seller-Mengen-Check je Kachel
-
-## Fehler- und Abbruchverhalten
-
-- Keine Treffer → `found: false` mit leeren Listen (kein Fehler).
-- UI-Drift/ambiguity → `UI_DRIFT` / `AMBIGUOUS_SELECTOR`; nicht mit
-  `.first()`/`.nth()`/force „reparieren", an Builder zurück.
-- Browser fehlt → `BROWSER_REQUIRED` / `ATTACH_FAILED` (harter Stopp).
-- Cloudflare > 90 s → `HUMAN_REQUIRED` (Operator löst in Chrome).
-- Alle Aktionen: `kind: read`, `retryable: false`, `mayHaveCommitted: false`
-  (keine Schreibaktion, nichts kann vercommitet sein).
+## Error Handling
+- `found: false`: No results (continue or stop).
+- `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: Stop, report to builder.
+- `BROWSER_REQUIRED`: Hard stop.
+- `HUMAN_REQUIRED`: Wait for manual Cloudflare solve.
