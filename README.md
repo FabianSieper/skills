@@ -11,6 +11,20 @@ Run `task test` for scaffold checks and a freshly generated demo's typecheck,
 build, unit tests and subprocess integration tests. Live-browser evidence is
 documented separately in the builder's references.
 
+Run the `/setup` skill to audit and install the repository prerequisites,
+including Node/npm, Task, the pinned Playwright CLI, OpenWiki, and maintained
+local package dependencies. The read-only audit is also available directly:
+
+```bash
+node .agents/skills/setup/scripts/check.mjs
+```
+
+Update the repository wiki with:
+
+```bash
+task openwiki:update
+```
+
 ## Installation
 
 Install all skills globally for OpenCode:

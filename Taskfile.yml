@@ -1,6 +1,10 @@
 version: "3"
 
 tasks:
+  setup:check:
+    desc: Audit repository prerequisites without changing the system
+    cmds:
+      - node .agents/skills/setup/scripts/check.mjs
   test:
     desc: Test the builder scaffold
     cmds:
@@ -10,3 +14,7 @@ tasks:
     desc: Install all skills globally for OpenCode
     cmds:
       - npx --yes skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
+  openwiki:update:
+    desc: Update the repository OpenWiki documentation
+    cmds:
+      - openwiki --update
