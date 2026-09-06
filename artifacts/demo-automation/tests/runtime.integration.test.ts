@@ -228,6 +228,31 @@ test("portable compiled Runtime through executable playwright-cli protocol fixtu
       },
     );
     await t.test(
+      "input and Unicode output byte budgets fail closed",
+      async () => {
+        await reset();
+        assert.equal(
+          run(
+            "run",
+            "inventory.find",
+            "--json",
+            JSON.stringify({ sku: "x".repeat(66000) }),
+          ).error,
+          "INVALID_INPUT",
+        );
+        assert.deepEqual((await state()).calls, []);
+        await change({ title: "🌲".repeat(5000) });
+        const result = run(
+          "run",
+          "inventory.find",
+          "--json",
+          '{"sku":"SKU-42"}',
+        );
+        assert.equal(result.error, "POSTCONDITION_FAILED");
+        assert.ok(JSON.stringify(result).length < 400);
+      },
+    );
+    await t.test(
       "observe and diagnostic paths are compact, regional and non-mutating",
       async () => {
         await reset("normal", true);
@@ -269,6 +294,7 @@ test("portable compiled Runtime through executable playwright-cli protocol fixtu
             '{"sku":"SKU-42"}',
           );
           assert.equal(result.error, error);
+          assert.equal(result.recovery, "inspect-state");
           assert.equal(run("inspect").ok, true);
         }
         await reset("outside");

@@ -88,7 +88,6 @@ function recovery(code) {
   ].includes(code))
     return "user-action";
   if ([
-    "AMBIGUOUS_SELECTOR",
     "POSTCONDITION_FAILED",
     "CLI_PROTOCOL",
     "NOT_CONFIGURED",
@@ -98,6 +97,7 @@ function recovery(code) {
   if (["PLAN_CHANGED", "PLAN_EXPIRED"].includes(code)) return "replan";
   if ([
     "UI_DRIFT",
+    "AMBIGUOUS_SELECTOR",
     "UNSUPPORTED_UI_STATE",
     "UNKNOWN_REGION",
     "PLAN_USED",
@@ -929,7 +929,7 @@ main().then(
     JSON.stringify({
       ok: false,
       error: error.code,
-      ...error.step ? { step: error.step } : {},
+      ...error.step ? { step: error.step.slice(0, 120) } : {},
       recovery: recovery(error.code),
       ...["PLAN_USED", "UNKNOWN_COMMIT"].includes(error.code) ? { mayHaveCommitted: true } : {}
     }) + "\n"

@@ -121,7 +121,6 @@ export function recovery(
     return "user-action";
   if (
     [
-      "AMBIGUOUS_SELECTOR",
       "POSTCONDITION_FAILED",
       "CLI_PROTOCOL",
       "NOT_CONFIGURED",
@@ -133,6 +132,7 @@ export function recovery(
   if (
     [
       "UI_DRIFT",
+      "AMBIGUOUS_SELECTOR",
       "UNSUPPORTED_UI_STATE",
       "UNKNOWN_REGION",
       "PLAN_USED",

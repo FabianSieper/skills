@@ -5,16 +5,16 @@
       "mapped": true,
       "implemented": true,
       "fixture": "pass",
-      "live": "not-run",
-      "remainingRisk": "Protocol subprocess and deterministic Page double passed. Real Chrome execution of this generated skill is not covered by this run."
+      "live": "pass",
+      "remainingRisk": "Read and observation paths passed against the localhost fixture in the user's attached Chrome; this is not evidence for an external production site."
     },
     "inventory.update-title": {
       "mapped": true,
       "implemented": true,
       "fixture": "pass",
       "live": "not-run",
-      "remainingRisk": "Protocol subprocess and deterministic Page double passed. Real Chrome execution of this generated skill is not covered by this run."
+      "remainingRisk": "Plan was verified as non-mutating in attached Chrome. Execute was intentionally not run live; commit safety is covered by fixture integration tests."
     }
   },
-  "next": "Review fixture evidence; perform separate live attach/read verification"
+  "next": "Demo handoff complete; live write execution remains intentionally untested"
 }

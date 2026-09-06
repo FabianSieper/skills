@@ -252,7 +252,7 @@ main()
       JSON.stringify({
         ok: false,
         error: error.code,
-        ...(error.step ? { step: error.step } : {}),
+        ...(error.step ? { step: error.step.slice(0, 120) } : {}),
         recovery: recovery(error.code),
         ...(["PLAN_USED", "UNKNOWN_COMMIT"].includes(error.code)
           ? { mayHaveCommitted: true }
