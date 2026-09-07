@@ -249,3 +249,33 @@ export type StockBulkPriceUpdateOutput = {
   updated: BulkPriceUpdateItem[];
   auth: AuthInfo;
 };
+
+/** One item in the name-based bulk price update result. */
+export type StockBulkPriceByNameItem = {
+  name: string;
+  articleId: number;
+  card: string;
+  oldPrice: string;
+  newPrice: number;
+  verified: boolean;
+};
+
+/** One failed item in the name-based bulk price update result. */
+export type StockBulkPriceByNameFailedItem = {
+  name: string;
+  articleId: number;
+  card: string;
+  oldPrice: string;
+  newPrice: number;
+  reason: string;
+};
+
+/** Output of stock.bulk-price-by-name */
+export type StockBulkPriceByNameOutput = {
+  state: 'own-offers';
+  count: number;
+  updated: StockBulkPriceByNameItem[];
+  unchanged: StockBulkPriceByNameItem[];
+  failed: StockBulkPriceByNameFailedItem[];
+  auth: AuthInfo;
+};

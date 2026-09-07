@@ -64,12 +64,10 @@ export function summarize(
   );
   return {
     headings: headings.slice(0, limits.items).map(name),
-    dialogs: dialogs
-      .slice(0, limits.items)
-      .map((el) => ({
-        role: el.getAttribute("role") || "dialog",
-        name: name(el),
-      })),
+    dialogs: dialogs.slice(0, limits.items).map((el) => ({
+      role: el.getAttribute("role") || "dialog",
+      name: name(el),
+    })),
     importantControls: controls.slice(0, limits.items).map((el) => ({
       role:
         el.getAttribute("role") ||
@@ -94,7 +92,10 @@ export function summarize(
   };
 }
 function safeURL(raw: string): string {
-  return raw.split(/[?#]/)[0]!.replace(/\/\/[^/]*@/, "//").slice(0, 1024);
+  return raw
+    .split(/[?#]/)[0]!
+    .replace(/\/\/[^/]*@/, "//")
+    .slice(0, 1024);
 }
 export async function observe(
   page: Page,
@@ -105,7 +106,12 @@ export async function observe(
   try {
     const url = safeURL(page.url());
     let inScope = false;
-    try { allowedURL(page.url(), origins); inScope = true; } catch { /* Status remains available outside the site. */ }
+    try {
+      allowedURL(page.url(), origins);
+      inScope = true;
+    } catch {
+      /* Status remains available outside the site. */
+    }
     const pageState = inScope
       ? await site.detectState().catch(() => "unknown")
       : "outside-site";

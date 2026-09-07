@@ -1,6 +1,6 @@
 # Actions Reference
 
-All actions are read-only except the write actions `user.offer.update` and `stock.bulk-price-update`, which are guarded and require `plan` and `execute` approval.
+All actions are read-only except the write actions `user.offer.update`, `stock.bulk-price-by-name`, and `stock.bulk-price-update`, which are guarded and require `plan` and `execute` approval.
 
 ## Command Table
 
@@ -19,6 +19,7 @@ All actions are read-only except the write actions `user.offer.update` and `stoc
 | `user.offers` | read | `detail` | `limit` | own-offer payload |
 | `user.offer.update` | write | `detail` | `articleId` + changes | update payload |
 | `stock.market-comparison` | read | `own-offers` | `limit`, `location`, `sellerType`, `foil`, `signed`, `altered` | `{ state, count, offers[], auth }` |
+| `stock.bulk-price-by-name` | write | `own-offers` | `names`, `prices`, optional `articleIds` | `{ state, count, updated[], unchanged[], failed[], auth }` |
 | `stock.bulk-price-update` | write | `own-offers` | `articleIds`, `prices` | `{ state, count, updated[], auth }` |
 
 ## Nav Status
@@ -55,7 +56,7 @@ All actions are read-only except the write actions `user.offer.update` and `stoc
 - Opens `/en/Magic/Stock/Offers/Singles`, the destination of Selling → My Offers → Singles.
 
 ### `nav.own-offers.filter`
-Every field is optional; omitted fields retain the page's current value. Use `cardName` for card-name searches.
+Every field is optional; omitted fields retain the page's current value. Use `cardName` for card-name searches. Own-offer card searches should use this visible Singles filter UI rather than hand-built URLs or raw form navigation.
 
 | field | type / values | meaning |
 |---|---|---|
@@ -135,6 +136,15 @@ Requires a logged-in session and the `own-offers` state. For every offer it open
 | `altered` | `any` | `any`, `yes`, `no` |
 
 Condition and language are taken from each offer, not passed as parameters.
+
+### `stock.bulk-price-by-name`
+Requires a logged-in session and the `own-offers` state. Bulk-updates the price of multiple offers by card name in a single approved plan. `names` and `prices` are parallel, index-aligned arrays of equal length (1–1000); `prices` are EUR strings such as `1.23` or `1,23`. `articleIds` is optional and, when present, must use the same length as `names`. An empty string resolves by normalized card name; a numeric string resolves by article ID.
+
+| field | required | type |
+|---|---|---|
+| `names` | yes | string array of card names, 1–1000, index-aligned with `prices` |
+| `prices` | yes | string array of new EUR prices, 1–1000, index-aligned with `names` |
+| `articleIds` | no, default `[]` | string array of optional article-ID disambiguators, 0–1000; `""` means resolve by name |
 
 ### `stock.bulk-price-update`
 Requires a logged-in session and the `own-offers` state. Bulk-updates the price of multiple offers in a single approved plan. `articleIds` and `prices` are parallel, index-aligned arrays of equal length (1–1000); `prices` are EUR strings such as `1.23` or `1,23`.
@@ -326,6 +336,26 @@ When `minQty > 0`, each artwork additionally contains:
 
 `belowMarket` is `true` when the offer price is at or below the lowest matching seller price (`marketFrom`). `marketSellers` is the number of seller rows read (capped at 3 for a compact comparison). `marketFrom` is `N/A` when no seller matches the derived filter.
 
+### `stock.bulk-price-by-name`
+```json
+{
+  "state": "own-offers",
+  "count": 2,
+  "updated": [
+    { "name": "Forest", "articleId": 2108603357, "card": "Forest", "oldPrice": "0,25 €", "newPrice": 0.26, "verified": true }
+  ],
+  "unchanged": [
+    { "name": "Bose", "articleId": 123456, "card": "Bose", "oldPrice": "2,00 €", "newPrice": 2, "verified": true }
+  ],
+  "failed": [
+    { "name": "Doomsday", "articleId": 1, "card": "Doomsday", "oldPrice": "1,00 €", "newPrice": 1.5, "reason": "PLAN_CHANGED" }
+  ],
+  "auth": { "loggedIn": true }
+}
+```
+
+`count` equals `updated.length + unchanged.length + failed.length`. The action is best-effort per entry and leaves the browser on the own-offers page.
+
 ### `stock.bulk-price-update`
 ```json
 {
@@ -340,12 +370,12 @@ When `minQty > 0`, each artwork additionally contains:
 
 ## Write Safety
 
-The write actions (`user.offer.update` and `stock.bulk-price-update`) use the engine write contract:
+The write actions (`user.offer.update`, `stock.bulk-price-by-name`, and `stock.bulk-price-update`) use the engine write contract:
 - `plan` opens and reads the edit modal, then closes it without saving.
 - The plan binds account, URL, card, article ID, current form values, requested changes, input, implementation, and TTL.
 - `execute` re-prepares the same target and blocks on account or form drift.
 - A used plan cannot be replayed.
-- A lost response after submit becomes `UNKNOWN_COMMIT`; verify with `user.offers` instead of retrying.
+- A lost response after submit becomes `UNKNOWN_COMMIT`; verify with the relevant read action (`user.offers` on detail or `info` on own-offers) instead of retrying.
 
 ## Examples
 
@@ -359,6 +389,7 @@ The write actions (`user.offer.update` and `stock.bulk-price-update`) use the en
 - `examples/input-user-offer-update.json` – `user.offer.update` schema example
 - `examples/input-own-offers-filter.json` – filter own stock by card name
 - `examples/input-own-offers-all.json` – list all own stock pages
+- `examples/input-bulk-price-by-name.json` – bulk price update by card name
 - `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, `info`, and `user.offers`
 - Every CLI `run`/`plan` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
 
@@ -377,4 +408,5 @@ The write actions (`user.offer.update` and `stock.bulk-price-update`) use the en
 - `user.offers.next`: `['info', 'user.offer.update']`
 - `user.offer.update.next`: `['info', 'user.offers']`
 - `stock.market-comparison.next`: `['info', 'nav.own-offers', 'stock.market-comparison', 'user.offers']`
+- `stock.bulk-price-by-name.next`: `['info', 'nav.own-offers', 'stock.market-comparison', 'stock.bulk-price-update']`
 - `stock.bulk-price-update.next`: `['info', 'nav.own-offers', 'stock.market-comparison']`

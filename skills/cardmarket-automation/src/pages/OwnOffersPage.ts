@@ -1,12 +1,12 @@
 import type { Locator, Page } from 'playwright';
 import { config } from '../../site.config.ts';
-import { parseQty } from '../lib/parse.ts';
+import { parseQty, normalizeName } from '../lib/parse.ts';
 import { resolveHref } from '../lib/url.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { clickUnique, fillUnique, uniqueVisible } from '../runtime/guards.ts';
 import type { OwnOffer, OwnOfferFilter, OwnOfferFilterState } from '../types.ts';
 import { SitePage } from './SitePage.ts';
-import { CardDetailPage } from './CardDetailPage.ts';
+import { CardDetailPage, type OfferFormState } from './CardDetailPage.ts';
 
 type FilterField = keyof OwnOfferFilterState;
 
@@ -261,5 +261,159 @@ export class OwnOffersPage extends SitePage {
     await this.page.waitForURL(/\/Products\/Singles\//, { timeout: 30_000 });
     await this.waitForCloudflare();
     return new CardDetailPage(this.page);
+  }
+
+  private get editModal(): Locator {
+    return this.page.locator('#modal .modal-content');
+  }
+
+  private get editForm(): Locator {
+    return this.page.locator('#modal form[data-ajax-action="Article_EditSingleArticle"]');
+  }
+
+  async setCardNameFilter(cardName: string): Promise<boolean> {
+    if (!(await this.hasFilterForm())) throw new AutomationError('UI_DRIFT', 'own-offers-filter-form');
+    const changed = await this.applyFilters({ cardName });
+    if (changed) await this.submitFilters();
+    return changed;
+  }
+
+  async searchOffers(limit: number): Promise<OwnOffer[]> {
+    const safe = Number.isFinite(limit) ? Math.floor(limit) : 0;
+    const clamped = Math.max(0, Math.min(1000, safe));
+    if (clamped === 0) return [];
+    const result = await this.extractOffers(clamped, false);
+    return result.offers;
+  }
+
+  private async rowIndexOfArticleId(articleId: number): Promise<number> {
+    await uniqueVisible(this.table, 'own-offers-table');
+    const count = await this.rows.count();
+    for (let index = 0; index < count; index++) {
+      const id = await this.rows.nth(index).evaluate((element) => {
+        const link = element.querySelector('a[data-modal*="idArticle="]') as HTMLAnchorElement | null;
+        return Number((link?.getAttribute('data-modal') ?? '').match(/[?&]idArticle=(\d+)/)?.[1] ?? '0');
+      });
+      if (id === articleId) return index;
+    }
+    return -1;
+  }
+
+  async readRowByArticleId(articleId: number): Promise<OwnOffer | null> {
+    const index = await this.rowIndexOfArticleId(articleId);
+    if (index === -1) return null;
+    try {
+      return await this.readRow(index);
+    } catch {
+      return null;
+    }
+  }
+
+  private async findOfferOnCurrentFilter(cardName: string, articleId?: number): Promise<OwnOffer | null> {
+    const baselineFilter = await this.readCurrentFilter();
+    const wantedName = normalizeName(cardName);
+    const seen = new Set<number>();
+    for (;;) {
+      const before = seen.size;
+      for (const offer of await this.offersOnCurrentPage(Number.MAX_SAFE_INTEGER)) {
+        if (seen.has(offer.articleId)) continue;
+        seen.add(offer.articleId);
+        if (articleId !== undefined ? offer.articleId === articleId : normalizeName(offer.card) === wantedName) return offer;
+      }
+      if (seen.size >= 1000) throw new AutomationError('UI_DRIFT', 'own-offers-search-limit');
+      if (seen.size === before) return null;
+      if (!(await this.hasNextPage())) return null;
+      await this.goToNextPage();
+      if (JSON.stringify(await this.readCurrentFilter()) !== JSON.stringify(baselineFilter))
+        throw new AutomationError('UI_DRIFT', 'own-offers-filter-lost-on-pagination');
+    }
+  }
+
+  async focusOffer(cardName: string, articleId?: number, reset = true): Promise<OwnOffer> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if ((reset && attempt === 0) || (!reset && attempt === 1)) await this.open();
+      await this.setCardNameFilter(cardName);
+      const found = await this.findOfferOnCurrentFilter(cardName, articleId);
+      if (found) return found;
+    }
+    throw new AutomationError('UI_DRIFT', 'own-offer-focus');
+  }
+
+  async openEditModal(articleId: number): Promise<void> {
+    const index = await this.rowIndexOfArticleId(articleId);
+    if (index === -1) throw new AutomationError('UI_DRIFT', 'own-offer-edit-row');
+    const link = this.rows.nth(index).locator('a[data-modal*="idArticle="]');
+    if ((await link.count()) !== 1) throw new AutomationError('UI_DRIFT', 'own-offer-edit-link');
+    await link.click({ timeout: 15_000 });
+    await uniqueVisible(this.editModal, 'own-offer-modal', 30_000);
+    await uniqueVisible(this.editForm, 'own-offer-form', 30_000);
+    await this.page
+      .waitForFunction(() => Boolean(document.querySelector('#modal form[data-ajax-action="Article_EditSingleArticle"] input[name="idArticle"]')), null, {
+        timeout: 30_000,
+      })
+      .catch(() => {});
+    const hidden = await this.editForm.locator('input[name="idArticle"]').first().inputValue().catch(() => '0');
+    if (Number(hidden) !== articleId) throw new AutomationError('UI_DRIFT', 'own-offer-form-id');
+  }
+
+  async readEditForm(articleId: number): Promise<OfferFormState> {
+    if ((await this.editForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'own-offer-form');
+    const state = await this.editForm.evaluate((form: Element) => {
+      const select = (name: string) => (form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null);
+      const input = (name: string) => (form.querySelector(`input[name="${name}"]`) as HTMLInputElement | null);
+      const amount = select('editAmount');
+      return {
+        idArticle: Number(input('idArticle')?.value ?? '0'),
+        condition: select('condition')?.value ?? '',
+        language: select('idLanguage')?.value ?? '',
+        foil: input('isFoil')?.checked ?? false,
+        signed: input('isSigned')?.checked ?? false,
+        altered: input('isAltered')?.checked ?? false,
+        comments: input('comments')?.value ?? '',
+        price: input('price')?.value ?? '',
+        quantity: Number(amount?.value ?? '0'),
+        quantityOptions: amount ? Array.from(amount.querySelectorAll('option')).map((option) => Number(option.value)) : [],
+      };
+    });
+    if (state.idArticle !== articleId) throw new AutomationError('UI_DRIFT', 'own-offer-form-id');
+    return state;
+  }
+
+  async closeEditModal(): Promise<void> {
+    await this.page.keyboard.press('Escape');
+    await this.editModal.waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {});
+    if (await this.editModal.isVisible().catch(() => false)) throw new AutomationError('UI_DRIFT', 'own-offer-modal-close');
+  }
+
+  async applyEditPrice(articleId: number, price: number): Promise<void> {
+    if ((await this.editForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'own-offer-form');
+    const hidden = await this.editForm.locator('input[name="idArticle"]').first().inputValue().catch(() => '0');
+    if (Number(hidden) !== articleId) throw new AutomationError('UI_DRIFT', 'own-offer-form-id');
+    await this.editForm.locator('input[name="price"]').fill(String(price), { timeout: 15_000 });
+  }
+
+  async submitEditForm(): Promise<void> {
+    if ((await this.editForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'own-offer-form');
+    const button = this.editForm.locator('button[type="submit"]');
+    if ((await button.count()) !== 1) throw new AutomationError('UI_DRIFT', 'own-offer-submit-button');
+    const navigation = this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+    await button.click({ timeout: 15_000 }).catch(() => {});
+    const nav = await navigation;
+    if (nav) await this.waitForCloudflare();
+    await this.editModal.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    if (await this.editModal.isVisible().catch(() => false)) {
+      const invalid = await this.editForm.locator('.invalid-feedback').first().isVisible().catch(() => false);
+      if (invalid) throw new AutomationError('INVALID_INPUT', 'own-offer-form');
+      throw new AutomationError('TIMEOUT', 'own-offer-submit');
+    }
+  }
+
+  async waitForRow(articleId: number): Promise<void> {
+    await this.page
+      .waitForFunction((id: string) => Boolean(document.querySelector(`#UserOffersTable a[data-modal*="idArticle=${id}"]`)), String(articleId), {
+        timeout: 30_000,
+        polling: 250,
+      })
+      .catch(() => {});
   }
 }

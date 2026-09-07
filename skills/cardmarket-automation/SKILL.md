@@ -1,6 +1,6 @@
 ---
 name: cardmarket-automation
-description: Guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, print variants, or explicit own-offer changes.
+description: Guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates, name-based bulk price updates). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, print variants, or explicit own-offer changes.
 ---
 
 # Cardmarket Automation
@@ -25,7 +25,7 @@ The `info` command detects the current state and returns `{ state, ..., auth }`.
 
 ## Automatic Login Handling
 
-The user never has to sign in "first". When a login-required action (`nav.own-offers`, `info` on the `own-offers` page, `user.offer.update`, `stock.market-comparison`, `stock.bulk-price-update`) is run while the attached browser is logged out, the runtime **automatically** opens the Cardmarket login form in the user's browser, waits up to 2 minutes for the user to enter credentials, and then **re-runs the same action** so the command succeeds in one call.
+The user never has to sign in "first". When a login-required action (`nav.own-offers`, `info` on the `own-offers` page, `user.offer.update`, `stock.market-comparison`, `stock.bulk-price-by-name`, `stock.bulk-price-update`) is run while the attached browser is logged out, the runtime **automatically** opens the Cardmarket login form in the user's browser, waits up to 2 minutes for the user to enter credentials, and then **re-runs the same action** so the command succeeds in one call.
 
 If the command still returns `AUTH_REQUIRED` (step `login-timeout`), the login page is already open in the user's browser. Tell the user the form is open and waiting, let them log in, then re-run the exact same command. Do not start a different flow.
 
@@ -67,7 +67,7 @@ On a detail page, `info` always applies Cardmarket's canonical seller default (`
 
 ## Own Offers Listing
 
-Use `nav.own-offers` for Selling → My Offers → Singles. Apply `nav.own-offers.filter` with `{ "cardName": "Forest" }` to search your stock by card name; its other parameters correspond to the editable left-side filters and use their visible labels where relevant. `info` returns rows and the currently active stock filter.
+Use `nav.own-offers` for Selling → My Offers → Singles. Own-offer card searches must use the visible Singles filter UI via `nav.own-offers.filter`; do not hand-build card-search URLs or submit raw form fields for stock searches. Apply `nav.own-offers.filter` with `{ "cardName": "Forest" }` to search your stock by card name; its other parameters correspond to the editable left-side filters and use their visible labels where relevant. `info` returns rows and the currently active stock filter.
 
 For a request to list all own offers, call `info` with `{ "all": true }`. It follows every bottom next-page button, verifies the stock filter has not been lost, and reports `complete: true` only after the last page. It intentionally leaves the browser on that final page.
 
@@ -146,6 +146,36 @@ npm run cli -- plan stock.bulk-price-update --input /tmp/cm-bulk.json
 
 **Output:** `{ state: "own-offers", count, updated: [{ articleId, card, oldPrice, newPrice, verified }], auth }`
 
+## Bulk Price Update by Name
+
+`stock.bulk-price-by-name` is a faster write action for changing multiple own-offer prices by card name instead of first collecting every `articleId`. It uses the Singles card-name filter, reads the stock edit modal, and verifies each changed price after approval. It takes `names` and `prices` as parallel arrays; optional `articleIds` can disambiguate duplicate card names, where `""` means resolve by name.
+
+**Parameters:**
+
+| parameter | required | range | meaning |
+|---|---|---|---|
+| `names` | yes | 1–1000 elements | Card names to update, index-aligned with `prices` |
+| `prices` | yes | 1–1000 elements | New prices in EUR, e.g. `"1.23"` or `"1,23"` |
+| `articleIds` | no | default `[]`, 0–1000 elements | Optional disambiguators; when present, use the same length as `names`. `""` resolves by name; a numeric string resolves by article ID |
+
+**Workflow:**
+1. Be on `own-offers`, or let the action navigate there.
+2. Build the input with `names`, `prices`, and optional `articleIds`.
+3. Create a plan: `npm run cli -- plan stock.bulk-price-by-name --input <file.json>`.
+4. Review the preview (shows each resolved card, old price, current form state, and new price) and obtain approval.
+5. Execute the stored plan.
+6. Verify with `info` on the own-offers page if needed.
+
+**Behavior:** The action is best-effort per entry. It returns `updated`, `unchanged`, and `failed` arrays, with `count` equal to their total. `failed[].reason` is an error code such as `PLAN_CHANGED`, `UI_DRIFT`, `TIMEOUT`, or `POSTCONDITION_FAILED`. Ambiguous name-only matches are rejected before execution and should be retried with explicit `articleIds`.
+
+**Output:** `{ state: "own-offers", count, updated: [{ name, articleId, card, oldPrice, newPrice, verified }], unchanged: [...], failed: [{ name, articleId, card, oldPrice, newPrice, reason }], auth }`
+
+**Example:**
+```bash
+echo '{"names": ["Forest", "Bose"], "prices": ["1.50", "2.00"], "articleIds": ["", "67890"]}' > /tmp/cm-bulk-name.json
+npm run cli -- plan stock.bulk-price-by-name --input /tmp/cm-bulk-name.json
+```
+
 ## Recommended Loop
 
 1. `npm run cli -- doctor` – verify browser attachment.
@@ -156,7 +186,8 @@ npm run cli -- plan stock.bulk-price-update --input /tmp/cm-bulk.json
    - in detail? `info`, `nav.filter`, or `nav.versions`
    - in versions? `info`, then `nav.artwork`
    - need own stock? `nav.own-offers`, then `nav.own-offers.filter` and `info`
-   - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
+    - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
+    - need to change multiple own-offer prices by card name? `stock.bulk-price-by-name`, with explicit user approval before execution
     - `auth.loggedIn === false` and a logged-in session is needed? Just run the action — the runtime opens the login form and waits for the user automatically (see Automatic Login Handling); on `AUTH_REQUIRED`/`login-timeout`, re-run the same command after the user logs in
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 

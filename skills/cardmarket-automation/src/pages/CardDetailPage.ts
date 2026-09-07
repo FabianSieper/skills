@@ -10,7 +10,7 @@ import { OFFER_CONDITION_LABELS, OFFER_CONDITION_VALUES, OFFER_LANGUAGE_LABELS, 
 import { resolveHref } from '../lib/url.ts';
 import type { Preview } from '../runtime/engine.ts';
 
-type OfferFormState = {
+export type OfferFormState = {
   idArticle: number;
   condition: string;
   language: string;
@@ -23,7 +23,7 @@ type OfferFormState = {
   quantityOptions: number[];
 };
 
-function sameFormState(current: OfferFormState, saved: unknown): boolean {
+export function sameFormState(current: OfferFormState, saved: unknown): boolean {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return false;
   const o = saved as Record<string, unknown>;
   return (

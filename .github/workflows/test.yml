@@ -14,4 +14,5 @@ jobs:
           npm --prefix "$target" install --ignore-scripts
           npm --prefix "$target" run format:check
           npm --prefix "$target" run typecheck
+          npm --prefix "$target" run build
           npm --prefix "$target" test

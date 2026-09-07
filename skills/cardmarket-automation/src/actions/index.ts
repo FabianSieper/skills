@@ -11,6 +11,7 @@ import { action as infoAction } from './info.action.ts';
 import { action as userOffersAction } from './user-offers.action.ts';
 import { action as userOfferUpdateAction } from './user-offer-update.action.ts';
 import { action as stockMarketComparisonAction } from './stock-market-comparison.action.ts';
+import { action as stockBulkPriceByNameAction } from './stock-bulk-price-by-name.action.ts';
 import { action as stockBulkPriceUpdateAction } from './stock-bulk-price-update.action.ts';
 import type { Action } from '../runtime/engine.ts';
 
@@ -28,5 +29,6 @@ export const actions: Action[] = [
   userOffersAction,
   userOfferUpdateAction,
   stockMarketComparisonAction,
+  stockBulkPriceByNameAction,
   stockBulkPriceUpdateAction,
 ];
