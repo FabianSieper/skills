@@ -4,24 +4,34 @@ import { detectState } from '../lib/state.ts';
 import { readAuth } from '../lib/auth.ts';
 import { parsePrice } from '../lib/parse.ts';
 import { OwnOffersPage } from '../pages/OwnOffersPage.ts';
+import { CardDetailPage } from '../pages/CardDetailPage.ts';
 
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
-import type { ResolvedSellerFilter, StockMarketComparisonOutput } from '../types.ts';
+import type { MarketComparisonRow, ResolvedSellerFilter, SellerOffer, StockMarketComparisonOutput } from '../types.ts';
 import { resolveSellerFilter, COUNTRY_INPUT_KEYS, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
 
-const description = 'Iterate through all own offers and compare each against the market. For every card, opens the detail page, extracts the card\'s actual condition and language from the page, derives and verifies the seller filter, reads the lowest matching seller price, and returns a compact consolidated comparison. Leaves the browser on the own-offers page.';
+const description =
+  'Compare own offers to matching market sellers. Phase 1 reads all offers (fast, no detail pages) and applies minPrice/maxPrice/minQty filters. Phase 2 navigates to each qualifying card detail page, applies and verifies the seller filter (condition+language from the offer, location from input), and reads the cheapest matching sellers. Use offset+limit to batch large stocks. Leaves the browser on the own-offers page.';
+
 const parameters: Fields = {
-  limit: { type: 'integer', description: 'Maximale Anzahl zu pruefender Angebote (0 = alle)', default: 0, min: 0, max: 1000 },
-  location: { type: 'string', description: 'Seller-Land fuer den Marktvergleich', default: 'germany', enum: COUNTRY_INPUT_KEYS },
-  sellerType: { type: 'string', description: 'Seller-Typ fuer den Marktvergleich', default: 'any', enum: Object.keys(SELLER_TYPE_VALUES) },
-  foil: { type: 'string', description: 'Foil-Filter fuer den Marktvergleich', default: 'any', enum: Object.keys(YES_NO_VALUES) },
-  signed: { type: 'string', description: 'Signiert-Filter fuer den Marktvergleich', default: 'any', enum: Object.keys(YES_NO_VALUES) },
-  altered: { type: 'string', description: 'Altered-Filter fuer den Marktvergleich', default: 'any', enum: Object.keys(YES_NO_VALUES) },
+  limit: { type: 'integer', description: 'Max offers to process in this call; 0 = all remaining', default: 0, min: 0, max: 1000 },
+  offset: { type: 'integer', description: 'Skip the first N qualifying offers (use with limit for batch processing)', default: 0, min: 0, max: 10000 },
+  minPrice: { type: 'number', description: 'Only include own offers with price >= this EUR; 0 = no filter', default: 0, min: 0, max: 1000000 },
+  maxPrice: { type: 'number', description: 'Only include own offers with price <= this EUR; 0 = no filter', default: 0, min: 0, max: 1000000 },
+  minQty: { type: 'integer', description: 'Only include own offers with quantity >= this; 1 = no filter', default: 1, min: 0, max: 1000000 },
+  location: { type: 'string', description: 'Seller country for the market filter', default: 'germany', enum: COUNTRY_INPUT_KEYS },
+  sellerType: { type: 'string', description: 'Seller type for the market filter', default: 'any', enum: Object.keys(SELLER_TYPE_VALUES) },
+  foil: { type: 'string', description: 'Foil filter for the market', default: 'any', enum: Object.keys(YES_NO_VALUES) },
+  signed: { type: 'string', description: 'Signed filter for the market', default: 'any', enum: Object.keys(YES_NO_VALUES) },
+  altered: { type: 'string', description: 'Altered filter for the market', default: 'any', enum: Object.keys(YES_NO_VALUES) },
+  sellers: { type: 'integer', description: 'How many market sellers to return per card (cheapest first); 0 = only marketFrom, no seller details', default: 3, min: 0, max: 50 },
+  sortResult: { type: 'string', description: 'Sort order: price (own price asc), marketFrom (cheapest market), diff (marketFrom - own price, most negative first)', default: 'price', enum: ['price', 'marketFrom', 'diff'] },
 };
+
 const outputDescription =
-  '{ state, count, offers: [{ articleId, card, price, marketFrom, marketSellers, belowMarket }], auth }';
+  '{ state, offset, count, hasMore, offers: [{ articleId, card, price, quantity, condition, language, marketFrom, marketSellers: [SellerOffer...], belowMarket, diff }], auth }';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -31,60 +41,118 @@ function isAuth(value: unknown): boolean {
   return isObject(value) && typeof value.loggedIn === 'boolean';
 }
 
-function isMarketComparisonOffer(value: unknown): boolean {
+function isSellerOffer(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  return (
+    typeof value.seller === 'string' &&
+    typeof value.location === 'string' &&
+    typeof value.condition === 'string' &&
+    typeof value.language === 'string' &&
+    typeof value.price === 'string' &&
+    typeof value.quantity === 'string'
+  );
+}
+
+function isMarketComparisonRow(value: unknown): boolean {
   if (!isObject(value)) return false;
   return (
     typeof value.articleId === 'number' &&
     typeof value.card === 'string' &&
     typeof value.price === 'string' &&
+    typeof value.quantity === 'number' &&
+    typeof value.condition === 'string' &&
+    typeof value.language === 'string' &&
     typeof value.marketFrom === 'string' &&
-    typeof value.marketSellers === 'number' &&
-    typeof value.belowMarket === 'boolean'
+    Array.isArray(value.marketSellers) &&
+    (value.marketSellers as unknown[]).every(isSellerOffer) &&
+    typeof value.belowMarket === 'boolean' &&
+    (value.diff === null || typeof value.diff === 'number')
   );
 }
 
 function validateOutput(raw: unknown): StockMarketComparisonOutput {
   if (!isObject(raw)) throw new AutomationError('POSTCONDITION_FAILED');
   if (raw.state !== 'own-offers') throw new AutomationError('POSTCONDITION_FAILED');
-  if (typeof raw.count !== 'number' || !Array.isArray(raw.offers) || raw.count !== raw.offers.length ||
-      !raw.offers.every(isMarketComparisonOffer) || !isAuth(raw.auth))
+  if (typeof raw.offset !== 'number' || !Number.isSafeInteger(raw.offset) || raw.offset < 0)
     throw new AutomationError('POSTCONDITION_FAILED');
+  if (typeof raw.count !== 'number' || !Number.isSafeInteger(raw.count) || raw.count < 0)
+    throw new AutomationError('POSTCONDITION_FAILED');
+  if (typeof raw.hasMore !== 'boolean') throw new AutomationError('POSTCONDITION_FAILED');
+  if (!Array.isArray(raw.offers) || raw.offers.length !== raw.count)
+    throw new AutomationError('POSTCONDITION_FAILED');
+  if (!(raw.offers as unknown[]).every(isMarketComparisonRow))
+    throw new AutomationError('POSTCONDITION_FAILED');
+  if (!isAuth(raw.auth)) throw new AutomationError('POSTCONDITION_FAILED');
   return raw as unknown as StockMarketComparisonOutput;
 }
 
-/** Map a display-condition string (e.g. "Excellent") to a filter condition key. */
-function mapConditionToFilter(offerCondition: string): string {
+function mapConditionToFilter(offerCondition: string): ResolvedSellerFilter['condition'] {
   const normalized = offerCondition.trim().toLowerCase();
-  const mapping: Record<string, string> = {
-    'mint': 'mint',
+  const mapping: Record<string, ResolvedSellerFilter['condition']> = {
+    mint: 'mint',
     'near mint': 'near-mint',
-    'excellent': 'excellent',
-    'good': 'good',
+    'near-mint': 'near-mint',
+    excellent: 'excellent',
+    good: 'good',
     'light played': 'light-played',
-    'played': 'played',
-    'poor': 'poor',
-    'any': 'any',
-    'all': 'any',
+    'light-played': 'light-played',
+    played: 'played',
+    poor: 'poor',
+    any: 'any',
+    all: 'any',
   };
   return mapping[normalized] ?? 'excellent';
 }
 
-/** Map a display-language string (e.g. "English", "German") to a filter language key. */
-function mapLanguageToFilter(offerLanguage: string): string {
+function mapLanguageToFilter(offerLanguage: string): ResolvedSellerFilter['language'] {
   const normalized = offerLanguage.trim().toLowerCase();
-  const mapping: Record<string, string> = {
-    'english': 'english',
-    'french': 'french',
-    'german': 'german',
-    'spanish': 'spanish',
-    'italian': 'italian',
+  const mapping: Record<string, ResolvedSellerFilter['language']> = {
+    english: 'english',
+    french: 'french',
+    german: 'german',
+    spanish: 'spanish',
+    italian: 'italian',
     's-chinese': 's-chinese',
-    'japanese': 'japanese',
-    'portuguese': 'portuguese',
-    'russian': 'russian',
+    's chinesisch': 's-chinese',
+    japanese: 'japanese',
+    portuguese: 'portuguese',
+    russian: 'russian',
     't-chinese': 't-chinese',
+    't chinesisch': 't-chinese',
   };
   return mapping[normalized] ?? 'english';
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function sortResults(results: MarketComparisonRow[], sortKey: string): MarketComparisonRow[] {
+  const copy = [...results];
+  switch (sortKey) {
+    case 'marketFrom':
+      copy.sort((a, b) =>
+        (parsePrice(a.marketFrom) ?? Number.MAX_SAFE_INTEGER) -
+        (parsePrice(b.marketFrom) ?? Number.MAX_SAFE_INTEGER),
+      );
+      break;
+    case 'diff':
+      copy.sort((a, b) => {
+        if (a.diff === null && b.diff === null) return 0;
+        if (a.diff === null) return 1;
+        if (b.diff === null) return -1;
+        return a.diff - b.diff;
+      });
+      break;
+    case 'price':
+    default:
+      copy.sort((a, b) =>
+        (parsePrice(a.price) ?? Number.MAX_SAFE_INTEGER) -
+        (parsePrice(b.price) ?? Number.MAX_SAFE_INTEGER),
+      );
+      break;
+  }
+  return copy;
 }
 
 export const action: Action = {
@@ -102,24 +170,43 @@ export const action: Action = {
     const auth = await readAuth(page);
     if (!auth.loggedIn) throw new AutomationError('AUTH_REQUIRED', 'stock-market-comparison');
 
+    const offset = input.offset as number;
     const limit = (input.limit as number) || 0;
-    const maxOffers = limit > 0 ? limit : 10000;
+    const minPrice = input.minPrice as number;
+    const maxPrice = input.maxPrice as number;
+    const minQty = input.minQty as number;
+    const sellersN = input.sellers as number;
+    const sortResult = input.sortResult as string;
 
     const ownOffers = new OwnOffersPage(page);
-    const listed = await ownOffers.extractOffers(maxOffers, false);
-    const offers = listed.offers.slice(0, maxOffers);
+    const startUrl = page.url();
 
-    const results: Array<{
-      articleId: number;
-      card: string;
-      price: string;
-      marketFrom: string;
-      marketSellers: number;
-      belowMarket: boolean;
-    }> = [];
+    // Phase 1: read all own offers via proven pagination (no detail pages)
+    const { offers: allOffers } = await ownOffers.extractOffers(0, true);
 
-    // Build the base filter from input (location, sellerType, foil, signed, altered)
+    // Apply price/qty filters
+    const qualifying = allOffers.filter((offer) => {
+      const price = parsePrice(offer.price);
+      if (minPrice > 0 && (price === null || price < minPrice)) return false;
+      if (maxPrice > 0 && (price === null || price > maxPrice)) return false;
+      if (minQty > 1 && offer.quantity < minQty) return false;
+      return true;
+    });
+
+    // Apply offset + limit
+    const workingSet = limit > 0 ? qualifying.slice(offset, offset + limit) : qualifying.slice(offset);
+    const hasMore = qualifying.length > offset + workingSet.length;
+
+    if (workingSet.length === 0) {
+      await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForSelector('#UserOffersTable', { state: 'visible', timeout: 60_000 });
+      return { state: 'own-offers', offset, count: 0, hasMore, offers: [], auth };
+    }
+
+    // Build base filter from input params (location, sellerType, foil, signed, altered)
     const baseFilter = resolveSellerFilter({
+      condition: 'excellent' as ResolvedSellerFilter['condition'],
+      language: 'english' as ResolvedSellerFilter['language'],
       location: input.location,
       sellerType: input.sellerType,
       foil: input.foil,
@@ -127,21 +214,19 @@ export const action: Action = {
       altered: input.altered,
     } as ResolvedSellerFilter);
 
-    for (let i = 0; i < offers.length; i++) {
-      const offer = offers[i];
-      if (!offer) continue;
+    const results: MarketComparisonRow[] = [];
 
-      // Open the detail page for this offer
-      const detail = await ownOffers.openOffer(i);
+    // Phase 2: navigate to each qualifying card detail page directly
+    for (const offer of workingSet) {
+      await page.goto(offer.cardUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForSelector('main h1', { state: 'visible', timeout: 60_000 });
 
-      // Derive filter from the offer's own condition and language
-      const offerCondition = mapConditionToFilter(offer.condition);
-      const offerLanguage = mapLanguageToFilter(offer.language);
+      const detail = new CardDetailPage(page);
 
-      // Build the filter: offer-specific condition/language + input location
+      // Derive filter from the offer's own condition and language + input params
       const filter: ResolvedSellerFilter = {
-        condition: offerCondition as ResolvedSellerFilter['condition'],
-        language: offerLanguage as ResolvedSellerFilter['language'],
+        condition: mapConditionToFilter(offer.condition),
+        language: mapLanguageToFilter(offer.language),
         location: baseFilter.location,
         sellerType: baseFilter.sellerType,
         foil: baseFilter.foil,
@@ -149,55 +234,72 @@ export const action: Action = {
         altered: baseFilter.altered,
       };
 
-      // Apply the filter (only submits if it differs from current)
       if (await detail.applySellerFilters(filter)) {
         await detail.submitSellerFilters();
       }
-
-      // Wait for sellers to load
       await detail.settleSellerList();
 
-      // Verify the filter was applied correctly by reading it back
+      // Verify the 3 critical filters: condition, language, location
       const appliedFilter = await detail.readCurrentFilter();
-      const filterMatch =
+      const criticalMatch =
         appliedFilter.condition === filter.condition &&
         appliedFilter.language === filter.language &&
         appliedFilter.location === filter.location;
 
-      if (!filterMatch) {
-        // Filter did not match — reapply and reload
+      if (!criticalMatch) {
         await detail.applySellerFilters(filter);
         await detail.submitSellerFilters();
         await detail.settleSellerList();
+        const retryFilter = await detail.readCurrentFilter();
+        const retryMatch =
+          retryFilter.condition === filter.condition &&
+          retryFilter.language === filter.language &&
+          retryFilter.location === filter.location;
+        if (!retryMatch) {
+          throw new AutomationError(
+            'POSTCONDITION_FAILED',
+            `filter-mismatch card=${offer.card} expected lang=${filter.language} cond=${filter.condition} loc=${filter.location} got lang=${retryFilter.language} cond=${retryFilter.condition} loc=${retryFilter.location}`,
+          );
+        }
       }
 
-      // Read seller rows (limit to 3 for compact output)
-      const sellers = await detail.extractSellers(3);
-      const marketFrom = sellers.length > 0 && sellers[0] ? sellers[0].price : 'N/A';
-      const marketSellers = sellers.length;
+      // Read seller rows
+      const sellers: SellerOffer[] = sellersN > 0 ? await detail.extractSellers(sellersN) : [];
+      const firstSeller = sellers[0];
+      const marketFrom = firstSeller ? firstSeller.price : 'N/A';
 
-      // Check if our price is below market
-      const ourPrice = parsePrice(offer.price);
+      // Compute diff and belowMarket
+      const ownPrice = parsePrice(offer.price);
       const marketPrice = marketFrom !== 'N/A' ? parsePrice(marketFrom) : null;
-      const belowMarket = ourPrice !== null && marketPrice !== null && ourPrice <= marketPrice;
+      const belowMarket = ownPrice !== null && marketPrice !== null && ownPrice <= marketPrice;
+      const diff = ownPrice !== null && marketPrice !== null ? round2(marketPrice - ownPrice) : null;
 
       results.push({
         articleId: offer.articleId,
         card: offer.card,
         price: offer.price,
+        quantity: offer.quantity,
+        condition: offer.condition,
+        language: offer.language,
         marketFrom,
-        marketSellers,
+        marketSellers: sellers,
         belowMarket,
+        diff,
       });
-
-      // Navigate back to own-offers page for the next iteration
-      await ownOffers.open();
     }
+
+    // Navigate back to the own-offers page
+    await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForSelector('#UserOffersTable', { state: 'visible', timeout: 60_000 });
+
+    const sorted = sortResults(results, sortResult);
 
     return {
       state: 'own-offers',
-      count: results.length,
-      offers: results,
+      offset,
+      count: sorted.length,
+      hasMore,
+      offers: sorted,
       auth,
     };
   },

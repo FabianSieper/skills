@@ -1,6 +1,6 @@
 ---
 name: cardmarket-automation
-description: Guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates, name-based bulk price updates). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, print variants, or explicit own-offer changes.
+description: Guarded Cardmarket state-machine automation (login state, search, detail, sellers, versions, artworks, own offers, approved offer updates). Attaches to existing Chrome session. Use for card prices, availability, sellers, filters, print variants, or explicit own-offer changes.
 ---
 
 # Cardmarket Automation
@@ -25,7 +25,7 @@ The `info` command detects the current state and returns `{ state, ..., auth }`.
 
 ## Automatic Login Handling
 
-The user never has to sign in "first". When a login-required action (`nav.own-offers`, `info` on the `own-offers` page, `user.offer.update`, `stock.market-comparison`, `stock.bulk-price-by-name`, `stock.bulk-price-update`) is run while the attached browser is logged out, the runtime **automatically** opens the Cardmarket login form in the user's browser, waits up to 2 minutes for the user to enter credentials, and then **re-runs the same action** so the command succeeds in one call.
+The user never has to sign in "first". When a login-required action (`nav.own-offers`, `info` on the `own-offers` page, `user.offer.update`, `stock.market-comparison`, `stock.bulk-price-update`) is run while the attached browser is logged out, the runtime **automatically** opens the Cardmarket login form in the user's browser, waits up to 2 minutes for the user to enter credentials, and then **re-runs the same action** so the command succeeds in one call.
 
 If the command still returns `AUTH_REQUIRED` (step `login-timeout`), the login page is already open in the user's browser. Tell the user the form is open and waiting, let them log in, then re-run the exact same command. Do not start a different flow.
 
@@ -65,9 +65,11 @@ Run `info` to read the current state.
 
 On a detail page, `info` always applies Cardmarket's canonical seller default (`excellent`, `english`, `germany`, all extras) unless its seller-filter parameters are supplied. Pass the requested filter values to `info` whenever comparing an own offer against other sellers.
 
+**Presentation:** When reporting seller data to the user, always state the active filters in a one-line header above the table. See `references/core-concepts.md` §17.
+
 ## Own Offers Listing
 
-Use `nav.own-offers` for Selling → My Offers → Singles. Own-offer card searches must use the visible Singles filter UI via `nav.own-offers.filter`; do not hand-build card-search URLs or submit raw form fields for stock searches. Apply `nav.own-offers.filter` with `{ "cardName": "Forest" }` to search your stock by card name; its other parameters correspond to the editable left-side filters and use their visible labels where relevant. `info` returns rows and the currently active stock filter.
+Use `nav.own-offers` for Selling → My Offers → Singles. Apply `nav.own-offers.filter` with `{ "cardName": "Forest" }` to search your stock by card name; its other parameters correspond to the editable left-side filters and use their visible labels where relevant. `info` returns rows and the currently active stock filter.
 
 For a request to list all own offers, call `info` with `{ "all": true }`. It follows every bottom next-page button, verifies the stock filter has not been lost, and reports `complete: true` only after the last page. It intentionally leaves the browser on that final page.
 
@@ -88,34 +90,40 @@ Supported changes: `price`, `quantity`, `condition`, `language`, `foil`, `signed
 
 ## Stock Market Comparison
 
-`stock.market-comparison` is a batch action that compares **all** (or a subset of) your own offers against the current market. For each offer it:
-
-1. Opens the card detail page.
-2. **Derives the seller filter from the offer's own condition and language** — e.g. an "Excellent / English" offer is compared against Excellent+ English sellers; a "Good / German" offer is compared against Good+ German sellers. The location (country) comes from the input parameter.
-3. Reads the lowest matching seller price (`marketFrom`) and the number of matching sellers (`marketSellers`).
-4. Sets `belowMarket: true` when your price is at or below the lowest market price.
-5. Navigates back to the own-offers page and continues with the next offer.
-
-The action returns a single consolidated result with all offers and their market comparison. The browser is left on the `own-offers` page.
+`stock.market-comparison` is a batch action that compares your own offers against the current market. Phase 1 reads all offers (fast, no detail pages) and applies price/qty filters. Phase 2 opens each qualifying card detail page, **derives the seller filter from the offer's own condition and language**, reads the cheapest matching sellers, and returns a consolidated comparison. Use `offset` + `limit` to batch large stocks. The browser is left on the `own-offers` page.
 
 **Parameters:**
 
 | parameter | default | range | meaning |
 |---|---:|---:|---|
-| `limit` | 0 | 0–1000 | Max offers to check (0 = all) |
+| `limit` | 0 | 0–1000 | Max offers to process (0 = all remaining) |
+| `offset` | 0 | 0–10000 | Skip first N qualifying offers |
+| `minPrice` | 0 | 0–1 000 000 | Only offers with price ≥ this EUR |
+| `maxPrice` | 0 | 0–1 000 000 | Only offers with price ≤ this EUR |
+| `minQty` | 1 | 0–1 000 000 | Only offers with quantity ≥ this |
 | `location` | `germany` | seller filter values | Seller location for market comparison |
 | `sellerType`, `foil`, `signed`, `altered` | `any` | seller filter values | Additional seller filters |
+| `sellers` | 3 | 0–50 | How many seller rows to return per card (0 = only marketFrom) |
+| `sortResult` | `price` | `price`, `marketFrom`, `diff` | Sort order |
 
-**Output:** `{ state: "own-offers", count, offers: [{ articleId, card, price, marketFrom, marketSellers, belowMarket }], auth }`
+**Output:** `{ state: "own-offers", offset, count, hasMore, offers: [{ articleId, card, price, quantity, condition, language, marketFrom, marketSellers: [...], belowMarket, diff }], auth }`
+
+**Presentation:** When reporting results to the user, always include the active filter line and a compact table. See `references/core-concepts.md` §17.
 
 **Example:** Compare all offers against German dealers (condition/language derived per card):
 ```bash
 echo '{}' | npm run cli -- run stock.market-comparison --input /dev/stdin
 ```
 
-Compare only the first 20 offers against Austrian dealers:
+Compare the first 20 offers, skipping the first 50, sorted by price difference:
 ```bash
-echo '{"limit": 20, "location": "austria"}' > /tmp/cm-compare.json
+echo '{"offset": 50, "limit": 20, "sortResult": "diff"}' > /tmp/cm-compare.json
+npm run cli -- run stock.market-comparison --input /tmp/cm-compare.json
+```
+
+Compare only offers priced 5–50 € against Austrian dealers, returning 5 sellers per card:
+```bash
+echo '{"minPrice": 5, "maxPrice": 50, "location": "austria", "sellers": 5}' > /tmp/cm-compare.json
 npm run cli -- run stock.market-comparison --input /tmp/cm-compare.json
 ```
 
@@ -146,36 +154,6 @@ npm run cli -- plan stock.bulk-price-update --input /tmp/cm-bulk.json
 
 **Output:** `{ state: "own-offers", count, updated: [{ articleId, card, oldPrice, newPrice, verified }], auth }`
 
-## Bulk Price Update by Name
-
-`stock.bulk-price-by-name` is a faster write action for changing multiple own-offer prices by card name instead of first collecting every `articleId`. It uses the Singles card-name filter, reads the stock edit modal, and verifies each changed price after approval. It takes `names` and `prices` as parallel arrays; optional `articleIds` can disambiguate duplicate card names, where `""` means resolve by name.
-
-**Parameters:**
-
-| parameter | required | range | meaning |
-|---|---|---|---|
-| `names` | yes | 1–1000 elements | Card names to update, index-aligned with `prices` |
-| `prices` | yes | 1–1000 elements | New prices in EUR, e.g. `"1.23"` or `"1,23"` |
-| `articleIds` | no | default `[]`, 0–1000 elements | Optional disambiguators; when present, use the same length as `names`. `""` resolves by name; a numeric string resolves by article ID |
-
-**Workflow:**
-1. Be on `own-offers`, or let the action navigate there.
-2. Build the input with `names`, `prices`, and optional `articleIds`.
-3. Create a plan: `npm run cli -- plan stock.bulk-price-by-name --input <file.json>`.
-4. Review the preview (shows each resolved card, old price, current form state, and new price) and obtain approval.
-5. Execute the stored plan.
-6. Verify with `info` on the own-offers page if needed.
-
-**Behavior:** The action is best-effort per entry. It returns `updated`, `unchanged`, and `failed` arrays, with `count` equal to their total. `failed[].reason` is an error code such as `PLAN_CHANGED`, `UI_DRIFT`, `TIMEOUT`, or `POSTCONDITION_FAILED`. Ambiguous name-only matches are rejected before execution and should be retried with explicit `articleIds`.
-
-**Output:** `{ state: "own-offers", count, updated: [{ name, articleId, card, oldPrice, newPrice, verified }], unchanged: [...], failed: [{ name, articleId, card, oldPrice, newPrice, reason }], auth }`
-
-**Example:**
-```bash
-echo '{"names": ["Forest", "Bose"], "prices": ["1.50", "2.00"], "articleIds": ["", "67890"]}' > /tmp/cm-bulk-name.json
-npm run cli -- plan stock.bulk-price-by-name --input /tmp/cm-bulk-name.json
-```
-
 ## Recommended Loop
 
 1. `npm run cli -- doctor` – verify browser attachment.
@@ -186,8 +164,7 @@ npm run cli -- plan stock.bulk-price-by-name --input /tmp/cm-bulk-name.json
    - in detail? `info`, `nav.filter`, or `nav.versions`
    - in versions? `info`, then `nav.artwork`
    - need own stock? `nav.own-offers`, then `nav.own-offers.filter` and `info`
-    - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
-    - need to change multiple own-offer prices by card name? `stock.bulk-price-by-name`, with explicit user approval before execution
+   - in own stock? `info { all: true }` for all pages, or `nav.own-offers.open` to compare one listing
     - `auth.loggedIn === false` and a logged-in session is needed? Just run the action — the runtime opens the login form and waits for the user automatically (see Automatic Login Handling); on `AUTH_REQUIRED`/`login-timeout`, re-run the same command after the user logs in
 4. After the executed nav command(s), check if output suggests success. If so, go back to #2. If not, analyse after which nav command it went wrong, check the state with `info` and figure out what to do next. If you are stuck, report the issue to the builder.
 
@@ -230,6 +207,7 @@ npm run cli -- doctor                       # Check browser attachment
 
 ## References
 
+- `references/core-concepts.md` – **Architectural invariants: read before extending or modifying any part of the skill**
 - `references/actions.md` – Full parameter & output schemas
 - `references/flows.md` – State-machine flows
 - `references/verification.md` – Status & known gaps

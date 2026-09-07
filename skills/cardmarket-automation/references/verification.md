@@ -1,6 +1,6 @@
 # Cardmarket Skill – Verifikation & Status
 
-> **Status: all states live-verified, auto-login ready** – State machine, login state, own offers on a card detail page, and guarded updates were validated on 2026-09-06. The Selling → My Offers → Singles listing and the AUTH_REQUIRED auto-login (open form → wait for user → re-run) were live-verified on 2026-09-07. The name-based bulk price update is implemented and browser-free verified; live verification is pending.
+> **Status: all states live-verified, auto-login ready** – State machine, login state, own offers on a card detail page, and guarded updates were validated on 2026-09-06. The Selling → My Offers → Singles listing and the AUTH_REQUIRED auto-login (open form → wait for user → re-run) were live-verified on 2026-09-07.
 
 ## Browserlos (erledigt)
 - Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/`, `examples/`.
@@ -131,12 +131,6 @@
 - **UI_DRIFT found live:** the own-offers POM identified its filter form as `form` index 3, but the logged-in page only has `form#searchForm` + the id-less stock-filter form (the logged-out login form shifts nothing once it is gone). Fixed by identifying the filter form via its `select[name="idLanguage"]` child.
 - **Live re-verify:** `info` on `own-offers` now returns the filter state and 20 own offers (first pages) with `auth.loggedIn: true`.
 
-## 2026-09-07: Name-based Bulk Price Update
-- **Feature:** `stock.bulk-price-by-name` bulk-updates own-offer prices by parallel `names` and `prices` arrays, with optional `articleIds` for duplicate-name disambiguation. It uses the Singles card-name filter, reads the stock edit modal, compares current form state, skips unchanged prices within a small epsilon, verifies the stock row, falls back to card-detail verification, and isolates per-entry failures.
-- **Browser-free:** `npm run typecheck` ✔, `npm test` ✔, including action registration, input validation, output guards, CLI list/describe, and registry order.
-- **Live:** pending — requires a logged-in attached Chrome session and explicit user approval. Verify name filtering, ambiguous `articleIds`, unchanged detection, stock-row verification, card-detail fallback, per-entry failure isolation, and final own-offers state.
-- **Docs:** `SKILL.md`, `references/actions.md`, and `references/flows.md` now document the action, the price-deviation audit process, and the requirement to use the visible Singles filter UI for own-offer card searches.
-
 ## Known Gaps
 - Neue State-Machine-Oberfläche live validiert (2026-09-06);
   `nav.versions` nutzt direkte Versions-URL-Navigation.
@@ -149,4 +143,3 @@
   nur die Option `1` liefert.
 - `own-offers` live-verified on 2026-09-07 (filter-form identified by content, 20 own offers read). The browserless filter fields cover the current Magic stock UI; unexpected per-game controls deliberately return `UI_DRIFT` instead of choosing a fallback.
 - Auto-login waits for a human inside one `run-code` call (up to `loginWaitMs`); if the user is slow the command returns `AUTH_REQUIRED`/`login-timeout` and the same command must be re-run once the form is filled.
-- `stock.bulk-price-by-name` is browser-free verified only; live write verification is pending.

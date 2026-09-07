@@ -39,7 +39,7 @@ export const action: Action = {
     if (state !== 'detail') return { status: 'wrong_state', state };
     const detail = new CardDetailPage(page);
     if (!(await detail.hasFilterForm())) return { status: 'not_available', state };
-    const changed = await detail.applySellerFilters(resolveSellerFilter({
+    const resolved = resolveSellerFilter({
       condition: input.condition,
       language: input.language,
       location: input.location,
@@ -47,10 +47,15 @@ export const action: Action = {
       foil: input.foil,
       signed: input.signed,
       altered: input.altered,
-    } as unknown as SellerFilter));
+    } as unknown as SellerFilter);
+    const changed = await detail.applySellerFilters(resolved);
     if (changed) {
       await detail.submitSellerFilters();
       await detail.settleSellerList();
+      const applied = await detail.readCurrentFilter();
+      if (applied.condition !== resolved.condition || applied.language !== resolved.language || applied.location !== resolved.location) {
+        throw new AutomationError('POSTCONDITION_FAILED', 'filter-not-applied');
+      }
     }
     return { status: 'ok', state: detectState(page) };
   },

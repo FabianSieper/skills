@@ -10,7 +10,7 @@ import { OFFER_CONDITION_LABELS, OFFER_CONDITION_VALUES, OFFER_LANGUAGE_LABELS, 
 import { resolveHref } from '../lib/url.ts';
 import type { Preview } from '../runtime/engine.ts';
 
-export type OfferFormState = {
+type OfferFormState = {
   idArticle: number;
   condition: string;
   language: string;
@@ -23,7 +23,7 @@ export type OfferFormState = {
   quantityOptions: number[];
 };
 
-export function sameFormState(current: OfferFormState, saved: unknown): boolean {
+function sameFormState(current: OfferFormState, saved: unknown): boolean {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return false;
   const o = saved as Record<string, unknown>;
   return (
@@ -282,8 +282,8 @@ export class CardDetailPage extends SitePage {
     if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
     const button = this.page.locator('form input[type="submit"][name="apply"]');
     const [nav] = await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null),
-      button.click({ timeout: 200 }).catch(() => null),
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null),
+      button.click({ timeout: 15_000 }).catch(() => null),
     ]);
     if (!nav) {
       await this.page.evaluate(() => {
@@ -292,7 +292,7 @@ export class CardDetailPage extends SitePage {
         const submitter = el.querySelector('input[type="submit"][name="apply"]');
         el.requestSubmit(submitter instanceof HTMLElement ? submitter : null);
       });
-      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 200 }).catch(() => null);
+      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
     }
     await this.waitForCloudflare();
   }

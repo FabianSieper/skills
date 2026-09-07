@@ -215,20 +215,30 @@ export type OwnOffersInfo = {
 };
 export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo | OwnOffersInfo;
 
-/** One row in the stock market comparison result (compact). */
+/** One row in the stock market comparison result. */
 export type MarketComparisonRow = {
   articleId: number;
   card: string;
   price: string;
+  quantity: number;
+  condition: string;
+  language: string;
   marketFrom: string;
-  marketSellers: number;
+  marketSellers: SellerOffer[];
   belowMarket: boolean;
+  /** marketFrom − own price; null when no matching seller */
+  diff: number | null;
 };
 
 /** Output of stock.market-comparison */
 export type StockMarketComparisonOutput = {
   state: 'own-offers';
+  /** Offset that was applied to the qualifying-offer set */
+  offset: number;
+  /** Offers processed in this call */
   count: number;
+  /** True when more qualifying offers exist beyond the ones returned — call again with a higher offset */
+  hasMore: boolean;
   offers: MarketComparisonRow[];
   auth: AuthInfo;
 };
@@ -247,35 +257,5 @@ export type StockBulkPriceUpdateOutput = {
   state: 'own-offers';
   count: number;
   updated: BulkPriceUpdateItem[];
-  auth: AuthInfo;
-};
-
-/** One item in the name-based bulk price update result. */
-export type StockBulkPriceByNameItem = {
-  name: string;
-  articleId: number;
-  card: string;
-  oldPrice: string;
-  newPrice: number;
-  verified: boolean;
-};
-
-/** One failed item in the name-based bulk price update result. */
-export type StockBulkPriceByNameFailedItem = {
-  name: string;
-  articleId: number;
-  card: string;
-  oldPrice: string;
-  newPrice: number;
-  reason: string;
-};
-
-/** Output of stock.bulk-price-by-name */
-export type StockBulkPriceByNameOutput = {
-  state: 'own-offers';
-  count: number;
-  updated: StockBulkPriceByNameItem[];
-  unchanged: StockBulkPriceByNameItem[];
-  failed: StockBulkPriceByNameFailedItem[];
   auth: AuthInfo;
 };

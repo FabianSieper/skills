@@ -29,19 +29,3 @@ export function parsePrice(s: string | null | undefined): number | null {
   const n = parseFloat(num);
   return Number.isFinite(n) ? n : null;
 }
-
-export function normalizeName(value: string | null | undefined): string {
-  if (!value) return '';
-  return value.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
-}
-
-export function parsePriceValue(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const raw = value.replace(/\u00a0/g, ' ').replace(/\s+/g, '');
-  if (!raw) return null;
-  if (raw.includes('€')) return parsePrice(value);
-  const num = raw.includes(',') ? raw.replace(/\./g, '').replace(/,/g, '.') : raw;
-  if (!/^\d+(\.\d+)?$/.test(num)) return null;
-  const n = parseFloat(num);
-  return Number.isFinite(n) ? n : null;
-}
