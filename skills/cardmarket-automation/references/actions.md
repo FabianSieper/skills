@@ -1,6 +1,6 @@
 # Actions Reference
 
-Actions are read-only except `user.offer.update`, which is a guarded write action requiring `plan` and `execute` approval.
+All actions are read-only except the write actions `user.offer.update` and `stock.bulk-price-update`, which are guarded and require `plan` and `execute` approval.
 
 ## Command Table
 
@@ -18,6 +18,8 @@ Actions are read-only except `user.offer.update`, which is a guarded write actio
 | `info` | read | auto-detect | `limit`, `sellers`, `minQty`, `all`, seller-filter fields | state-specific payload |
 | `user.offers` | read | `detail` | `limit` | own-offer payload |
 | `user.offer.update` | write | `detail` | `articleId` + changes | update payload |
+| `stock.market-comparison` | read | `own-offers` | `limit`, `location`, `sellerType`, `foil`, `signed`, `altered` | `{ state, count, offers[], auth }` |
+| `stock.bulk-price-update` | write | `own-offers` | `articleIds`, `prices` | `{ state, count, updated[], auth }` |
 
 ## Nav Status
 
@@ -119,6 +121,28 @@ Only own `stockRow` entries are returned. The action is empty outside `detail`.
 | `comments` | no | string, 0–100 chars |
 
 At least one change field is required; `prepare` fails with `INVALID_INPUT` when only `articleId` is supplied. Image upload is not part of the action.
+
+### `stock.market-comparison`
+Requires a logged-in session and the `own-offers` state. For every offer it opens the card detail page, derives and verifies the seller filter from the offer's own condition and language, reads the lowest matching seller price, and returns a compact consolidated comparison. The browser is left on the own-offers page.
+
+| field | default | values |
+|---|---|---|
+| `limit` | `0` (all) | 0–1000 |
+| `location` | `germany` | country keys: `germany`, `uk`, `any`, + more |
+| `sellerType` | `any` | `private`, `professional`, `powerseller`, `any` |
+| `foil` | `any` | `any`, `yes`, `no` |
+| `signed` | `any` | `any`, `yes`, `no` |
+| `altered` | `any` | `any`, `yes`, `no` |
+
+Condition and language are taken from each offer, not passed as parameters.
+
+### `stock.bulk-price-update`
+Requires a logged-in session and the `own-offers` state. Bulk-updates the price of multiple offers in a single approved plan. `articleIds` and `prices` are parallel, index-aligned arrays of equal length (1–1000); `prices` are EUR strings such as `1.23` or `1,23`.
+
+| field | required | type |
+|---|---|---|
+| `articleIds` | yes | string array of article IDs, 1–1000, index-aligned with `prices` |
+| `prices` | yes | string array of new EUR prices, 1–1000, index-aligned with `articleIds` |
 
 ## `info` Output Shapes
 
@@ -288,9 +312,35 @@ When `minQty > 0`, each artwork additionally contains:
 }
 ```
 
+### `stock.market-comparison`
+```json
+{
+  "state": "own-offers",
+  "count": 1,
+  "offers": [
+    { "articleId": 2108603357, "card": "Esix, Fractal Bloom", "price": "0,25 €", "marketFrom": "1,00 €", "marketSellers": 3, "belowMarket": true }
+  ],
+  "auth": { "loggedIn": true }
+}
+```
+
+`belowMarket` is `true` when the offer price is at or below the lowest matching seller price (`marketFrom`). `marketSellers` is the number of seller rows read (capped at 3 for a compact comparison). `marketFrom` is `N/A` when no seller matches the derived filter.
+
+### `stock.bulk-price-update`
+```json
+{
+  "state": "own-offers",
+  "count": 1,
+  "updated": [
+    { "articleId": 2108603357, "card": "Esix, Fractal Bloom", "oldPrice": "0,25 €", "newPrice": 0.26, "verified": true }
+  ],
+  "auth": { "loggedIn": true }
+}
+```
+
 ## Write Safety
 
-`user.offer.update` uses the engine write contract:
+The write actions (`user.offer.update` and `stock.bulk-price-update`) use the engine write contract:
 - `plan` opens and reads the edit modal, then closes it without saving.
 - The plan binds account, URL, card, article ID, current form values, requested changes, input, implementation, and TTL.
 - `execute` re-prepares the same target and blocks on account or form drift.
@@ -326,3 +376,5 @@ When `minQty > 0`, each artwork additionally contains:
 - `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'user.offers']`
 - `user.offers.next`: `['info', 'user.offer.update']`
 - `user.offer.update.next`: `['info', 'user.offers']`
+- `stock.market-comparison.next`: `['info', 'nav.own-offers', 'stock.market-comparison', 'user.offers']`
+- `stock.bulk-price-update.next`: `['info', 'nav.own-offers', 'stock.market-comparison']`

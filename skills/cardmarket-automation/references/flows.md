@@ -69,6 +69,6 @@ The user never signs in "first": login-required actions handle login on their ow
 - `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: stop and report to builder.
 - `BROWSER_REQUIRED`: hard stop.
 - `HUMAN_REQUIRED`: wait for manual Cloudflare solve.
-- `AUTH_REQUIRED`: **automatic** — call `nav.home` to go to the login page, prompt the user to enter credentials, then retry the original action.
+- `AUTH_REQUIRED`: **automatic** — the runtime already opened the login form and waited for you to log in, then re-runs the same action. If it returns step `login-timeout`, the login page is open: tell the user to log in, then re-run the exact same command. Never start a different flow on your own.
 - `PLAN_CHANGED`: create and review a new plan.
 - `PLAN_USED` / `UNKNOWN_COMMIT`: do not retry; verify with `user.offers`.

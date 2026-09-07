@@ -42,4 +42,4 @@ npx skills add FabianSieper/skills --skill website-automation-builder
 ## Available skills
 
 - `website-automation-builder` – Builds deterministic website automations with TypeScript, Playwright POMs, and an already open browser.
-- `cardmarket-automation` – Read-only Cardmarket (MTG) automations: `cards.search` (result tiles), `cards.price` (detail top block + seller offers), `cards.artworks` (print variants + seller-quantity check). Live-verified; attaches to an already-open browser via `playwright-cli`, never launches/replaces/closes one.
+- `cardmarket-automation` – State-machine Cardmarket (MTG) automations: navigate search/detail/versions/artwork/filters, `info`, own offers (`user.offers`), market comparison (`stock.market-comparison`), and guarded price writes (`user.offer.update`, `stock.bulk-price-update` via plan → exact review → execute). Live-verified; attaches to an already-open browser via `playwright-cli`, never launches/replaces/closes one.
