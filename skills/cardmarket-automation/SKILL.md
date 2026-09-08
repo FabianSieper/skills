@@ -12,9 +12,12 @@ steps.
 
 ## Non-negotiable boundaries
 
-- Attach to the existing Chrome session `cardmarket-automation`; never launch,
-  replace, close or switch browsers/tabs. A missing or mismatched session is a
-  hard error.
+- Attach to the existing shared Chrome session `chrome` (user-global rule: one
+  relay/tab group for all browsing agents); never launch, replace, close or
+  switch browsers/tabs. A missing or mismatched session is a hard error. If the
+  session does not exist yet, `attach` opens the extension's one-time Welcome
+  tab; the user picks an existing tab there ("Allow & select") and the Welcome
+  tab is removed. Never re-`attach` while a session exists, never `tab-new`.
 - Observe first. `status` is pure: it does not navigate, accept cookies, open a
   login form, fill fields, change filters or retry an action.
 - An unrecognized or outside-site page is `unknown`. Stop and use only an
@@ -204,6 +207,25 @@ phase, state (when known), step, expected/actual context, effects and
 
 Do not use error-message text to invent a command. The typed recovery object
 and this table are the complete operator guidance.
+
+## Browser transport pitfalls — CRITICAL
+
+**The `playwright-cli` transport has four pitfalls that trap the agent in an endless loop of `attach` → `about:blank` → `stale ref` → `attach`:**
+
+1. **`press Enter` on Cardmarket forms navigates to `about:blank`** — Cardmarket uses JS-based navigation. Pressing Enter on the Name search form triggers a broken form submit, navigating to `about:blank`. Reproducible: `fill` + separate `press Enter` → Page URL `about:blank`. **Never use `press Enter` on Cardmarket forms.**
+
+2. **Refs are snapshot-local** — refs (e.g. `f9e207`) are valid ONLY for the snapshot they were extracted from. After any navigation (including `about:blank`), all refs are dead. **Always fetch a new `snapshot` after every navigation.**
+
+3. **Compound actions must be atomic** — `fill` + `click` or `fill` + `press Enter` must execute in a single `run-code` invocation. Each separate `playwright-cli` call is an independent process with its own WebSocket relay. **Always use `run-code 'async (page) => { ... }'` for compound actions.**
+
+4. **`attach` is one-shot** — every `attach` opens a new Playwright Welcome tab and a new relay; while a session exists, re-attaching spawns another Welcome tab and a second client that cannot reuse the same tabs ("already connected to another client"). **Always run `playwright-cli list` first; if the `chrome` session exists, reuse it — never `attach`, `detach`, `close`, `close-all`, `kill-all` or `delete-data`. After handover, never `tab-new`; bring existing tabs in by dragging them into the "Playwright · playwright-cli" tab group.**
+
+**Recommended patterns:**
+- Search: `goto 'https://www.cardmarket.com/...?name=esix'` — works immediately, no refs needed
+- Compound action: `run-code 'async (page) => { await page.fill("input", "esix"); await page.click("button.search"); return page.url(); }'`
+- `run-code --filename` for complex actions: write JS file → `run-code --filename=<path>` → delete file
+- `run-code` inline code must be an Arrow Function: `async (page) => { ... }`. No plain JavaScript.
+- `attach --extension=chrome` opens the one-time Welcome handoff tab plus a new relay port — see pitfall 4; it must not be repeated while a session exists.
 
 ## Verification and known migration boundary
 

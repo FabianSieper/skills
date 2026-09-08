@@ -23,7 +23,8 @@ export const config = {
 
   // Runtime invariant: the user's browser is already open. Never launch another browser.
   browser: {
-    session: 'cardmarket-automation',
+    // Shared session name (user-global rule): one relay/tab group for all browsing agents, no new tabs.
+    session: 'chrome',
     attach: { mode: 'extension' as const, target: 'chrome' },
     cliCommand: 'playwright-cli'
   }

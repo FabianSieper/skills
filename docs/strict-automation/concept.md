@@ -445,6 +445,42 @@ adding independent timeouts. Return page/chunk cursors for more work; no `all`
 with unbounded work. Use observed value/revision/URL/loader changes, not arbitrary
 sleeps or broad network-idle waits on a busy website.
 
+### Wait strategy: observable conditions, never fixed waits
+
+Every internal wait must target a concrete, observable UI condition — the
+appearance or disappearance of a specific element, a status change, a loader
+disappearing, or a network request completing. Never use a fixed timeout
+(e.g. `setTimeout`, `page.waitForTimeout`, arbitrary `sleep`) to wait for
+the UI to reach a state. Fixed waits make scripts slower than necessary
+(they always wait the full duration) and fragile (they break when the
+site changes speed).
+
+Principles:
+
+1. **Wait for what you can verify.** Before interacting, wait for the
+   target element to be visible, enabled, and stable. After an action,
+   wait for the expected post-condition (new element, changed text,
+   removed spinner) within the action deadline.
+
+2. **Use the shortest sufficient condition.** If a loader disappears
+   in 200 ms, do not wait the full 30 s deadline. If a button becomes
+   clickable in 50 ms, do not wait 1 s. The deadline is a safety
+   ceiling, not a target.
+
+3. **Timeouts are failure signals, not wait targets.** A timeout means
+   the expected condition did not appear within the deadline — it is a
+   `TIMEOUT` error, not a valid completion. The action should not
+   proceed after a timeout.
+
+4. **No arbitrary sleeps anywhere.** `page.waitForTimeout`, `sleep()`,
+   `setTimeout` for UI synchronization are forbidden. They are never
+   a valid wait strategy, regardless of context.
+
+5. **Network waits must be scoped.** `waitForResponse`/`waitForRequest`
+   must target a specific URL pattern or resource type, not
+   `networkidle` on a busy page. Broad network waits are unreliable
+   and slow.
+
 No retry after a commit boundary. A registered noncommitting wait may poll
 within the deadline. A transition may repeat once only when evidence proves
 the first attempt had no effect and the target/context is unchanged; this must

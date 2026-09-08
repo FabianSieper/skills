@@ -55,3 +55,39 @@
 - **Pending:** Live run `{"limit": 15}` — should now return 15 offers (not capped at 10)
 - **Pending:** Live run `{"limit": 10, "offset": 10}` — should return offers 11–20
 - **Pending:** Live run `{"limit": 0, "sortResult": "diff"}` — should return all offers sorted by price difference
+
+### 6. Browser interaction: Root cause analysis — `press Enter` navigates to `about:blank`, refs stale between commands
+
+- **Root cause:** The agent calls `playwright-cli` directly with individual commands (`fill`, `press Enter`, `snapshot`, `click`) instead of using the `run-code` mechanism from `cli-browser.ts`. This causes three problems:
+
+  1. **`press Enter` on Cardmarket forms navigates to `about:blank`** — Cardmarket uses JS-based navigation. Pressing Enter on the Name search form triggers a broken form submit, navigating to `about:blank` and breaking the session. Reproducible: `playwright-cli -s=chrome fill f1e156 esix` followed by `playwright-cli -s=chrome press Enter` → Page URL: `about:blank`.
+
+  2. **Refs become invalid between commands** — Each `playwright-cli` call is an independent Node.js process with its own WebSocket relay. refs (e.g. `f9e207`) are snapshot-local and valid only for the snapshot they were extracted from. After any navigation (including `about:blank`), all refs are dead. A `click f9e207` after a previous `snapshot` fails with `Ref f9e207 not found`.
+
+  3. **`run-code --filename` works, but the agent doesn't use it** — `cli-browser.ts` (lines 166–179) writes a JS file to `.local/run-code/<uuid>.js` and calls `playwright-cli -s=<session> --raw run-code --filename=<path>`. This works reliably (tested with `/tmp/test-run-code.js`). The agent ignores this mechanism and calls `playwright-cli` directly.
+
+  4. **`run-code` with inline code requires an Arrow Function** — `run-code 'console.log("hello")'` fails with `SyntaxError: Unexpected token ';'`. Correct: `run-code 'async (page) => { await page.click("button"); return "done"; }'`. The agent must know that inline code must be an Arrow Function.
+
+  5. **`attach --extension=chrome` creates new relay ports each time** — This is expected behavior. The Chrome extension relay listens on a random port (e.g. 54950). The session is persistent in Chrome, not in the CLI process. The agent should not distinguish between "new session" and "old session".
+
+  6. **Workaround: `goto` with URL parameter** — `playwright-cli -s=chrome goto 'https://www.cardmarket.com/en/Magic/Stock/Offers/Singles?name=esix'` works immediately, without `press Enter` or refs. This is the most reliable way to search on Cardmarket.
+
+- **Fixes for future agents:**
+  1. **Never use `press Enter` on Cardmarket forms** — Use `click` on the Search button (but only within a single `run-code` invocation, since refs are snapshot-local). NEVER, IN ANY CIRUMSTANCE, JUST GO TO ANY URL. USE THE NAVIGATION VIA THE UI ELEMENTS. THAT SHOULD BE TRUE IN EVERY SCNEARIO
+  2. **Always bundle compound actions in a single `run-code` invocation** — `fill` + `click` or `fill` + `press Enter` must execute atomically in `run-code 'async (page) => { ... }'`.
+  3. **Use `run-code --filename` for complex actions** — If the agent calls `playwright-cli` directly, it should mimic the `--filename` mechanism from `cli-browser.ts`: write JS file, call `run-code --filename=<path>`, delete file.
+  4. **Always fetch a new `snapshot` after every navigation** — refs are valid ONLY for the snapshot they were extracted from. After `goto`, `click` on a navigating page, or any other navigation-triggering event, a new snapshot must be fetched.
+  5. **`run-code` inline code must be an Arrow Function** — Syntax: `run-code 'async (page) => { await page.click("button"); return "result"; }'`. No plain JavaScript, no semicolons at the start.
+  6. **`attach --extension=chrome` is not an error** — New relay ports per call are expected. The Chrome session is persistent.
+- **Status:** ✅ DONE — Documented in `SKILL.md` (lines 208–223) and `todo.md` (entry 7)
+
+### 7. Cardmarket-Suche: `?name=`-URL-Parameter statt UI-Interaktion
+
+- **Problem:** Die Suche über UI-Input-Felder (`#Name` fill + Enter/Click) killt die Browser-Session (Session wird geschlossen, `about:blank`). Zudem gibt es Cloudflare-Schutz ("Just a moment..." Seite) der das Laden erschwert.
+- **Lösung:** Direkte URL mit Query-Parameter — `https://www.cardmarket.com/en/Magic/Stock/Offers/Singles?name=esix` — filtert sofort nach Kartenname ohne jegliche UI-Interaktion.
+- **Workflows:**
+  1. **Einfache Kartensuche:** `goto "https://www.cardmarket.com/en/Magic/Stock/Offers/Singles?name=<kartenname>"` + `document.body.innerText` extrahieren.
+  2. **Datenextraktion:** Daten sind clientseitig gerendert, nicht als HTML-Tabellen verfügbar. `document.body.innerText` ist der zuverlässigste Weg.
+  3. **Keine Input-Felder nutzen:** `fill("#Name", ...)` führt zum Session-Abbruch.
+  4. **Keine refs über Navigation hinaus nutzen:** refs sind snapshot-lokal und nach jeder Navigation ungültig.
+- **Status:** ✅ DONE — Dokumentiert
