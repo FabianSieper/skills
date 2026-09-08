@@ -22,8 +22,8 @@ const messages: Record<ErrorCode, string> = {
   UNKNOWN_ACTION: 'Unknown or unsupported action. Use list/describe; do not improvise.',
   AUTH_REQUIRED: 'The already-open browser is not authenticated as the required account. Let the user log in there, then retry.',
   HUMAN_REQUIRED: 'Manual user interaction is required in the already-open browser. Do not bypass this state.',
-  BROWSER_REQUIRED: 'The configured browser must already be open. Do not launch a replacement browser.',
-  ATTACH_FAILED: 'Could not attach playwright-cli to the configured open browser/session. Check the browser, extension/CDP setup and session.',
+  BROWSER_REQUIRED: 'The configured browser is not open or reachable through the fixed transport. Open it and complete the extension attachment handoff if prompted; do not launch a replacement browser.',
+  ATTACH_FAILED: 'The configured session could not be established or reached through playwright-cli. Use the step and cause fields for the exact prerequisite; do not launch a replacement browser.',
   CLI_PROTOCOL: 'playwright-cli returned an unexpected result. Stop instead of guessing or falling back to raw browser commands.',
   UI_DRIFT: 'The observed UI no longer matches the documented flow. Stop and repair the POM.',
   AMBIGUOUS_SELECTOR: 'The target locator matches more than one element. Stop; do not pick the first.',
@@ -75,6 +75,8 @@ export function recoveryFor(code: ErrorCode): ErrorContext['recovery'] {
   if (['INVALID_INPUT', 'UNKNOWN_ACTION'].includes(code)) return { disposition: 'fix_input', owner: 'operator' };
   if (['WRONG_STATE', 'STALE_CONTEXT', 'UNKNOWN_STATE', 'SESSION_MISMATCH'].includes(code)) return { disposition: 'observe', owner: 'operator', command: 'npm --prefix <skill-root> run cli -- status' };
   if (['AUTH_REQUIRED', 'CONSENT_REQUIRED', 'HUMAN_REQUIRED'].includes(code)) return { disposition: 'user_action', owner: 'user', prerequisite: 'Handle the visible login, consent or challenge in the attached browser.' };
+  if (code === 'BROWSER_REQUIRED') return { disposition: 'user_action', owner: 'user', prerequisite: 'Open the configured browser and complete the extension attachment handoff if prompted. Do not launch a replacement browser.' };
+  if (code === 'ATTACH_FAILED') return { disposition: 'user_action', owner: 'user', prerequisite: 'Fix the exact shared session in the already-open browser (complete the one-time handoff or reconnect the extension, per step and cause). Do not launch, replace or switch browsers.' };
   if (['UI_DRIFT', 'AMBIGUOUS_SELECTOR', 'BUILD_ERROR', 'BUILD_INVALID', 'NOT_VERIFIED', 'NOT_CONFIGURED'].includes(code)) return { disposition: 'repair', owner: 'builder' };
   if (['PLAN_CHANGED', 'PLAN_EXPIRED'].includes(code)) return { disposition: 'replan', owner: 'operator' };
   if (['PLAN_USED', 'UNKNOWN_COMMIT', 'SESSION_QUARANTINED'].includes(code)) return { disposition: 'reconcile', owner: 'operator', prerequisite: 'Read the affected business state before any new write.' };
