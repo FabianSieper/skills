@@ -152,8 +152,15 @@ All items below remain open. Detailed acceptance gates are in
   `playwright-cli` operator guidance (the source of tab churn) was superseded:
   `SKILL.md` now carries an explicit tab/session policy and the raw-transport
   pitfalls moved to `references/transport.md` (builder-level). Live `status`,
-  `nav.home`, `nav.search`, `nav.open`, `nav.filter` verified working and fast;
-  typecheck + 58-test suite + 45-link concept validator all pass.
+   `nav.home`, `nav.search`, `nav.open`, `nav.filter` verified working and fast;
+   typecheck + 58-test suite + 45-link concept validator all pass.
+- 2026-09-08 navigation clarity (Cardmarket): `availableActionDetails` now exposes
+  `description`, `from`, `to` (happy-path destination) and `requiredInput` for every
+  currently legal action, so a local operator AI can see where each action leads
+  without guessing. `SKILL.md` adds a compact state→action→destination map backed by
+  the same data. Live `status` at `detail` verified: `nav.versions`→versions,
+  `nav.filter`→detail, `nav.home`→start, `nav.search`→results. typecheck + 58-test
+  suite + concept validator all pass.
 
 ## Resume instructions
 

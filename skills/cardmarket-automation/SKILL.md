@@ -145,12 +145,39 @@ npm run cli -- doctor
 The shell is only a transport for these fixed commands. Do not pass arbitrary
 URLs, selectors, scripts, `eval`, `--force` or alternate browser drivers.
 
-### Common read loop
+### How you move between UI points
 
+Every response lists `availableActionDetails` — one entry per action you may run
+right now. Each entry tells you:
+- `description` — what the action does;
+- `from` — the states it can run in;
+- `to` — where it lands on success;
+- `requiredInput` — the fields you must supply (empty = none).
+
+Pick the entry whose `to` is the point you want, then run it. Happy paths:
+
+| action                  | from       | to         | needs        |
+|-------------------------|------------|------------|--------------|
+| `status`                | any        | (observe)  | —            |
+| `nav.home`              | any        | start      | —            |
+| `nav.search`            | any        | results    | `query`      |
+| `nav.open`              | results    | detail     | `index`      |
+| `nav.versions`          | detail     | versions   | —            |
+| `nav.filter`            | detail     | detail     | filter keys  |
+| `nav.artwork`           | versions   | detail     | `index`      |
+| `nav.own-offers`        | any        | own-offers | —            |
+| `nav.own-offers.open`   | own-offers | detail     | `index`      |
+| `nav.own-offers.filter` | own-offers | own-offers | `cardName`   |
+
+So: `start → results` is `nav.search`; `results → detail` is `nav.open`;
+`detail → versions` is `nav.versions`; `versions → detail` is `nav.artwork`.
+Never guess a transition that is not in the list for your current state.
+
+Read loop:
 1. `status` (or use a known current result state).
-2. Select one ID from `availableActions` and satisfy its `describe` schema.
+2. From `availableActionDetails`, choose the entry whose `to` is your target.
 3. Run it with the supplied JSON form.
-4. Continue only from the returned `state`, `outcome` and `availableActions`.
+4. Continue only from the returned `state`, `outcome` and `availableActionDetails`.
 5. On any mismatch, observe again; do not blindly repeat a UI-changing action.
 
 Typical card-price path:

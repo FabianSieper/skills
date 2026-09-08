@@ -142,11 +142,16 @@ export class Engine {
       const action = this.action(id);
       const contract = actionContract(id);
       const required = Object.entries(action.parameters).filter(([, field]) => field.required).map(([name]) => name);
+      const to: StateId[] = contract && contract.outcomes.ok ? [...contract.outcomes.ok] : [];
+      const from: StateId[] = contract ? [...contract.from] : [];
       return {
         id,
+        description: contract?.description ?? action.description,
         kind: action.kind,
         mode: contract?.mode ?? action.kind,
         auth: contract?.auth ?? 'public',
+        from,
+        to,
         effects: contract?.effects ?? { ui: 'unknown', commit: 'unknown' },
         requiredInput: required,
         commandPhase: action.kind === 'write' ? 'plan' : 'run',

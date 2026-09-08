@@ -91,3 +91,8 @@
   3. **Keine Input-Felder nutzen:** `fill("#Name", ...)` führt zum Session-Abbruch.
    4. **Keine refs über Navigation hinaus nutzen:** refs sind snapshot-lokal und nach jeder Navigation ungültig.
 - **Status:** ✅ DONE — **SUPERSEDED** (see entry 6): legacy raw `playwright-cli` approach; the current strict CLI never uses raw `goto`/`fill`/refs. Transport notes: `references/transport.md`.
+
+### Navigation clarity (2026-09-08, done)
+- **Problem:** a local operator AI could not tell where each action leads, so moving from one UI point to another relied on guessing.
+- **Fix:** `availableActionDetails` now returns `description`, `from`, `to` (happy-path destination) and `requiredInput` for each currently legal action; `SKILL.md` adds a state→action→destination map backed by the same data.
+- **Status:** ✅ DONE — typecheck clean, 58/58 tests pass, concept validator OK; live `status` at `detail` verified (`nav.versions`→versions, `nav.filter`→detail, `nav.home`→start, `nav.search`→results). Account writes remain `NOT_VERIFIED`.
