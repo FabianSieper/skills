@@ -33,7 +33,7 @@ function make(root:string){
     if(phase==='execute')return {accountKey:state.account,value:await action.execute({} as Page,input,preview!) as never};
     throw new Error('fixture');
   };
-  const config={name:'fixture',version:1,planTtlMs:600000};
+  const config={name:'fixture',version:1,planTtlMs:600000,lockStaleMs:600000};
   const engine=new Engine(root,config,actions,browser);
   return {root,state,actions,browser,config,engine,plan:async()=>await engine.plan('item.update',{value:7}) as PlanResult};
 }
@@ -74,5 +74,5 @@ test('used plan is never mistaken for an unused expired plan',()=>fixture(async 
   await assert.rejects(()=>f.engine.execute(p.planId,digest(saved)),code('PLAN_USED'));
 }));
 test('concurrent run is blocked by project lock',()=>fixture(async f=>{
-  await withLock(f.root,async()=>{await assert.rejects(()=>f.engine.run('item.read',{}),code('BUSY'));});await f.engine.run('item.read',{});
+  await withLock(f.root,600000,async()=>{await assert.rejects(()=>f.engine.run('item.read',{}),code('BUSY'));});await f.engine.run('item.read',{});
 }));

@@ -79,7 +79,7 @@
   4. **Always fetch a new `snapshot` after every navigation** — refs are valid ONLY for the snapshot they were extracted from. After `goto`, `click` on a navigating page, or any other navigation-triggering event, a new snapshot must be fetched.
   5. **`run-code` inline code must be an Arrow Function** — Syntax: `run-code 'async (page) => { await page.click("button"); return "result"; }'`. No plain JavaScript, no semicolons at the start.
   6. **`attach --extension=chrome` is not an error** — New relay ports per call are expected. The Chrome session is persistent.
-- **Status:** ✅ DONE — Documented in `SKILL.md` (lines 208–223) and `todo.md` (entry 7)
+- **Status:** ✅ DONE — **SUPERSEDED.** Entries 6–7 describe the legacy raw `playwright-cli` approach. The current skill is the closed strict CLI (`npm run cli -- ...`), which never exposes these raw-browser failure modes to the operator. The transport notes now live in `references/transport.md` (builder-level only); `SKILL.md` points there instead of teaching raw `playwright-cli`.
 
 ### 7. Cardmarket-Suche: `?name=`-URL-Parameter statt UI-Interaktion
 
@@ -89,5 +89,5 @@
   1. **Einfache Kartensuche:** `goto "https://www.cardmarket.com/en/Magic/Stock/Offers/Singles?name=<kartenname>"` + `document.body.innerText` extrahieren.
   2. **Datenextraktion:** Daten sind clientseitig gerendert, nicht als HTML-Tabellen verfügbar. `document.body.innerText` ist der zuverlässigste Weg.
   3. **Keine Input-Felder nutzen:** `fill("#Name", ...)` führt zum Session-Abbruch.
-  4. **Keine refs über Navigation hinaus nutzen:** refs sind snapshot-lokal und nach jeder Navigation ungültig.
-- **Status:** ✅ DONE — Dokumentiert
+   4. **Keine refs über Navigation hinaus nutzen:** refs sind snapshot-lokal und nach jeder Navigation ungültig.
+- **Status:** ✅ DONE — **SUPERSEDED** (see entry 6): legacy raw `playwright-cli` approach; the current strict CLI never uses raw `goto`/`fill`/refs. Transport notes: `references/transport.md`.

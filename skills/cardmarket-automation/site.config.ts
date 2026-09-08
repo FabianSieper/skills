@@ -19,6 +19,9 @@ export const config = {
   // Bounded action deadline; human login/consent is handled outside the runtime.
   actionBudgetMs: 240_000,
   planTtlMs: 600_000,
+  // A lock whose owner process is dead (or whose age exceeds this generous bound) is
+  // reaped so a crashed/killed run does not wedge the CLI into permanent BUSY.
+  lockStaleMs: 600_000,
   maxInputBytes: 65_536,
 
   // Runtime invariant: the user's browser is already open. Never launch another browser.

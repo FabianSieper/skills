@@ -64,9 +64,9 @@ async function main(): Promise<unknown> {
             enabled:contract.enabled,...(contract.disabledReason ? {disabledReason:contract.disabledReason} : {})} : {}),next:action.next};
       })};
     case 'describe': syntax(true,[]); return engine.describe(id!);
-    case 'connect': syntax(false,[]); return withLock(root, async()=>{await ensureAttached();
+    case 'connect': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{await ensureAttached();
       return {site:config.name,session:config.browser.session,attached:true,browserLaunch:false};});
-    case 'doctor': syntax(false,[]); return withLock(root, async()=>{await ensureAttached();
+    case 'doctor': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{await ensureAttached();
       return {site:config.name,session:config.browser.session,attached:true,configured:config.configured,browserLaunch:false};});
     case 'status': syntax(false,[]); return engine.run('status',{});
     case 'run': syntax(true,['input','json']); return engine.run(id!,await input());

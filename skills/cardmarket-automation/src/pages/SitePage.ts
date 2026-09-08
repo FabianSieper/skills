@@ -2,7 +2,7 @@ import type { Page } from 'playwright';
 import { config } from '../../site.config.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { navigate } from '../runtime/guards.ts';
-import { resolveHref } from '../lib/url.ts';
+import { originOf, resolveHref } from '../lib/url.ts';
 import { readAccount } from '../lib/auth.ts';
 
 /**
@@ -59,6 +59,8 @@ export class SitePage {
 }
 
 export function isAllowedOrigin(url: string, origins: readonly string[]): boolean {
-  try { return origins.includes(new URL(url).origin); }
-  catch { return false; }
+  // Browser-safe: the run-code vm context has no `URL` global, so we use the
+  // require-free origin parser instead of `new URL(url).origin`.
+  const origin = originOf(url);
+  return origin !== null && origins.includes(origin);
 }

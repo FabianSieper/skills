@@ -208,24 +208,24 @@ phase, state (when known), step, expected/actual context, effects and
 Do not use error-message text to invent a command. The typed recovery object
 and this table are the complete operator guidance.
 
-## Browser transport pitfalls — CRITICAL
+## Browser transport
 
-**The `playwright-cli` transport has four pitfalls that trap the agent in an endless loop of `attach` → `about:blank` → `stale ref` → `attach`:**
+The transport is fixed and internal: the CLI attaches to the shared
+`playwright-cli` session `chrome` and issues atomic `run-code` calls. You never
+run raw `playwright-cli` commands (`goto`, `fill`, `click`, `press`, `snapshot`,
+`attach`, `tab-new`). Doing so bypasses the closed contract and re-introduces
+the raw-browser failure modes (stale refs, `about:blank`, tab churn).
 
-1. **`press Enter` on Cardmarket forms navigates to `about:blank`** — Cardmarket uses JS-based navigation. Pressing Enter on the Name search form triggers a broken form submit, navigating to `about:blank`. Reproducible: `fill` + separate `press Enter` → Page URL `about:blank`. **Never use `press Enter` on Cardmarket forms.**
+- Only the shared `chrome` session is ever touched. Do not launch, attach,
+  detach, close, kill or create tabs. If a session does not exist yet, the user
+  completes the one-time extension handoff in the browser; never re-`attach`
+  while a session exists and never `tab-new`.
+- On `BROWSER_REQUIRED`, `ATTACH_FAILED` or `SESSION_MISMATCH`, the user fixes
+  the exact existing session in the attached browser (see the error table); you
+  do not open another browser.
 
-2. **Refs are snapshot-local** — refs (e.g. `f9e207`) are valid ONLY for the snapshot they were extracted from. After any navigation (including `about:blank`), all refs are dead. **Always fetch a new `snapshot` after every navigation.**
-
-3. **Compound actions must be atomic** — `fill` + `click` or `fill` + `press Enter` must execute in a single `run-code` invocation. Each separate `playwright-cli` call is an independent process with its own WebSocket relay. **Always use `run-code 'async (page) => { ... }'` for compound actions.**
-
-4. **`attach` is one-shot** — every `attach` opens a new Playwright Welcome tab and a new relay; while a session exists, re-attaching spawns another Welcome tab and a second client that cannot reuse the same tabs ("already connected to another client"). **Always run `playwright-cli list` first; if the `chrome` session exists, reuse it — never `attach`, `detach`, `close`, `close-all`, `kill-all` or `delete-data`. After handover, never `tab-new`; bring existing tabs in by dragging them into the "Playwright · playwright-cli" tab group.**
-
-**Recommended patterns:**
-- Search: `goto 'https://www.cardmarket.com/...?name=esix'` — works immediately, no refs needed
-- Compound action: `run-code 'async (page) => { await page.fill("input", "esix"); await page.click("button.search"); return page.url(); }'`
-- `run-code --filename` for complex actions: write JS file → `run-code --filename=<path>` → delete file
-- `run-code` inline code must be an Arrow Function: `async (page) => { ... }`. No plain JavaScript.
-- `attach --extension=chrome` opens the one-time Welcome handoff tab plus a new relay port — see pitfall 4; it must not be repeated while a session exists.
+Builder-level transport notes (why the CLI is atomic and never raw) live in
+[references/transport.md](references/transport.md).
 
 ## Verification and known migration boundary
 
@@ -254,3 +254,4 @@ production-compliant until the corresponding evidence and runtime gates in
 - [action schemas and examples](references/actions.md)
 - [verification log and known gaps](references/verification.md)
 - [POM selector evidence](references/selectors.md)
+- [browser transport — builder notes](references/transport.md)

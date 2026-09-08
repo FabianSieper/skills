@@ -1,10 +1,12 @@
 import type { Page } from 'playwright';
 import type { StateId } from '../types.ts';
+import { parseUrl } from './url.ts';
 
 export function stateFromUrl(url: string): StateId {
-  let parsed: URL;
-  try { parsed = new URL(url); }
-  catch { return 'unknown'; }
+  // The run-code browser vm context has no `URL` global, so we use the
+  // require-free parser instead of `new URL(...)` (which would always throw).
+  const parsed = parseUrl(url);
+  if (!parsed) return 'unknown';
   if (parsed.origin !== 'https://www.cardmarket.com' || parsed.username || parsed.password) return 'unknown';
   const path = parsed.pathname;
   // Match only the documented English Magic surfaces. Same-origin lookalike

@@ -141,6 +141,19 @@ All items below remain open. Detailed acceptance gates are in
 - `npm ci` succeeded for the pinned Cardmarket package; typecheck passed. After
   downloading the pinned Chromium binary and using the required host permission,
   all 58 package tests passed.
+- 2026-09-08 live fixes (Cardmarket): the run-code browser vm has no `URL`
+  global, so state detection was failing on valid Cardmarket URLs; added a
+  require-free browser-safe URL parser (`src/lib/url.ts`) used by `state.ts` and
+  `SitePage.ts`. `CardDetailPage.submitSellerFilters()` no longer blocks up to 30s
+  on a navigation that never happens on the AJAX path — it races a real
+  navigation against an observable seller-list update, so `nav.filter` is ~0.9s.
+  `withLock` now reaps a dead/stale `.local/runtime.lock` (age `> lockStaleMs`
+  or dead PID) before returning `BUSY`, preserving live locks. The legacy raw
+  `playwright-cli` operator guidance (the source of tab churn) was superseded:
+  `SKILL.md` now carries an explicit tab/session policy and the raw-transport
+  pitfalls moved to `references/transport.md` (builder-level). Live `status`,
+  `nav.home`, `nav.search`, `nav.open`, `nav.filter` verified working and fast;
+  typecheck + 58-test suite + 45-link concept validator all pass.
 
 ## Resume instructions
 

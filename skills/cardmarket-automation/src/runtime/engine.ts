@@ -24,7 +24,7 @@ export type Action = Common & (
 );
 export interface BrowserInvocation { accountKey: string; value: Json; state?: StateId }
 export type BrowserExecutor = (action: Action, phase: 'run'|'prepare'|'execute', input: Input, preview?: Preview) => Promise<BrowserInvocation>;
-export interface RuntimeConfig { name: string; version: number; planTtlMs: number; [key: string]: unknown }
+export interface RuntimeConfig { name: string; version: number; planTtlMs: number; lockStaleMs: number; [key: string]: unknown }
 interface Plan {
   format: 1; id: string; action: string; input: Input; accountKey: string;
   preview: Preview; configHash: string; createdAt: number; expiresAt: number;
@@ -36,12 +36,38 @@ async function exclusiveJSON(path: string, data: unknown): Promise<void> {
   finally { await handle.close(); }
 }
 function isExists(error: unknown): boolean { return (error as NodeJS.ErrnoException)?.code === 'EEXIST'; }
-export async function withLock<T>(root: string, job: () => Promise<T>): Promise<T> {
+// A lock is stale when its owner is gone (dead pid, unparseable owner, or the lock
+// outlived the generous bound). The age bound also covers pid reuse and hung owners.
+async function isStaleLock(path: string, staleMs: number): Promise<boolean> {
+  let raw: string;
+  try { raw = await readFile(path, 'utf8'); } catch { return true; }
+  let lock: { pid?: unknown; startedAt?: unknown };
+  try { lock = JSON.parse(raw); } catch { return true; }
+  const started = typeof lock.startedAt === 'string' ? Date.parse(lock.startedAt) : NaN;
+  const age = Number.isFinite(started) ? Date.now() - started : Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(age) || age > staleMs) return true;
+  const pid = typeof lock.pid === 'number' ? lock.pid : null;
+  if (pid === null) return false;
+  try { process.kill(pid, 0); } catch (error) {
+    return (error as NodeJS.ErrnoException)?.code === 'ESRCH';
+  }
+  return false;
+}
+export async function withLock<T>(root: string, staleMs: number, job: () => Promise<T>): Promise<T> {
   await privateDir(root);
   const path = join(root, 'runtime.lock');
-  try { await exclusiveJSON(path, {pid: process.pid, startedAt: new Date().toISOString()}); }
-  catch (error) { if (isExists(error)) throw new AutomationError('BUSY'); throw error; }
-  try { return await job(); } finally { await unlink(path); }
+  const acquire = async (): Promise<boolean> => {
+    try { await exclusiveJSON(path, { pid: process.pid, startedAt: new Date().toISOString() }); return true; }
+    catch (error) { if (isExists(error)) return false; throw error; }
+  };
+  const run = async (): Promise<T> => { try { return await job(); } finally { await unlink(path); } };
+  if (await acquire()) return await run();
+  if (await isStaleLock(path, staleMs)) {
+    await unlink(path).catch(() => {});
+    if (!(await acquire())) throw new AutomationError('BUSY'); // another process won the reap race
+    return await run();
+  }
+  throw new AutomationError('BUSY');
 }
 function validatePreview(raw: unknown): Preview {
   jsonValue(raw);
@@ -130,7 +156,7 @@ export class Engine {
   async run(id:string,raw:unknown):Promise<unknown>{
     const action=this.action(id); if(action.kind!=='read')throw new AutomationError('APPROVAL_REQUIRED');
     const input=validateInput(action.parameters,raw);
-    return withLock(this.root,async()=>{const invoked=await this.browser(action,'run',input);
+    return withLock(this.root,this.config.lockStaleMs,async()=>{const invoked=await this.browser(action,'run',input);
       const checked = this.checkedResult(action, invoked);
       const accountKey = this.accountKeyForResult(checked.result, invoked.accountKey);
       const available = checked.state === undefined ? undefined : this.next(action, checked.state, accountKey);
@@ -143,7 +169,7 @@ export class Engine {
     if(action.kind!=='write')throw new AutomationError('INVALID_INPUT');
     if (contract && !contract.enabled) throw new AutomationError('NOT_VERIFIED', 'contract-disabled', { operation: id, cause: contract.disabledReason });
     const input=validateInput(action.parameters,raw);
-    return withLock(this.root,async()=>{const invoked=await this.browser(action,'prepare',input);
+    return withLock(this.root,this.config.lockStaleMs,async()=>{const invoked=await this.browser(action,'prepare',input);
       const preview=validatePreview(invoked.value); const now=Date.now();
       const plan:Plan={format:1,id:randomUUID(),action:id,input,accountKey:invoked.accountKey,preview,
         configHash:digest(this.config),createdAt:now,expiresAt:now+this.config.planTtlMs};
@@ -159,7 +185,7 @@ export class Engine {
   async execute(id:string,approval:string):Promise<unknown>{
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)||!/^[0-9a-f]{64}$/.test(approval))
       throw new AutomationError('APPROVAL_REQUIRED');
-    return withLock(this.root,async()=>{
+    return withLock(this.root,this.config.lockStaleMs,async()=>{
       let plan:Plan; try{plan=JSON.parse(await readFile(join(this.root,'plans',id+'.json'),'utf8')) as Plan;}catch{throw new AutomationError('APPROVAL_REQUIRED');}
       if(digest(plan)!==approval||plan.format!==1||plan.id!==id)throw new AutomationError('APPROVAL_REQUIRED');
       const marker=join(this.root,'attempts',id+'.json');

@@ -287,15 +287,52 @@ export class CardDetailPage extends SitePage {
     return changedCount > 0;
   }
 
+  // Stable fingerprint of the seller-list region, used to detect an AJAX
+  // (no-navigation) update without trusting whole-page innerHTML noise.
+  private async sellerListFingerprint(): Promise<string> {
+    return await this.page.evaluate(() => {
+      const main = document.querySelector('main');
+      if (!main) return 'no-main';
+      const rows = Array.from(main.querySelectorAll('.article-row'))
+        .map((row) => row.id || (row.textContent ?? '').trim().slice(0, 80));
+      const noResults = /no (results|offers|sellers|items)/i.test(main.textContent ?? '') ? '#nor' : '';
+      return rows.join('|') + noResults;
+    });
+  }
+
   async submitSellerFilters(): Promise<void> {
     if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
     const button = this.page.locator('form input[type="submit"][name="apply"]');
-    const navigation = this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+    const before = await this.sellerListFingerprint();
+    const navigation = this.page
+      .waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+    const ajax = this.page
+      .waitForFunction(
+        (prev: string) => {
+          const main = document.querySelector('main');
+          if (!main) return false;
+          if (main.querySelector('.loader, .loading, [class*="spinner"]')) return false;
+          const rows = Array.from(main.querySelectorAll('.article-row'))
+            .map((row) => row.id || (row.textContent ?? '').trim().slice(0, 80));
+          const noResults = /no (results|offers|sellers|items)/i.test(main.textContent ?? '') ? '#nor' : '';
+          return rows.join('|') + noResults !== prev;
+        },
+        before,
+        { timeout: 30_000, polling: 500 },
+      )
+      .then(() => true)
+      .catch(() => false);
     // A successful click is the only dispatch. We do not issue a second
     // requestSubmit merely because this UI uses an AJAX/no-navigation path;
     // the caller settles and reads the resulting filter explicitly.
     await clickUnique(button, 'seller-filter-submit', 15_000);
-    if (await navigation) await this.waitForCloudflare();
+    // Previously this waited up to 30s for a navigation that never happens on
+    // the no-navigation path, which made the filter action feel slow. Return as
+    // soon as either a real navigation or an observable seller-list update fires.
+    await Promise.race([navigation, ajax]);
+    await this.waitForCloudflare();
   }
 
   async settleSellerList(timeoutMs = 15_000): Promise<void> {
