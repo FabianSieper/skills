@@ -1,11 +1,12 @@
 # Actions Reference
 
-All actions are read-only except the write actions `user.offer.update` and `stock.bulk-price-update`, which are guarded and require `plan` and `execute` approval.
+All actions are read-only except the write actions `user.offer.update` and `stock.bulk-price-update`, which are currently disabled with `NOT_VERIFIED` until the strict write gate is complete. The executable source of truth is `src/runtime/contracts.ts`; this reference is a compatibility-oriented explanation of those declarations. The table's `Kind` is the legacy implementation dispatch (`read`/`write`); `describe`'s `mode` is the strict contract classification (`observe`, `transition`, `workflow` or `write`).
 
 ## Command Table
 
 | ID | Kind | State | Parameters | Output |
 |---|---|---|---|---|
+| `status` | read | any declared state → same state | – | `{ state, url, auth, authKnown, blockers }` |
 | `nav.home` | read | any → `start` | – | `{ status, state }` |
 | `nav.search` | read | any → `results` | `query` (str, req) | `{ status, state }` |
 | `nav.open` | read | `results` → `detail` | `index` (int, req) | `{ status, state }` |
@@ -16,10 +17,10 @@ All actions are read-only except the write actions `user.offer.update` and `stoc
 | `nav.own-offers.filter` | read | `own-offers` → `own-offers` | stock filter fields (all optional) | `{ status, state }` |
 | `nav.own-offers.open` | read | `own-offers` → `detail` | `index` (int, req) | `{ status, state }` |
 | `info` | read | auto-detect | `limit`, `sellers`, `minQty`, `all`, seller-filter fields | state-specific payload |
-| `user.offers` | read | `detail` | `limit` | own-offer payload |
-| `user.offer.update` | write | `detail` | `articleId` + changes | update payload |
+| `user.offers` | read | `detail` | `limit` | own-offer payload (`found:false` is a legal empty result) |
+| `user.offer.update` | write (disabled) | `detail` | `articleId` + changes | update payload |
 | `stock.market-comparison` | read | `own-offers` | `limit`, `offset`, `minPrice`, `maxPrice`, `minQty`, `location`, `sellerType`, `foil`, `signed`, `altered`, `sellers`, `sortResult` | `{ state, offset, count, hasMore, offers[], auth }` |
-| `stock.bulk-price-update` | write | `own-offers` | `articleIds`, `prices` | `{ state, count, updated[], auth }` |
+| `stock.bulk-price-update` | write (disabled) | `own-offers` | `articleIds`, `prices` | `{ state, count, updated[], auth }` |
 
 ## Nav Status
 
@@ -30,7 +31,10 @@ All actions are read-only except the write actions `user.offer.update` and `stoc
 - `not_available` – expected page affordance is missing
 - `wrong_state` – command precondition is not met
 
-`state` values: `start`, `results`, `detail`, `versions`, `own-offers`.
+`state` values: `start`, `results`, `detail`, `versions`, `own-offers`, `unknown`.
+`list` also exposes each contract's mode, source states, outcomes, auth
+requirement and effects. Runtime results add `availableActionDetails` so a
+small agent can choose the next command without re-reading every description.
 
 ## Parameters
 
@@ -84,7 +88,7 @@ All fields are optional and default to the current canonical filter:
 | `signed` | `any` | `any`, `yes`, `no` |
 | `altered` | `any` | `any`, `yes`, `no` |
 
-`nav.filter` submits the filter form and settles the seller list before returning. After submission it reads the active filter back and throws `POSTCONDITION_FAILED` (`filter-not-applied`) if `condition`, `language`, or `location` do not match the requested values — this makes silent no-op filter changes loud instead of returning `ok` for a filter that was never applied.
+`nav.filter` submits the filter form and settles the seller list before returning. After submission it reads every resolved filter field back and throws `FILTER_MISMATCH` (`filter-not-applied`) if any field differs from the requested values — this makes silent no-op or partial filter changes loud instead of returning `ok` for a filter that was never applied.
 
 ### `info`
 | field | default | range |
@@ -142,7 +146,7 @@ Requires a logged-in session and the `own-offers` state. Phase 1 reads all own o
 
 Condition and language are taken from each offer, not passed as parameters. Use `offset` + `limit` to batch large stocks across multiple calls.
 
-**Critical-filter guarantee:** Before any market comparison is performed, the action derives a filter from each offer's own condition and language (location defaults to `germany` unless overridden). After submitting the filter it reads the active filter back; if `condition`, `language`, or `location` do not match after one retry, the action throws `POSTCONDITION_FAILED` with a `filter-mismatch` message identifying which fields differ. This prevents comparing a card's own-language offer against sellers of a different language.
+**Filter guarantee:** Before any market comparison is performed, the action derives a filter from each offer's own condition and language (location defaults to `germany` unless overridden). After submitting the filter it reads every resolved field back; if any field does not match after one retry, the action throws `FILTER_MISMATCH` with expected and actual filters. This prevents comparing a card against sellers selected by stale or partial filter state.
 
 ### `stock.bulk-price-update`
 Requires a logged-in session and the `own-offers` state. Bulk-updates the price of multiple offers in a single approved plan. `articleIds` and `prices` are parallel, index-aligned arrays of equal length (1–1000); `prices` are EUR strings such as `1.23` or `1,23`.
@@ -350,7 +354,9 @@ When `minQty > 0`, each artwork additionally contains:
 
 ## Write Safety
 
-The write actions (`user.offer.update` and `stock.bulk-price-update`) use the engine write contract:
+The write actions (`user.offer.update` and `stock.bulk-price-update`) are currently
+disabled by the executable registry (`NOT_VERIFIED`) until the complete strict
+write gate is implemented. When enabled, they use the engine write contract:
 - `plan` opens and reads the edit modal, then closes it without saving.
 - The plan binds account, URL, card, article ID, current form values, requested changes, input, implementation, and TTL.
 - `execute` re-prepares the same target and blocks on account or form drift.
@@ -369,11 +375,15 @@ The write actions (`user.offer.update` and `stock.bulk-price-update`) use the en
 - `examples/input-user-offer-update.json` – `user.offer.update` schema example
 - `examples/input-own-offers-filter.json` – filter own stock by card name
 - `examples/input-own-offers-all.json` – list all own stock pages
-- `examples/input-empty.json` – no parameters, valid for `nav.home`, `nav.versions`, `info`, and `user.offers`
-- Every CLI `run`/`plan` requires `--input <file.json>`; use `examples/input-empty.json` (`{}`) when no parameters are needed.
+- `examples/input-empty.json` – no parameters, valid for `status`, `nav.home`, `nav.versions`, `info`, and `user.offers`
+- CLI input is a naked JSON object. Use `--json '{...}'` for small values or
+  `--input <file.json>` for a file; they are mutually exclusive. Omit input for
+  `{}`. The 64 KiB input cap and strict schema validation still apply.
 
 ## Static Next Hints
 
+- `status.next`: all registered actions are listed statically; the runtime's
+  returned `availableActions` is the state/account-aware subset.
 - `nav.home.next`: `['info', 'nav.search']`
 - `nav.search.next`: `['info', 'nav.open']`
 - `nav.open.next`: `['info', 'nav.versions', 'nav.filter', 'user.offers']`
@@ -383,7 +393,7 @@ The write actions (`user.offer.update` and `stock.bulk-price-update`) use the en
 - `nav.own-offers.next`: `['info', 'nav.own-offers.filter', 'nav.own-offers.open']`
 - `nav.own-offers.filter.next`: `['info', 'nav.own-offers.open']`
 - `nav.own-offers.open.next`: `['info', 'nav.filter', 'nav.versions', 'user.offers']`
-- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'user.offers']`
+- `info.next`: `['nav.home', 'nav.search', 'nav.open', 'nav.versions', 'nav.artwork', 'nav.filter', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'user.offers']` (legacy static hint; prefer returned `availableActions`)
 - `user.offers.next`: `['info', 'user.offer.update']`
 - `user.offer.update.next`: `['info', 'user.offers']`
 - `stock.market-comparison.next`: `['info', 'nav.own-offers', 'stock.market-comparison', 'user.offers']`

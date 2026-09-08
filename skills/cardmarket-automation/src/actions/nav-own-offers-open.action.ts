@@ -4,7 +4,7 @@ import { OwnOffersPage } from '../pages/OwnOffersPage.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
-import type { NavOutput, StateId } from '../types.ts';
+import { isStateId, type NavOutput, type StateId } from '../types.ts';
 
 const description = 'Open a card detail page by clicking its name in the current own-offers Singles listing. Returns status only.';
 const parameters: Fields = {
@@ -16,7 +16,7 @@ function validateOutput(raw: unknown): NavOutput {
   const object = raw as Record<string, unknown>;
   if (!object || typeof object !== 'object') throw new AutomationError('POSTCONDITION_FAILED');
   if (!['ok', 'not_found', 'wrong_state'].includes(String(object.status)) ||
-      !['start', 'results', 'detail', 'versions', 'own-offers'].includes(String(object.state)))
+      !isStateId(object.state))
     throw new AutomationError('POSTCONDITION_FAILED');
   return object as unknown as NavOutput;
 }

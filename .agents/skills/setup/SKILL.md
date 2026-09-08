@@ -11,7 +11,7 @@ configuration as a side effect of setup.
 ## Contract
 
 - Work from the checkout that contains `Taskfile.yml`, `README.md`, and
-  `skills/website-automation-builder`.
+  `.agents/skills/website-automation-builder/SKILL.md`.
 - Preserve dirty worktrees. Setup may create ignored `node_modules` directories,
   but must not rewrite manifests, lockfiles, generated skills, or user changes.
 - Audit before installing anything. Install only missing or incompatible items.

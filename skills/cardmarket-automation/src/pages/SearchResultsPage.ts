@@ -4,6 +4,7 @@ import { SitePage } from './SitePage.ts';
 import { CardDetailPage } from './CardDetailPage.ts';
 import type { SearchCard } from '../types.ts';
 import { resolveHref } from '../lib/url.ts';
+import { AutomationError } from '../runtime/errors.ts';
 
 /**
  * Search results page:
@@ -44,6 +45,7 @@ export class SearchResultsPage extends SitePage {
           (a.textContent ?? '').match(/From [^\n]+/i)?.[0]?.trim() ?? '',
       };
     });
+    if (!data.href || !data.name || !data.set) throw new AutomationError('UI_DRIFT', `search-tile-${i}`);
     return {
       name: data.name,
       set: data.set,

@@ -5,7 +5,7 @@ import { uniqueVisible, clickUnique } from '../runtime/guards.ts';
 import { SitePage } from './SitePage.ts';
 import { parsePrice, parseQty } from '../lib/parse.ts';
 import type { CardInfo, OfferCondition, OfferLanguage, ResolvedSellerFilter, SellerOffer, UserOffer, UserOfferChanges } from '../types.ts';
-import { buildFilterTargets, type FilterTargets, SELLER_FILTER_DEFAULTS, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry } from './seller-filters.ts';
+import { buildFilterTargets, type FilterTargets, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry } from './seller-filters.ts';
 import { OFFER_CONDITION_LABELS, OFFER_CONDITION_VALUES, OFFER_LANGUAGE_LABELS, OFFER_LANGUAGE_VALUES } from './user-offer-filters.ts';
 import { resolveHref } from '../lib/url.ts';
 import type { Preview } from '../runtime/engine.ts';
@@ -70,10 +70,16 @@ export class CardDetailPage extends SitePage {
     super(page);
   }
 
+  /** Confirm that the current surface is a rendered product detail page. */
+  async waitUntilReady(timeoutMs = 30_000): Promise<void> {
+    await uniqueVisible(this.page.locator('main h1'), 'detail-title', timeoutMs);
+  }
+
   /** Extract the structured top block. */
   async extractInfo(): Promise<CardInfo> {
     const titleEl = await uniqueVisible(this.page.locator('main h1'), 'detail-title');
     const title = (await titleEl.innerText()).replace(/\n+/g, ' - ').trim();
+    if (!title) throw new AutomationError('UI_DRIFT', 'detail-title-text');
     const { pairs, image } = await this.page.evaluate(() => {
       const out: { pairs: Record<string, string>; image: string } = {
         pairs: {},
@@ -122,7 +128,7 @@ export class CardDetailPage extends SitePage {
     const n = Math.min(limit, total);
     const out: SellerOffer[] = [];
     for (let i = 0; i < n; i++) {
-      out.push(await rows.nth(i).evaluate((el) => {
+      const seller = await rows.nth(i).evaluate((el) => {
         const q = (sel: string) => el.querySelector(sel);
         const condition = q('.article-condition');
         return {
@@ -139,7 +145,10 @@ export class CardDetailPage extends SitePage {
           price: q('.col-offer span.color-primary')?.textContent?.trim() ?? '',
           quantity: q('.item-count')?.textContent?.trim() ?? '',
         };
-      }));
+      });
+      if (!seller.seller || !seller.price || !seller.quantity)
+        throw new AutomationError('UI_DRIFT', `seller-row-${i}`);
+      out.push(seller);
     }
     return out;
   }
@@ -180,10 +189,10 @@ export class CardDetailPage extends SitePage {
   }
 
   async readCurrentFilter(): Promise<ResolvedSellerFilter> {
-    if ((await this.filterForm.count()) !== 1) return { ...SELLER_FILTER_DEFAULTS };
+    if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
     const raw = await this.filterForm.evaluate((form: Element) => {
       const select = (name: string) => (form.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null)?.value ?? '';
-      const checked = (prefix: string) => (form.querySelector(`input[type="checkbox"][name^="${prefix}["]:checked`) as HTMLInputElement | null)?.value ?? '';
+      const checked = (prefix: string) => Array.from(form.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][name^="${prefix}["]:checked`)).map((input) => input.value);
       return {
         minCondition: select('minCondition') || '7',
         language: checked('language'),
@@ -194,11 +203,13 @@ export class CardDetailPage extends SitePage {
         isAltered: select('extra[isAltered]') || '0',
       };
     });
+    if (raw.language.length > 1 || raw.sellerCountry.length > 1 || raw.sellerType.length > 1)
+      throw new AutomationError('AMBIGUOUS_SELECTOR', 'seller-filter-selection');
     return {
       condition: reverseCondition(raw.minCondition),
-      language: reverseLanguage(raw.language),
-      location: reverseCountry(raw.sellerCountry),
-      sellerType: reverseSellerType(raw.sellerType),
+      language: reverseLanguage(raw.language[0] ?? ''),
+      location: reverseCountry(raw.sellerCountry[0] ?? ''),
+      sellerType: reverseSellerType(raw.sellerType[0] ?? ''),
       foil: reverseYesNo(raw.isFoil),
       signed: reverseYesNo(raw.isSigned),
       altered: reverseYesNo(raw.isAltered),
@@ -225,9 +236,7 @@ export class CardDetailPage extends SitePage {
         const count = await expand.count();
         if (count === 0) throw new AutomationError('UI_DRIFT', 'country-expand');
         if (count > 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'country-expand');
-        await expand.click({ timeout: 5_000 }).catch(() =>
-          expand.first().evaluate((el) => (el as HTMLElement).click()),
-        );
+        await clickUnique(expand, 'country-expand', 5_000);
         await this.page
           .waitForFunction(
             (v: string) => Boolean(document.querySelector(`form[action*="Product_Filter_FilterProduct"] input[name="sellerCountry[${v}]"]`)),
@@ -281,25 +290,17 @@ export class CardDetailPage extends SitePage {
   async submitSellerFilters(): Promise<void> {
     if ((await this.filterForm.count()) !== 1) throw new AutomationError('UI_DRIFT', 'filter-form');
     const button = this.page.locator('form input[type="submit"][name="apply"]');
-    const [nav] = await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null),
-      button.click({ timeout: 15_000 }).catch(() => null),
-    ]);
-    if (!nav) {
-      await this.page.evaluate(() => {
-        const el = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
-        if (!(el instanceof HTMLFormElement)) return;
-        const submitter = el.querySelector('input[type="submit"][name="apply"]');
-        el.requestSubmit(submitter instanceof HTMLElement ? submitter : null);
-      });
-      await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
-    }
-    await this.waitForCloudflare();
+    const navigation = this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
+    // A successful click is the only dispatch. We do not issue a second
+    // requestSubmit merely because this UI uses an AJAX/no-navigation path;
+    // the caller settles and reads the resulting filter explicitly.
+    await clickUnique(button, 'seller-filter-submit', 15_000);
+    if (await navigation) await this.waitForCloudflare();
   }
 
   async settleSellerList(timeoutMs = 15_000): Promise<void> {
     await this.waitForCloudflare();
-    await this.page
+    const settled = await this.page
       .waitForFunction(
         () => {
           const main = document.querySelector('main');
@@ -310,7 +311,9 @@ export class CardDetailPage extends SitePage {
         null,
         { timeout: timeoutMs },
       )
-      .catch(() => {});
+      .then(() => true)
+      .catch(() => false);
+    if (!settled) throw new AutomationError('TIMEOUT', 'seller-list-settle');
   }
 
   private userOfferRow(articleId: number): Locator {
@@ -398,7 +401,9 @@ export class CardDetailPage extends SitePage {
         { timeout: 30_000 },
       )
       .catch(() => {});
-    const hidden = await this.userOfferForm().locator('input[name="idArticle"]').first().inputValue();
+    const hiddenLocator = this.userOfferForm().locator('input[name="idArticle"]');
+    if (await hiddenLocator.count() !== 1) throw new AutomationError('UI_DRIFT', 'user-offer-form-id');
+    const hidden = await hiddenLocator.inputValue();
     if (Number(hidden) !== articleId) throw new AutomationError('UI_DRIFT', 'user-offer-form-id');
   }
 
@@ -463,12 +468,16 @@ export class CardDetailPage extends SitePage {
     const button = this.userOfferForm().locator('button[type="submit"]');
     if ((await button.count()) !== 1) throw new AutomationError('UI_DRIFT', 'offer-submit-button');
     const navigation = this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => null);
-    await button.click({ timeout: 15_000 }).catch(() => {});
+    await button.click({ timeout: 15_000 });
     const nav = await navigation;
     if (nav) await this.waitForCloudflare();
     await this.userOfferModal().waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
     if (await this.userOfferModal().isVisible().catch(() => false)) {
-      const invalid = await this.userOfferForm().locator('.invalid-feedback').first().isVisible().catch(() => false);
+      const invalid = await this.userOfferForm().locator('.invalid-feedback').evaluateAll((nodes) => nodes.some((node) => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      })).catch(() => false);
       if (invalid) throw new AutomationError('INVALID_INPUT', 'offer-form');
       throw new AutomationError('TIMEOUT', 'offer-submit');
     }

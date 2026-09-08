@@ -1,29 +1,41 @@
 {
-  "status": "live_verified_except_own_offers_listing",
+  "status": "partial_contract_migration_not_live_verified",
+  "statusAuthority": "The current runtime and SKILL.md override historical live-validation entries below.",
+  "migrationStatus": {
+    "contractRegistry": "implemented",
+    "unknownState": "implemented",
+    "pureReadiness": "implemented",
+    "structuredRecovery": "implemented",
+    "inlineOrEmptyInput": "implemented",
+    "liveVerificationOfCurrentSlice": "not-run",
+    "remaining": ["dom-backed union recognition", "opaque target references", "capability facade", "precompiled artifact", "durable write journal", "exact tab binding"]
+  },
   "site": "cardmarket-automation",
   "url": "https://www.cardmarket.com",
   "searchEntry": "/en/Magic",
   "configured": true,
-  "phase": "LIVE",
-  "liveValidation": "passed",
-  "liveNote": "2026-09-05 Re-Validierung (Session cardmarket-automation, angehaengter Chrome): nach 'Search 2.0'-Repair (Such-Einstieg = Game-Seite /en/Magic, da das Top-Bar-Form die Startseite /en verlassen hat) bestanden cards.search (Forest, 20 Kacheln), cards.price (Forest, Top-Block), cards.artworks (Esix Fractal Bloom, 3 Versionen - urspr. Fehlerfall). Such-Submit via form.requestSubmit(); Einstieg ueber config.searchEntry (openSearchEntry -> gotoAllowed).",
+  "phase": "PARTIAL_CONTRACT_MIGRATION",
+  "liveValidation": "not_run_for_current_slice",
+  "liveNote": "Historical live-validation records below are retained as evidence for the superseded action surface only. No live Cardmarket navigation or account write was performed for the current contract slice.",
   "search2026Regression": "2026-09-05 live: /en -> form#searchForm/#ProductSearchInput/#search-btn = 0, /en/Magic = 1. Repair: site.config.ts +searchEntry '/en/Magic'; SearchPage.openHome() -> openSearchEntry() mit gotoAllowed(searchEntry). Alle 3 Aktionen re-validiert; typecheck ok + 30/30 Tests.",
-  "sellerFilterFeature": "2026-09-05: cards.price waendet vor dem Auslesen den Detailseiten-Seller-Filter an (Default excellent/english/germany), klickt 'Filter', wartet auf Reload und liest dann Top-Block + Seller-Zeilen. Browserlos: 36/36 Tests + typecheck. Live: Spellskite Default, language=any und location=any/condition=mint/language=german verifiziert.",
+  "sellerFilterFeature": "Historical 2026-09-05 cards.price evidence; superseded by the current registered nav.filter/info contract. It is not current-slice live evidence.",
   "implemented": {
     "config": true,
     "types": true,
     "parse": true,
     "sitePage": true,
     "pages": ["SearchPage", "SearchResultsPage", "CardDetailPage", "CardVersionsPage", "OwnOffersPage"],
-    "actions": ["cards.search", "cards.price", "cards.artworks", "nav.own-offers", "nav.own-offers.filter", "nav.own-offers.open"],
+    "actions": ["status", "nav.home", "nav.search", "nav.open", "nav.versions", "nav.artwork", "nav.filter", "nav.own-offers", "nav.own-offers.filter", "nav.own-offers.open", "info", "user.offers", "user.offer.update", "stock.market-comparison", "stock.bulk-price-update"],
     "tests": ["tests/parse.test.ts", "tests/actions.test.ts", "tests/engine.test.ts", "tests/cli.test.ts", "tests/seller-filters.test.ts", "tests/state.test.ts"],
     "docs": ["references/actions.md", "references/flows.md", "references/selectors.md", "references/verification.md", "SKILL.md", "examples"]
   },
   "verified": {
     "typecheck": "tsc --noEmit: keine Fehler",
-    "tests": "node --test: 36/36 pass",
-    "cliBrowserFree": "list + describe cards.search/price/artworks: ok, ohne Browser",
-    "cliRunInput": "run <action> --input <datei>: Syntax verifiziert; Positional-JSON wird als INVALID_INPUT abgelehnt",
+    "tests": "node --test: 58/58 pass for the current contract slice",
+    "cliBrowserFree": "list + describe status/nav.search: ok; status reports the attached extension relay as unknown/off-site with safe entry actions",
+    "cliRunInput": "run <action> supports --json, --input or omitted {} input; disabled writes return NOT_VERIFIED before browser access"
+  },
+  "historicalEvidence": {
     "liveSearch": "cards.search esix: ok, count 10, allowedNext [cards.price, cards.artworks]",
     "livePrice": "cards.price Spellskite: ok, Seller-Filter (Default, language=any, location=any/mint/german) + Top-Block + Seller-Zeilen live verifiziert",
     "liveArtworks": "cards.artworks esix: ok, 3 Versionen; minQty=1: ok, maxSellerQuantity + qualifies"

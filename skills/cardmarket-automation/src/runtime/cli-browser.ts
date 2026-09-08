@@ -6,14 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { build } from 'esbuild';
 import { config } from '../../site.config.ts';
-import { AutomationError } from './errors.ts';
+import { AutomationError, type ErrorCode } from './errors.ts';
 import type { Action, Preview } from './engine.ts';
 import type { Input, Json } from './input.ts';
+import { actionContract } from './contracts.ts';
+import { isStateId, type StateId } from '../types.ts';
 
 const execFileAsync = promisify(execFile);
 
 type Phase = 'run' | 'prepare' | 'execute';
-export interface BrowserResult { accountKey: string; value: Json }
+export interface BrowserResult { accountKey: string; value: Json; state?: StateId }
 
 function cliArgs(...args: string[]): string[] { return args; }
 
@@ -24,8 +26,10 @@ async function runCli(args: string[], timeoutMs = 20_000): Promise<{stdout:strin
     });
     return {stdout: result.stdout, stderr: result.stderr};
   } catch (raw) {
-    const error = raw as NodeJS.ErrnoException & {stderr?: string};
+    const error = raw as NodeJS.ErrnoException & {stderr?: string; killed?: boolean; signal?: string};
     if (error.code === 'ENOENT') throw new AutomationError('ATTACH_FAILED', 'playwright-cli-not-found');
+    if (error.code === 'ETIMEDOUT' || error.killed || error.signal === 'SIGTERM')
+      throw new AutomationError('TIMEOUT', 'playwright-cli');
     throw new AutomationError('ATTACH_FAILED', 'playwright-cli');
   }
 }
@@ -64,13 +68,24 @@ function assertBrowserPayload(raw: unknown): BrowserResult {
   const object = raw as Record<string, unknown>;
   if (object.ok === false) {
     const error = object.error as Record<string, unknown> | undefined;
-    const known = new Set(['AUTH_REQUIRED','HUMAN_REQUIRED','UI_DRIFT','AMBIGUOUS_SELECTOR','POSTCONDITION_FAILED','TIMEOUT','NOT_CONFIGURED']);
-    const code = typeof error?.code === 'string' && known.has(error.code) ? error.code : 'INTERNAL';
-    throw new AutomationError(code as 'AUTH_REQUIRED'|'HUMAN_REQUIRED'|'UI_DRIFT'|'AMBIGUOUS_SELECTOR'|'POSTCONDITION_FAILED'|'TIMEOUT'|'NOT_CONFIGURED',
-      typeof error?.step === 'string' ? error.step : undefined);
+    const known = new Set<ErrorCode>(['INVALID_INPUT','UNKNOWN_ACTION','AUTH_REQUIRED','HUMAN_REQUIRED','BROWSER_REQUIRED','ATTACH_FAILED',
+      'CLI_PROTOCOL','UI_DRIFT','AMBIGUOUS_SELECTOR','POSTCONDITION_FAILED','PLAN_CHANGED','PLAN_EXPIRED','APPROVAL_REQUIRED',
+      'PLAN_USED','UNKNOWN_COMMIT','BUSY','TIMEOUT','INTERNAL','NOT_CONFIGURED','BUILD_ERROR','WRONG_STATE','UNKNOWN_STATE',
+      'STALE_CONTEXT','FILTER_MISMATCH','SESSION_MISMATCH','CONSENT_REQUIRED','SESSION_QUARANTINED','OUTPUT_LIMIT','BUILD_INVALID',
+      'NOT_VERIFIED']);
+    const candidate = typeof error?.code === 'string' ? error.code as ErrorCode : undefined;
+    const code: ErrorCode = candidate && known.has(candidate) ? candidate : 'INTERNAL';
+    throw new AutomationError(code,
+      typeof error?.step === 'string' ? error.step : undefined,
+      { ...(Object.prototype.hasOwnProperty.call(error ?? {}, 'expected') ? { expected: error?.expected } : {}),
+        ...(Object.prototype.hasOwnProperty.call(error ?? {}, 'actual') ? { actual: error?.actual } : {}),
+        ...(isStateId(object.state) ? { state: object.state } : {}),
+        ...(typeof error?.cause === 'string' ? { cause: error.cause } : {}) });
   }
   if (object.ok !== true || typeof object.accountKey !== 'string' || !object.accountKey) throw new AutomationError('CLI_PROTOCOL');
-  return {accountKey: object.accountKey, value: object.value as Json};
+  if (object.state !== undefined && !isStateId(object.state)) throw new AutomationError('CLI_PROTOCOL', 'state');
+  const state = object.state === undefined ? undefined : object.state;
+  return {accountKey: object.accountKey, value: object.value as Json, ...(state ? { state } : {})};
 }
 
 export async function invokeBrowser(
@@ -81,25 +96,41 @@ export async function invokeBrowser(
 
   const actionPath = resolve(action.modulePath.startsWith('file:') ? fileURLToPath(action.modulePath) : action.modulePath);
   const sitePagePath = resolve(project, 'src/pages/SitePage.ts');
-  const authPath = resolve(project, 'src/lib/auth.ts');
+  const statePath = resolve(project, 'src/lib/state.ts');
+  const contract = actionContract(action.id);
+  if (!contract) throw new AutomationError('NOT_CONFIGURED', 'contract-registry');
   const inputLiteral = JSON.stringify(input);
   const previewLiteral = preview === undefined ? 'undefined' : JSON.stringify(preview);
+  const allowedFromLiteral = JSON.stringify(contract.from);
   const source = `
     import { action } from ${JSON.stringify(actionPath)};
     import { SitePage } from ${JSON.stringify(sitePagePath)};
-    import { autoLogin, readAuth } from ${JSON.stringify(authPath)};
+    import { detectState } from ${JSON.stringify(statePath)};
     const toError = (error) => {
       const message = error && typeof error.message === 'string' ? error.message : '';
       const code = error && typeof error.code === 'string' ? error.code
         : /strict mode violation/i.test(message) ? 'AMBIGUOUS_SELECTOR'
         : error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'INTERNAL';
       const step = error && typeof error.step === 'string' ? error.step : undefined;
-      return {code,...(step?{step}:{})};
+      const context = error && error.context && typeof error.context === 'object' ? error.context : {};
+      const allowed = ['page','component','operation','expected','actual','cause'];
+      const details = Object.fromEntries(allowed.filter((key) => context[key] !== undefined).map((key) => [key, context[key]]));
+      return {code,...(step?{step}:{}),...details};
     };
     export async function invoke(page) {
       try {
         const ready = await new SitePage(page).assertReady();
         if (!ready || typeof ready.accountKey !== 'string' || !ready.accountKey) return {ok:false,error:{code:'AUTH_REQUIRED'}};
+        if (ready.onSite !== true && !['nav.home','nav.search','status','info'].includes(${JSON.stringify(action.id)})) {
+          return {ok:false,accountKey:ready.accountKey,state:'unknown',error:{code:'UNKNOWN_STATE',step:'origin',expected:${JSON.stringify(config.allowedOrigins)},actual:page.url()}};
+        }
+        const beforeState = detectState(page);
+        if (!${allowedFromLiteral}.includes(beforeState)) {
+          return {ok:false,accountKey:ready.accountKey,state:beforeState,error:{code:'WRONG_STATE',step:'source-state',expected:${allowedFromLiteral},actual:beforeState}};
+        }
+        if (${JSON.stringify(contract.auth)} === 'account' && ['public','unknown'].includes(ready.accountKey)) {
+          return {ok:false,accountKey:ready.accountKey,state:beforeState,error:{code:'AUTH_REQUIRED',step:'account-identity'}};
+        }
         const input = ${inputLiteral};
         const preview = ${previewLiteral};
         const runPhase = async () => {
@@ -116,20 +147,13 @@ export async function invokeBrowser(
         };
         try {
           const value = await runPhase();
-          return {ok:true,accountKey:ready.accountKey,value};
+          return {ok:true,accountKey:ready.accountKey,state:detectState(page),value};
         } catch (error) {
           const payload = toError(error);
-          if (payload.code !== 'AUTH_REQUIRED') return {ok:false,error:payload};
-          const login = await autoLogin(page, ${JSON.stringify(config.loginWaitMs)});
-          const fresh = await new SitePage(page).assertReady();
-          const loggedIn = login === 'logged-in' && (await readAuth(page).catch(() => ({loggedIn:false}))).loggedIn;
-          if (!fresh || typeof fresh.accountKey !== 'string' || !fresh.accountKey || !loggedIn)
-            return {ok:false,error:{code:'AUTH_REQUIRED',step:loggedIn?'login-verify':'login-timeout'}};
-          const value = await runPhase();
-          return {ok:true,accountKey:fresh.accountKey,value};
+          return {ok:false,accountKey:ready.accountKey,state:detectState(page),error:payload};
         }
       } catch (error) {
-        return {ok:false,error:toError(error)};
+        return {ok:false,state:detectState(page),error:toError(error)};
       }
     }
   `;

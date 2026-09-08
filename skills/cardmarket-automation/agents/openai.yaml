@@ -1,3 +1,3 @@
 interface:
   display_name: "cardmarket-automation"
-  short_description: "Read-only Cardmarket-Aktionen (Suche, Preis, Artworks) am bereits geöffneten Browser ausführen"
+  short_description: "Strict Cardmarket navigation, bounded reads and approval-guarded offer updates in the already-open browser"

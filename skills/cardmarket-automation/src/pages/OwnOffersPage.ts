@@ -55,14 +55,19 @@ export class OwnOffersPage extends SitePage {
     return this.page.locator('form').filter({ has: this.page.locator('select[name="idLanguage"]') });
   }
 
+  /** Confirm that the stock surface, not merely its URL, is rendered. */
+  async waitUntilReady(timeoutMs = 30_000): Promise<void> {
+    await uniqueVisible(this.table, 'own-offers-table', timeoutMs);
+  }
+
   /** Cardmarket's next control at the bottom of the stock table. */
   private get nextControl(): Locator {
-    return this.page.locator('main a.pagination-control[data-direction="next"]').first();
+    return this.page.locator('main a.pagination-control[data-direction="next"]');
   }
 
   async open(): Promise<void> {
     await this.gotoAllowed(config.ownOffersEntry);
-    await uniqueVisible(this.table, 'own-offers-table', 30_000);
+    await this.waitUntilReady();
   }
 
   async hasFilterForm(): Promise<boolean> {
@@ -75,26 +80,37 @@ export class OwnOffersPage extends SitePage {
 
   async readCurrentFilter(): Promise<OwnOfferFilterState> {
     if (!(await this.hasFilterForm())) throw new AutomationError('UI_DRIFT', 'own-offers-filter-form');
-    const values = await this.filterForm.locator(FIELD_SELECTORS.cardName).all();
-    const cardName = values.length > 0 && values[0] ? await values[0].inputValue() : '';
-    const expansion = (await this.filterForm.locator(FIELD_SELECTORS.expansion).first().innerText()) ?? '';
-    const rarity = (await this.filterForm.locator(FIELD_SELECTORS.rarity).first().innerText()) ?? '';
-    const condition = (await this.filterForm.locator(FIELD_SELECTORS.condition).first().innerText()) ?? '';
-    const language = (await this.filterForm.locator(FIELD_SELECTORS.language).first().innerText()) ?? '';
-    const comments = (await this.filterForm.locator(FIELD_SELECTORS.comments).first().inputValue()) ?? '';
-    const minPrice = (await this.filterForm.locator(FIELD_SELECTORS.minPrice).first().inputValue()) ?? '';
-    const maxPrice = (await this.filterForm.locator(FIELD_SELECTORS.maxPrice).first().inputValue()) ?? '';
-    const minQuantity = (await this.filterForm.locator(FIELD_SELECTORS.minQuantity).first().inputValue()) ?? '';
-    const foil = (await this.filterForm.locator(FIELD_SELECTORS.foil).first().innerText()) ?? '';
-    const signed = (await this.filterForm.locator(FIELD_SELECTORS.signed).first().innerText()) ?? '';
-    const altered = (await this.filterForm.locator(FIELD_SELECTORS.altered).first().innerText()) ?? '';
-    const sort = (await this.filterForm.locator(FIELD_SELECTORS.sort).first().innerText()) ?? '';
+    const textValue = async (field: FilterField): Promise<string> => {
+      const control = await this.requiredFilterControl(field);
+      return (await control.inputValue()).trim();
+    };
+    const selectedLabel = async (field: FilterField): Promise<string> => {
+      const control = await this.requiredFilterControl(field);
+      const selected = control.locator('option:checked');
+      if (await selected.count() !== 1) throw new AutomationError('UI_DRIFT', `own-offers-filter-${field}-selected`);
+      return (await selected.innerText()).replace(/\s+/g, ' ').trim();
+    };
+    const cardName = await textValue('cardName');
+    const expansion = await selectedLabel('expansion');
+    const rarity = await selectedLabel('rarity');
+    const condition = await selectedLabel('condition');
+    const language = await selectedLabel('language');
+    const comments = await textValue('comments');
+    const minPrice = await textValue('minPrice');
+    const maxPrice = await textValue('maxPrice');
+    const minQuantity = await textValue('minQuantity');
+    const foil = await selectedLabel('foil');
+    const signed = await selectedLabel('signed');
+    const altered = await selectedLabel('altered');
+    const sort = await selectedLabel('sort');
     return { cardName, expansion, rarity, condition, language, comments, minPrice, maxPrice, minQuantity, foil, signed, altered, sort } as OwnOfferFilterState;
   }
 
   private async setSelectByVisibleLabel(field: FilterField, label: string): Promise<boolean> {
     const control = await this.requiredFilterControl(field);
-    const selected = await control.locator('option:checked').innerText();
+    const selectedOption = control.locator('option:checked');
+    if (await selectedOption.count() !== 1) throw new AutomationError('UI_DRIFT', `own-offers-filter-${field}-selected`);
+    const selected = await selectedOption.innerText();
     if (selected.replace(/\s+/g, ' ').trim().toLocaleLowerCase() === label.trim().toLocaleLowerCase()) return false;
     const options = await control.locator('option').evaluateAll((nodes) =>
       nodes.map((option) => ({
@@ -119,40 +135,28 @@ export class OwnOffersPage extends SitePage {
     for (const field of textFields) {
       const value = filter[field];
       if (value === undefined) continue;
-      try {
-        const control = await this.requiredFilterControl(field);
-        if ((await control.inputValue()) !== value) {
-          await fillUnique(control, value, `own-offers-filter-${field}`);
-          changed = true;
-        }
-      } catch {
-        // Control not visible; skip.
+      const control = await this.requiredFilterControl(field);
+      if ((await control.inputValue()) !== value) {
+        await fillUnique(control, value, `own-offers-filter-${field}`);
+        changed = true;
       }
     }
     const numberFields: Array<keyof Pick<OwnOfferFilter, 'minPrice' | 'maxPrice' | 'minQuantity'>> = ['minPrice', 'maxPrice', 'minQuantity'];
     for (const field of numberFields) {
       const value = filter[field];
       if (value === undefined) continue;
-      try {
-        const control = await this.requiredFilterControl(field);
-        const text = String(value);
-        if ((await control.inputValue()) !== text) {
-          await fillUnique(control, text, `own-offers-filter-${field}`);
-          changed = true;
-        }
-      } catch {
-        // Control not visible; skip.
+      const control = await this.requiredFilterControl(field);
+      const text = String(value);
+      if ((await control.inputValue()) !== text) {
+        await fillUnique(control, text, `own-offers-filter-${field}`);
+        changed = true;
       }
     }
     const selectFields: FilterField[] = ['expansion', 'rarity', 'condition', 'language', 'foil', 'signed', 'altered', 'sort'];
     for (const field of selectFields) {
       const value = filter[field as keyof OwnOfferFilter];
       if (value === undefined) continue;
-      try {
-        if (await this.setSelectByVisibleLabel(field, String(value))) changed = true;
-      } catch {
-        // Control not visible; skip.
-      }
+      if (await this.setSelectByVisibleLabel(field, String(value))) changed = true;
     }
     return changed;
   }
@@ -165,9 +169,11 @@ export class OwnOffersPage extends SitePage {
       clickUnique(button, 'own-offers-filter-submit', 15_000),
     ]);
     if (!navigation) {
-      await this.page
+      const settled = await this.page
         .waitForFunction(() => !Boolean(document.querySelector('#UserOffersTable .loader, #UserOffersTable .spinner')), null, { timeout: 15_000, polling: 250 })
-        .catch(() => {});
+        .then(() => true)
+        .catch(() => false);
+      if (!settled) throw new AutomationError('TIMEOUT', 'own-offers-filter-settle');
     }
     await this.waitForCloudflare();
     await uniqueVisible(this.table, 'own-offers-table', 30_000);
@@ -217,7 +223,7 @@ export class OwnOffersPage extends SitePage {
     const href = await this.nextControl.getAttribute('href');
     if (!href) throw new AutomationError('UI_DRIFT', 'own-offers-next');
     await this.gotoAllowed(href);
-    await uniqueVisible(this.table, 'own-offers-table', 30_000);
+    await this.waitUntilReady();
     return true;
   }
 

@@ -2,14 +2,21 @@
 
 Personal collection of reusable agent skills.
 
-The website automation builder generates portable skills: agents only need to read
-`SKILL.md` and start the local `node scripts/site-runtime.mjs` process. Generated
-skills use precompiled TypeScript/POM actions through `playwright-cli` in an
-already-open browser. They require no harness-specific tools or plugins.
+Website automation uses **playwright-cli** in the user's already-open browser.
+For website-automation development, [AGENTS.md](AGENTS.md) requires the
+[project-local builder skill](.agents/skills/website-automation-builder/SKILL.md)
+and the [strict concept](docs/strict-automation/concept.md). The builder is an
+authoring guide, not an installable site runtime or a scaffold generator.
 
-Run `task test` for scaffold checks and a freshly generated demo's typecheck,
-build, unit tests and subprocess integration tests. Live-browser evidence is
-documented separately in the builder's references.
+Run `task test` for concept links/routing and the illustrative UI-model tests.
+Run `task test:cardmarket` for the current Cardmarket typecheck and unit tests
+after installing its locked dependencies. CI runs both groups and typechecks
+the model. These checks do not establish live-browser verification.
+
+The former builder/scaffold has been removed. The concept's precompiled runtime
+and Cardmarket migration are still planned; see the
+[progress tracker](docs/strict-automation/todo.md). Use the current Cardmarket
+skill's documented commands until its migration is implemented.
 
 Run the `/setup` skill to audit and install the repository prerequisites,
 including Node/npm, Task, the pinned Playwright CLI, and maintained local
@@ -21,7 +28,7 @@ node .agents/skills/setup/scripts/check.mjs
 
 ## Installation
 
-Install all skills globally for OpenCode:
+Install the Cardmarket runtime skill globally for OpenCode:
 
 ```bash
 task install:opencode
@@ -30,16 +37,13 @@ task install:opencode
 Alternatively, use the CLI directly:
 
 ```bash
-npx skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
+npx skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
 ```
 
-Install a single skill:
-
-```bash
-npx skills add FabianSieper/skills --skill website-automation-builder
-```
+The builder stays in this checkout under `.agents/skills`; its concept links are
+repository-relative. Do not install that authoring skill globally in isolation.
 
 ## Available skills
 
-- `website-automation-builder` – Builds deterministic website automations with TypeScript, Playwright POMs, and an already open browser.
-- `cardmarket-automation` – State-machine Cardmarket (MTG) automations: navigate search/detail/versions/artwork/filters, `info`, own offers (`user.offers`), market comparison (`stock.market-comparison`), and guarded price writes (`user.offer.update`, `stock.bulk-price-update` via plan → exact review → execute). Live-verified; attaches to an already-open browser via `playwright-cli`, never launches/replaces/closes one.
+- `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/POM/navigation concept using playwright-cli.
+- `cardmarket-automation` – Existing MTG search, detail, sellers, artworks, stock comparison and planned offer updates. Uses playwright-cli; current limitations and historical verification are recorded in its references. Strict-concept migration remains open.

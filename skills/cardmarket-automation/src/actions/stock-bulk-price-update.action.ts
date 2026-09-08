@@ -108,7 +108,8 @@ export const action: Action = {
   outputDescription,
   validateOutput,
   prepare: async (page: Page, input: Input): Promise<Preview> => {
-    if (detectState(page) !== 'own-offers') throw new AutomationError('INVALID_INPUT', 'state');
+    const state = detectState(page);
+    if (state !== 'own-offers') throw new AutomationError('WRONG_STATE', 'source-state', { expected: ['own-offers'], actual: state, operation: 'stock.bulk-price-update' });
     const auth = await readAuth(page);
     if (!auth.loggedIn) throw new AutomationError('AUTH_REQUIRED');
     const { ids, prices, offers } = await resolveOffers(input, page);
@@ -127,7 +128,8 @@ export const action: Action = {
     };
   },
   execute: async (page: Page, input: Input, preview: Preview): Promise<StockBulkPriceUpdateOutput> => {
-    if (detectState(page) !== 'own-offers') throw new AutomationError('INVALID_INPUT', 'state');
+    const state = detectState(page);
+    if (state !== 'own-offers') throw new AutomationError('WRONG_STATE', 'source-state', { expected: ['own-offers'], actual: state, operation: 'stock.bulk-price-update' });
     const auth = await readAuth(page);
     if (!auth.loggedIn) throw new AutomationError('AUTH_REQUIRED');
     const { prices } = await resolveOffers(input, page);

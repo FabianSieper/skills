@@ -1,6 +1,27 @@
 # Cardmarket Skill – Verifikation & Status
 
-> **Status: all states live-verified, auto-login ready** – State machine, login state, own offers on a card detail page, and guarded updates were validated on 2026-09-06. The Selling → My Offers → Singles listing and the AUTH_REQUIRED auto-login (open form → wait for user → re-run) were live-verified on 2026-09-07.
+> **Current status (2026-09-08): partially migrated, not production-ready.**
+> The current runtime slice has browser-free contract/state tests and a clean
+> typecheck, but no live verification was performed for this slice. Historical
+> entries below are evidence of older behavior. In particular, the 2026-09-07
+> automatic-login/replay behavior is superseded: the current runtime never
+> opens login or replays an action implicitly; the user handles login in the
+> attached browser and writes are never auto-retried.
+
+## Current contract slice — 2026-09-08
+
+- `npm ci` completed with the pinned lockfile; `npm run typecheck` passes.
+- The complete package suite passes **58/58** (including DOM guard fixtures after
+  installing the pinned Chromium binary with the required host permission).
+- `node scripts/verify-website-concept.mjs` passes (45 local links, 15 mapped
+  actions); the skill-creator validator passes.
+- `npm run cli -- list` and `describe status/nav.search` return one structured
+  envelope. `npm run cli -- status` observed the attached extension relay as
+  `unknown` with `outside-site`/`unknown-state` blockers and only the safe entry
+  actions available. No Cardmarket live navigation or account write was made.
+- The registry reports both write actions as `enabled:false`; `plan` rejects
+  them with `NOT_VERIFIED` before browser access while the journal/target/evidence
+  migration is incomplete.
 
 ## Browserlos (erledigt)
 - Scaffold `src/` (types, config, engine, actions, runtime, pages), `tests/`, `examples/`.
@@ -123,17 +144,14 @@
 - **Browser-free:** `npm run typecheck` ✔; 38 non-browser tests ✔, including action registration, input validation, output guards, CLI list/describe, and existing write-safety tests.
 - **Live:** not run — `npm run cli -- doctor` returned `BROWSER_REQUIRED`; no authenticated attached Chrome session was available. Verify navigation, all named filter controls, a multi-page filtered listing, and opening a row before marking this state live verified.
 
-## 2026-09-07: Auto-Login on AUTH_REQUIRED
-- **Feature:** A login-required action run while logged out no longer dead-ends. The runtime opens the Cardmarket login form in the attached browser (clicks the header login trigger, or falls back to the home page), waits up to `loginWaitMs` (120 s) for a human login, then re-runs the same action once. `actionBudgetMs` raised 90 s → 240 s to cover the wait. SKILL.md/flows.md updated; the duplicated "Automatic Login Handling" and "Require Login" sections were consolidated.
-- **Fix:** the inlined `openLoginForm` no longer references module scope (`elementVisible`), which made every `page.evaluate(openLoginForm)` throw in the page and silently skip opening the form.
-- **Browser-free:** `npm run typecheck` ✔, `npm test` 48/48 ✔.
-- **Live (2026-09-07):** `nav.own-offers` while logged out succeeded in one call — the runtime kept the already-visible inline login form, the user logged in (account `Hayrus`), and the action re-ran to `state: own-offers` without a second command.
-- **UI_DRIFT found live:** the own-offers POM identified its filter form as `form` index 3, but the logged-in page only has `form#searchForm` + the id-less stock-filter form (the logged-out login form shifts nothing once it is gone). Fixed by identifying the filter form via its `select[name="idLanguage"]` child.
-- **Live re-verify:** `info` on `own-offers` now returns the filter state and 20 own offers (first pages) with `auth.loggedIn: true`.
+## Historical 2026-09-07: Auto-Login on AUTH_REQUIRED (superseded)
+The former implementation opened the login form and replayed an action. That
+behavior was deliberately removed in the current strict slice; the bullets that
+used to describe it are retained only in git history, not as operating guidance.
 
 ## Known Gaps
-- Neue State-Machine-Oberfläche live validiert (2026-09-06);
-  `nav.versions` nutzt direkte Versions-URL-Navigation.
+- Historical state-machine surface was live validated (2026-09-06);
+  the current contract slice still has no live navigation verification.
 - Preise als Text im deutschen Format – Downstream-Parsing nötig.
 - Such-Einstieg hängt an `searchEntry` = `/en/Magic`; entfernt Cardmarket das
   Top-Bar-Form auch von Game-Seiten, wieder `UI_DRIFT` → Einstieg per read-only
@@ -142,4 +160,5 @@
 - Mengen-Update im Esix-Testfall nicht weiter prüfbar, weil `editAmount`
   nur die Option `1` liefert.
 - `own-offers` live-verified on 2026-09-07 (filter-form identified by content, 20 own offers read). The browserless filter fields cover the current Magic stock UI; unexpected per-game controls deliberately return `UI_DRIFT` instead of choosing a fallback.
-- Auto-login waits for a human inside one `run-code` call (up to `loginWaitMs`); if the user is slow the command returns `AUTH_REQUIRED`/`login-timeout` and the same command must be re-run once the form is filled.
+- Login is intentionally outside the runtime: `AUTH_REQUIRED` is returned with
+  a user-owned recovery instruction; no login form is opened or action replayed.

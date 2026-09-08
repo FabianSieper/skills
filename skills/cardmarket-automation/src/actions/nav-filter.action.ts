@@ -4,8 +4,8 @@ import { detectState } from '../lib/state.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
-import { COUNTRY_INPUT_KEYS, CONDITION_VALUES, LANGUAGE_VALUES, resolveSellerFilter, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
-import type { NavOutput, SellerFilter, StateId } from '../types.ts';
+import { COUNTRY_INPUT_KEYS, CONDITION_VALUES, LANGUAGE_VALUES, resolveSellerFilter, sameResolvedSellerFilter, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
+import { isStateId, type NavOutput, type SellerFilter, type StateId } from '../types.ts';
 
 const description = 'Apply and submit the seller filter on the detail state. Returns status only.';
 const parameters: Fields = {
@@ -23,7 +23,7 @@ function validateOutput(raw: unknown): NavOutput {
   const object = raw as Record<string, unknown>;
   if (!object || typeof object !== 'object') throw new AutomationError('POSTCONDITION_FAILED');
   if (!['ok', 'not_found', 'not_available', 'wrong_state'].includes(String(object.status))) throw new AutomationError('POSTCONDITION_FAILED');
-  if (object.state !== 'start' && object.state !== 'results' && object.state !== 'detail' && object.state !== 'versions' && object.state !== 'own-offers') throw new AutomationError('POSTCONDITION_FAILED');
+  if (!isStateId(object.state)) throw new AutomationError('POSTCONDITION_FAILED');
   return object as unknown as NavOutput;
 }
 
@@ -52,10 +52,14 @@ export const action: Action = {
     if (changed) {
       await detail.submitSellerFilters();
       await detail.settleSellerList();
-      const applied = await detail.readCurrentFilter();
-      if (applied.condition !== resolved.condition || applied.language !== resolved.language || applied.location !== resolved.location) {
-        throw new AutomationError('POSTCONDITION_FAILED', 'filter-not-applied');
-      }
+    }
+    // Read back even when no control changed: an unchanged or missing form is
+    // not evidence that the requested filter is active.
+    const applied = await detail.readCurrentFilter();
+    if (!sameResolvedSellerFilter(applied, resolved)) {
+      throw new AutomationError('FILTER_MISMATCH', 'filter-not-applied', {
+        expected: resolved, actual: applied, operation: 'nav.filter',
+      });
     }
     return { status: 'ok', state: detectState(page) };
   },

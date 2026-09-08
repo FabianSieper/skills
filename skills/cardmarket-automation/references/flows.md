@@ -1,14 +1,15 @@
 # Flows
 
 ## Detect Current State
-1. `info` – returns `state` and `auth.loggedIn`.
+1. `status` – pure observation of `state`, URL, auth certainty and blockers.
+2. `info` – bounded state-specific data read when the current state is known.
 
 ## Require Login
-The user never signs in "first": login-required actions handle login on their own.
-1. Run the needed action directly (e.g. `nav.own-offers`).
-2. If the attached browser is logged out, the runtime automatically opens the Cardmarket login form, waits up to 2 minutes for the user's credentials, and re-runs the same action.
-3. If `AUTH_REQUIRED` still comes back (step `login-timeout`): the login page is open in the user's browser — tell them to log in, then re-run the exact same command.
-4. `info` – verify `auth.loggedIn` is `true`, then continue from the required state.
+Login is a user-owned prerequisite, not an implicit workflow.
+1. Run `status` and inspect `authKnown`/blockers.
+2. If an account action returns `AUTH_REQUIRED`, have the user log in or complete MFA in the already-attached browser.
+3. Re-run the same read or transition action after the user confirms completion.
+4. Never replay a write after login, timeout or an uncertain response; verify or reconcile first.
 
 ## Find a Card
 1. `nav.search { query }`
@@ -69,6 +70,6 @@ The user never signs in "first": login-required actions handle login on their ow
 - `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: stop and report to builder.
 - `BROWSER_REQUIRED`: hard stop.
 - `HUMAN_REQUIRED`: wait for manual Cloudflare solve.
-- `AUTH_REQUIRED`: **automatic** — the runtime already opened the login form and waited for you to log in, then re-runs the same action. If it returns step `login-timeout`, the login page is open: tell the user to log in, then re-run the exact same command. Never start a different flow on your own.
+- `AUTH_REQUIRED`: user handles login/MFA in the visible attached browser; re-run the same read/transition only after confirmation. There is no automatic login or write replay.
 - `PLAN_CHANGED`: create and review a new plan.
 - `PLAN_USED` / `UNKNOWN_COMMIT`: do not retry; verify with `user.offers`.

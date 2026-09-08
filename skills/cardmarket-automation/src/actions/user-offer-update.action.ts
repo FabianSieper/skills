@@ -65,7 +65,8 @@ function normalizeChanges(input: Input): UserOfferChanges {
 }
 
 async function context(page: Page, input: Input): Promise<{ articleId: number; changes: UserOfferChanges; card: string; set: string }> {
-  if (detectState(page) !== 'detail') throw new AutomationError('INVALID_INPUT', 'state');
+  const state = detectState(page);
+  if (state !== 'detail') throw new AutomationError('WRONG_STATE', 'source-state', { expected: ['detail'], actual: state, operation: 'user.offer.update' });
   const auth = await readAuth(page);
   if (!auth.loggedIn) throw new AutomationError('AUTH_REQUIRED');
   const detail = new CardDetailPage(page);

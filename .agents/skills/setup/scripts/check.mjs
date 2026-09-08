@@ -76,7 +76,7 @@ function isRepositoryRoot(directory) {
   return (
     existsSync(join(directory, "Taskfile.yml")) &&
     existsSync(join(directory, "README.md")) &&
-    existsSync(join(directory, "skills", "website-automation-builder")) &&
+    existsSync(join(directory, ".agents", "skills", "website-automation-builder", "SKILL.md")) &&
     existsSync(
       join(directory, "skills", "cardmarket-automation", "package.json"),
     )

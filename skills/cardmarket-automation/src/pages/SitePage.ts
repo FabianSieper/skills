@@ -5,43 +5,6 @@ import { navigate } from '../runtime/guards.ts';
 import { resolveHref } from '../lib/url.ts';
 import { readAccount } from '../lib/auth.ts';
 
-/** Inlined: evaluated in the browser, must not reference module scope. */
-function consentOverlayGone(): boolean {
-  const acceptPattern = /accept all cookies|alle akzeptieren/i;
-  const isVisible = (el: Element): boolean => {
-    let node: Element | null = el;
-    while (node && node !== document.documentElement) {
-      const cs = getComputedStyle(node);
-      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
-      node = node.parentElement;
-    }
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
-  };
-  const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
-  return !buttons.some((b) => acceptPattern.test(b.textContent || '') && isVisible(b));
-}
-
-/** Inlined: evaluated in the browser, must not reference module scope. */
-function clickConsentAccept(): boolean {
-  const acceptPattern = /accept all cookies|alle akzeptieren/i;
-  const isVisible = (el: Element): boolean => {
-    let node: Element | null = el;
-    while (node && node !== document.documentElement) {
-      const cs = getComputedStyle(node);
-      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
-      node = node.parentElement;
-    }
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
-  };
-  const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
-  const accept = buttons.find((b) => acceptPattern.test(b.textContent || '') && isVisible(b));
-  if (!accept) return false;
-  (accept as HTMLElement).click();
-  return true;
-}
-
 /**
  * Cardmarket base page: origin guard + Cloudflare detection.
  *
@@ -57,18 +20,17 @@ export class SitePage {
   }
 
   /**
-   * Verify the page sits on an allowed origin and is past any Cloudflare
-   * challenge. Navigates to the base URL when the page is empty or off-site.
+   * Purely observe the attached page before an action. This method deliberately
+   * does not navigate, dismiss consent, open login or repair the UI. Navigation
+   * belongs to an explicit registered action; a readiness check must not change
+   * the page it is describing.
    */
-  async assertReady(): Promise<{ accountKey: string }> {
+  async assertReady(): Promise<{ accountKey: string; onSite: boolean }> {
     const url = this.page.url();
-    const onSite = url !== 'about:blank' && url.startsWith(config.baseURL);
-    if (!onSite) {
-      await navigate(this.page, config.baseURL, config.allowedOrigins);
-    }
+    const onSite = isAllowedOrigin(url, config.allowedOrigins);
+    if (!onSite) return { accountKey: 'unknown', onSite: false };
     await this.waitForCloudflare();
-    await this.dismissConsentOverlay();
-    return { accountKey: await readAccount(this.page) };
+    return { accountKey: await readAccount(this.page), onSite: true };
   }
 
   /** Navigate to an absolute/relative Cardmarket URL with origin + Cloudflare guards. */
@@ -76,19 +38,6 @@ export class SitePage {
     const target = resolveHref(url);
     await navigate(this.page, target, config.allowedOrigins);
     await this.waitForCloudflare();
-    await this.dismissConsentOverlay();
-  }
-
-  /**
-   * Best-effort dismissal of a cookie-consent overlay. The overlay blocks
-   * page reading and clicks; it does not reappear once a choice is stored.
-   * Never throws.
-   */
-  async dismissConsentOverlay(timeoutMs = 5_000): Promise<void> {
-    await this.page.evaluate(clickConsentAccept).catch(() => {});
-    await this.page
-      .waitForFunction(consentOverlayGone, null, { timeout: timeoutMs })
-      .catch(() => {});
   }
 
   /**
@@ -101,8 +50,15 @@ export class SitePage {
     await this.page
       .waitForFunction(() => !/just a moment|attention required|cloudflare/i.test(document.title), null, { timeout: timeoutMs })
       .catch(() => {});
-    const title = await this.page.title().catch(() => '');
+    let title: string;
+    try { title = await this.page.title(); }
+    catch { throw new AutomationError('TIMEOUT', 'cloudflare-title'); }
     if (/just a moment|attention required|cloudflare/i.test(title))
       throw new AutomationError('HUMAN_REQUIRED', 'cloudflare-challenge');
   }
+}
+
+export function isAllowedOrigin(url: string, origins: readonly string[]): boolean {
+  try { return origins.includes(new URL(url).origin); }
+  catch { return false; }
 }

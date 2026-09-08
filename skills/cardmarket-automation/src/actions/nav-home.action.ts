@@ -2,7 +2,7 @@ import type { Page } from 'playwright';
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
-import type { NavOutput } from '../types.ts';
+import { isStateId, type NavOutput } from '../types.ts';
 import { config } from '../../site.config.ts';
 import { SitePage } from '../pages/SitePage.ts';
 import { detectState } from '../lib/state.ts';

@@ -6,7 +6,7 @@ import { OwnOffersPage } from '../pages/OwnOffersPage.ts';
 import { detectState } from '../lib/state.ts';
 import { readAuth } from '../lib/auth.ts';
 import { parseQty } from '../lib/parse.ts';
-import { isResolvedSellerFilter } from '../pages/seller-filters.ts';
+import { isResolvedSellerFilter, sameResolvedSellerFilter } from '../pages/seller-filters.ts';
 import { resolveSellerFilter, COUNTRY_INPUT_KEYS, CONDITION_VALUES, LANGUAGE_VALUES, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
@@ -31,7 +31,8 @@ const outputDescription =
   'start: { state, ready, auth }; results: { state, query, count, cards, auth }; ' +
   'detail: { state, card, url, filter, info, sellerCount, sellers, auth }; ' +
   'versions: { state, card, versionsUrl, total, shown, minQuantity, artworks, auth }; ' +
-  'own-offers: { state, url, filter, count, offers, pagesVisited, complete, auth }';
+  'own-offers: { state, url, filter, count, offers, pagesVisited, complete, auth }; ' +
+  'unknown: { state, url, reason, auth: null, authKnown: false }';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -85,11 +86,6 @@ function sellerFilterFromInput(input: Input): ResolvedSellerFilter {
   } as ResolvedSellerFilter);
 }
 
-function sameFilter(left: ResolvedSellerFilter, right: ResolvedSellerFilter): boolean {
-  return left.condition === right.condition && left.language === right.language && left.location === right.location &&
-    left.sellerType === right.sellerType && left.foil === right.foil && left.signed === right.signed && left.altered === right.altered;
-}
-
 function validateOutput(raw: unknown): InfoOutput {
   if (!isObject(raw)) throw new AutomationError('POSTCONDITION_FAILED');
   if (raw.state === 'start') {
@@ -115,6 +111,10 @@ function validateOutput(raw: unknown): InfoOutput {
       throw new AutomationError('POSTCONDITION_FAILED');
     return raw as unknown as InfoOutput;
   }
+  if (raw.state === 'unknown') {
+    if (typeof raw.url !== 'string' || typeof raw.reason !== 'string' || raw.auth !== null || raw.authKnown !== false) throw new AutomationError('POSTCONDITION_FAILED');
+    return raw as unknown as InfoOutput;
+  }
   throw new AutomationError('POSTCONDITION_FAILED');
 }
 
@@ -127,6 +127,7 @@ export const action: Action = {
   kind: 'read',
   run: async (page: Page, input: Input): Promise<InfoOutput> => {
     const state = detectState(page);
+    if (state === 'unknown') return { state, url: page.url(), reason: 'unrecognized-or-outside-site', auth: null, authKnown: false };
     const auth = await readAuth(page);
     if (state === 'start') return { state, ready: true, auth };
     if (state === 'results') {
@@ -146,7 +147,9 @@ export const action: Action = {
         await detail.settleSellerList();
       }
       const filter = await detail.readCurrentFilter();
-      if (!sameFilter(filter, wantedFilter)) throw new AutomationError('POSTCONDITION_FAILED', 'seller-filter');
+      if (!sameResolvedSellerFilter(filter, wantedFilter)) throw new AutomationError('FILTER_MISMATCH', 'seller-filter', {
+        expected: wantedFilter, actual: filter, operation: 'info',
+      });
       const sellerLimit = input.sellers as number;
       const sellers = sellerLimit > 0 ? await detail.extractSellers(sellerLimit) : [];
       return { state, card: info.title, url: page.url(), filter, info, sellerCount: sellers.length, sellers, auth };
@@ -179,6 +182,7 @@ export const action: Action = {
       const checks: ArtworkCheck[] = [];
       for (let i = 0; i < shown; i++) {
         const detail = await versions.openArtwork(i);
+        await detail.settleSellerList();
         const sellers = await detail.extractSellers(200);
         const quantities = sellers.map((seller) => parseQty(seller.quantity));
         const maxSellerQuantity = quantities.length ? Math.max(...quantities) : 0;

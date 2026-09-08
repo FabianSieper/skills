@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { actions } from '../src/actions/index.ts';
 import { AutomationError } from '../src/runtime/errors.ts';
 import { validateInput } from '../src/runtime/input.ts';
+import type { Page } from 'playwright';
 
 const plain = (o: Record<string, unknown>) => Object.assign(Object.create(null), o);
 
@@ -83,7 +84,7 @@ const artwork = (over: Record<string, unknown> = {}) => ({
 test('registry has the state-machine and user-offer actions', () => {
   assert.deepEqual(
     actions.map((a) => a.id).sort(),
-    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'nav.search', 'nav.versions', 'stock.bulk-price-update', 'stock.market-comparison', 'user.offer.update', 'user.offers'],
+    ['info', 'nav.artwork', 'nav.filter', 'nav.home', 'nav.open', 'nav.own-offers', 'nav.own-offers.filter', 'nav.own-offers.open', 'nav.search', 'nav.versions', 'status', 'stock.bulk-price-update', 'stock.market-comparison', 'user.offer.update', 'user.offers'],
   );
   for (const a of actions) {
     if (a.kind === 'write') assert.ok('prepare' in a && 'execute' in a);
@@ -199,6 +200,53 @@ test('validateOutput happy + sad for nav actions', () => {
   }
 });
 
+test('status output preserves unknown/off-site and auth certainty', () => {
+  const status = byId('status');
+  assert.doesNotThrow(() => status.validateOutput({
+    state: 'unknown', url: 'about:blank', auth: null, authKnown: false,
+    blockers: ['outside-site', 'unknown-state'],
+  }));
+  assert.doesNotThrow(() => status.validateOutput({
+    state: 'start', url: 'https://www.cardmarket.com/en', auth: { loggedIn: false }, authKnown: true,
+    blockers: ['login-required'],
+  }));
+  assert.equal(code(() => status.validateOutput({
+    state: 'unknown', url: 'about:blank', auth: { loggedIn: false }, authKnown: false,
+    blockers: ['unknown-state'],
+  })), 'POSTCONDITION_FAILED');
+});
+
+test('status fails closed when authentication observation is unavailable', async () => {
+  const status = byId('status');
+  const page = {
+    url: () => 'https://www.cardmarket.com/en',
+    waitForFunction: async () => { throw new Error('DOM unavailable'); },
+    locator: () => ({ evaluateAll: async () => { throw new Error('DOM unavailable'); } }),
+  } as unknown as Page;
+  assert.equal(status.kind, 'read');
+  if (status.kind !== 'read') throw new Error('status must be a read action');
+  const result = await status.run(page, {} as never);
+  assert.deepEqual(result, {
+    state: 'unknown',
+    url: 'https://www.cardmarket.com/en',
+    auth: null,
+    authKnown: false,
+    blockers: ['unknown-state'],
+  });
+  assert.doesNotThrow(() => status.validateOutput(result));
+});
+
+test('market comparison reports the typed wrong-state error', async () => {
+  const comparison = byId('stock.market-comparison');
+  assert.equal(comparison.kind, 'read');
+  if (comparison.kind !== 'read') throw new Error('comparison must be a read action');
+  const page = { url: () => 'https://www.cardmarket.com/en' } as unknown as Page;
+  await assert.rejects(
+    () => comparison.run(page, {} as never),
+    (error: unknown) => error instanceof AutomationError && error.code === 'WRONG_STATE' && error.context?.actual === 'start',
+  );
+});
+
 test('validateOutput happy + sad for info', () => {
   const infoAction = byId('info');
 
@@ -206,6 +254,10 @@ test('validateOutput happy + sad for info', () => {
   assert.doesNotThrow(() => infoAction.validateOutput(start));
   assert.equal(code(() => infoAction.validateOutput({ state: 'start' })), 'POSTCONDITION_FAILED');
   assert.equal(code(() => infoAction.validateOutput({ state: 'start', ready: true })), 'POSTCONDITION_FAILED');
+
+  assert.doesNotThrow(() => infoAction.validateOutput({
+    state: 'unknown', url: 'about:blank', reason: 'unrecognized-or-outside-site', auth: null, authKnown: false,
+  }));
 
   const results = { state: 'results', query: 'Forest', count: 2, cards: [card(), card({ name: 'Bose' })], auth: auth() };
   assert.doesNotThrow(() => infoAction.validateOutput(results));

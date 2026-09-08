@@ -232,6 +232,12 @@ export function resolveSellerFilter(partial: SellerFilter = {}): ResolvedSellerF
   return { condition, language, location, sellerType, foil, signed, altered };
 }
 
+/** Exact equality used by every filter postcondition; no critical field is optional. */
+export function sameResolvedSellerFilter(left: ResolvedSellerFilter, right: ResolvedSellerFilter): boolean {
+  return left.condition === right.condition && left.language === right.language && left.location === right.location &&
+    left.sellerType === right.sellerType && left.foil === right.foil && left.signed === right.signed && left.altered === right.altered;
+}
+
 export function isResolvedSellerFilter(value: unknown): value is ResolvedSellerFilter {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const o = value as Record<string, unknown>;

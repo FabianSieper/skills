@@ -1,12 +1,21 @@
 # Core Concepts
 
+> **Implementation status (2026-09-08):** The Cardmarket runtime now enforces
+> an explicit `unknown` state, a typed contract registry, shared availability /
+> destination checks, pure readiness, fixed `playwright-cli` transport,
+> optional/inline JSON input and structured recovery envelopes. This file is a
+> historical invariant reference; the complete union recognizer, target
+> references, capability facade, journal and precompiled artifact gates remain
+> open in [`docs/strict-automation/migration.md`](../../docs/strict-automation/migration.md).
+
 > Read this before extending or modifying any part of the skill. These are the architectural invariants that keep the system safe, predictable, and maintainable. Breaking any of them is a regression.
 
 ---
 
 ## 1. State Machine
 
-The skill models the browser as a finite state machine with five states:
+The skill models the browser as a finite state machine with six observable
+states:
 
 | state | meaning |
 |---|---|
@@ -15,8 +24,13 @@ The skill models the browser as a finite state machine with five states:
 | `detail` | One card page |
 | `versions` | Artwork / version list |
 | `own-offers` | Selling → My Offers → Singles |
+| `unknown` | Outside-site, unsupported route, or insufficient recognition evidence |
 
-Every action is bound to the state(s) it can run in. `next` declares which actions are valid after the current one. The runtime detects the actual state from the browser URL via `detectState()`. An action that runs in the wrong state must fail with `wrong_state`, not guess.
+Every action is bound to the state(s) it can run in. The contract registry is
+authoritative for availability and destinations; `next` remains a compatibility
+hint for the legacy action declaration. The runtime detects the actual state
+from the browser URL via `detectState()`. An action that runs in the wrong state
+must fail with `wrong_state`, not guess.
 
 **Rule:** Never assume a state. Always detect it. Never skip a state transition.
 
@@ -86,14 +100,14 @@ Every action defines a `validateOutput()` function. After the browser operation 
 
 Three seller filters are **critical**: `condition`, `language`, and `location`.
 
-After applying and submitting these filters on a detail page, the runtime **reads back** the active filter values. The read-back value for each critical filter must **exactly equal** the submitted value. If it does not:
+After applying and submitting the seller filters on a detail page, the runtime **reads back** every resolved filter value. The read-back value for each requested field must **exactly equal** the submitted value. If it does not:
 
 1. Retry once (the page may not have settled).
-2. If still mismatched → `POSTCONDITION_FAILED` with `filter-not-applied <name>` (for `nav.filter`) or `filter-mismatch <name> expected=<a> actual=<b>` (for `stock.market-comparison`).
+2. If still mismatched → `FILTER_MISMATCH` with expected and actual filter objects (for `nav.filter`, `info` or `stock.market-comparison`).
 
 The action **never** silently continues with a wrong filter. A wrong filter means wrong prices.
 
-**Rule:** If a critical filter cannot be verified, the action fails. There is no fallback.
+**Rule:** If any requested filter cannot be verified, the action fails. There is no fallback.
 
 ---
 
@@ -105,7 +119,7 @@ Every error is one of a fixed set of `ErrorCode` values. Each maps to a specific
 |---|---|---|
 | `INVALID_INPUT` | 2 | Bad parameter; fix input |
 | `UNKNOWN_ACTION` | 2 | No such action; use `list`/`describe` |
-| `AUTH_REQUIRED` | 3 | Not logged in; runtime opened login form |
+| `AUTH_REQUIRED` | 3 | The required account is not observed; the user handles login in the attached browser |
 | `HUMAN_REQUIRED` | 3 | Cloudflare or manual step; user must act |
 | `BROWSER_REQUIRED` | 3 | Browser not attached; hard stop |
 | `ATTACH_FAILED` | 3 | Attach failed; check setup |
@@ -209,17 +223,13 @@ If step 9 throws: `UNKNOWN_COMMIT` (the write may or may not have happened).
 
 ---
 
-## 13. Automatic Login Handling
+## 13. Authentication and human handling
 
-When a login-required action (`nav.own-offers`, `stock.market-comparison`, `user.offer.update`, `stock.bulk-price-update`, `info` on `own-offers`) is run while the browser is logged out:
-
-1. The runtime opens the Cardmarket login form in the user's browser.
-2. It waits up to 2 minutes for the user to enter credentials.
-3. It re-runs the same action.
-
-If the login times out → `AUTH_REQUIRED` with step `login-timeout`. The login page is already open. Tell the user, let them log in, then re-run the exact same command.
-
-**Rule:** The user never has to log in "first". The runtime handles it. But if it times out, the agent must not start a different flow.
+There is no hidden login loop. Account actions return `AUTH_REQUIRED` when the
+observed account is not sufficient. The user handles login/MFA in the already
+attached browser, then the agent re-runs the same read or transition. A write is
+never automatically replayed after login, timeout or a lost response. Consent
+and challenges are explicit human blockers; readiness never dismisses them.
 
 ---
 
@@ -230,14 +240,15 @@ The CLI has a fixed command set:
 ```
 cli list                              # List all action IDs
 cli describe <id>                     # Show params + output schema
-cli run <id> --input <file.json>      # Read action
-cli plan <id> --input <file.json>     # Write action: create plan
+cli status                            # Pure state/auth/blocker observation
+cli run <id> [--json '{...}'|--input <file.json>]   # Read/transition/workflow
+cli plan <id> [--json '{...}'|--input <file.json>]  # Write action: create plan
 cli execute --plan <id> --approve <hash>  # Write action: execute
 cli doctor                            # Check browser attachment
 ```
 
-- Input is always a JSON file (`--input <path>`). The file contains a naked JSON object.
-- `/dev/null` and `/dev/stdin` do **not** work as input files (they are not regular files; `stat().isFile()` returns `false`). Use a temp file instead.
+- Input is a naked JSON object. `--json` and `--input` are mutually exclusive;
+  absent input means `{}` and input is capped at 64 KiB.
 - The result envelope is `{ ok, runId, durationMs, data?, error? }`.
 
 **Rule:** The CLI protocol is the only interface. Do not add new CLI subcommands without updating this document and SKILL.md.

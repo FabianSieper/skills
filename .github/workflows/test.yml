@@ -1,18 +1,21 @@
 name: test
 on: [push, pull_request]
 jobs:
-  builder:
+  website-contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: node skills/website-automation-builder/scripts/test-scaffold.mjs
-      - run: |
-          target="$(mktemp -d)/fixture-automation"
-          node skills/website-automation-builder/scripts/scaffold.mjs --name fixture-automation --url https://example.org --out "$target"
-          npm --prefix "$target" install --ignore-scripts
-          npm --prefix "$target" run format:check
-          npm --prefix "$target" run typecheck
-          npm --prefix "$target" run build
-          npm --prefix "$target" test
+      - run: node scripts/verify-website-concept.mjs
+      - run: node --experimental-strip-types --test docs/strict-automation/ui-model.test.mjs
+  cardmarket:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm --prefix skills/cardmarket-automation ci
+      - run: npm --prefix skills/cardmarket-automation run typecheck
+      - run: npm --prefix skills/cardmarket-automation test
+      - run: node skills/cardmarket-automation/node_modules/typescript/bin/tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions docs/strict-automation/ui-model.ts docs/strict-automation/ui-model.type-test.ts

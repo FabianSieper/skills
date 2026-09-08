@@ -157,14 +157,14 @@ export type ArtworkCheck = Artwork & {
   qualifies: boolean;
 };
 
-/** Output of cards.search */
+/** Legacy search output shape retained for compatibility-only code. */
 export type SearchOutput = {
   query: string;
   count: number;
   cards: SearchCard[];
 };
 
-/** Output of cards.price */
+/** Legacy price output shape retained for compatibility-only code. */
 export type PriceOutput = {
   found: boolean;
   card: string;
@@ -175,7 +175,7 @@ export type PriceOutput = {
   sellers: SellerOffer[];
 };
 
-/** Empty CardInfo used when cards.price finds no card. */
+/** Empty CardInfo helper retained for compatibility-only code. */
 export function emptyCardInfo(): CardInfo {
   return {
     title: '', rarity: '', number: '', printedIn: '', reprints: '',
@@ -184,7 +184,7 @@ export function emptyCardInfo(): CardInfo {
   };
 }
 
-/** Output of cards.artworks */
+/** Legacy artwork output shape retained for compatibility-only code. */
 export type ArtworksOutput = {
   found: boolean;
   card: string;
@@ -195,7 +195,12 @@ export type ArtworksOutput = {
   artworks: (Artwork | ArtworkCheck)[];
 };
 
-export type StateId = 'start' | 'results' | 'detail' | 'versions' | 'own-offers';
+/** A URL that does not match a verified Cardmarket surface is never guessed as `start`. */
+export type StateId = 'start' | 'results' | 'detail' | 'versions' | 'own-offers' | 'unknown';
+export const STATE_IDS: readonly StateId[] = ['start', 'results', 'detail', 'versions', 'own-offers', 'unknown'];
+export function isStateId(value: unknown): value is StateId {
+  return typeof value === 'string' && (STATE_IDS as readonly string[]).includes(value);
+}
 export type NavStatus = 'ok' | 'not_found' | 'not_available' | 'wrong_state';
 export type NavOutput = { status: NavStatus; state: StateId };
 export type AuthInfo = { loggedIn: boolean };
@@ -203,6 +208,7 @@ export type StartInfo = { state: 'start'; ready: boolean; auth: AuthInfo };
 export type ResultsInfo = { state: 'results'; query: string; count: number; cards: SearchCard[]; auth: AuthInfo };
 export type DetailInfo = { state: 'detail'; card: string; url: string; filter: ResolvedSellerFilter; info: CardInfo; sellerCount: number; sellers: SellerOffer[]; auth: AuthInfo };
 export type VersionsInfo = { state: 'versions'; card: string; versionsUrl: string; total: number; shown: number; minQuantity: number; artworks: (Artwork | ArtworkCheck)[]; auth: AuthInfo };
+export type UnknownInfo = { state: 'unknown'; url: string; reason: string; auth: AuthInfo | null; authKnown: boolean };
 export type OwnOffersInfo = {
   state: 'own-offers';
   url: string;
@@ -213,7 +219,16 @@ export type OwnOffersInfo = {
   complete: boolean;
   auth: AuthInfo;
 };
-export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo | OwnOffersInfo;
+export type InfoOutput = StartInfo | ResultsInfo | DetailInfo | VersionsInfo | OwnOffersInfo | UnknownInfo;
+
+/** Minimal, pure observation result. Domain data is intentionally not read here. */
+export type StatusOutput = {
+  state: StateId;
+  url: string;
+  auth: AuthInfo | null;
+  authKnown: boolean;
+  blockers: ('outside-site' | 'unknown-state' | 'login-required')[];
+};
 
 /** One row in the stock market comparison result. */
 export type MarketComparisonRow = {

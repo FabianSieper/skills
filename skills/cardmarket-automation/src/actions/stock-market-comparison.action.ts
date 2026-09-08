@@ -10,7 +10,7 @@ import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
 import type { MarketComparisonRow, ResolvedSellerFilter, SellerOffer, StockMarketComparisonOutput } from '../types.ts';
-import { resolveSellerFilter, COUNTRY_INPUT_KEYS, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
+import { resolveSellerFilter, sameResolvedSellerFilter, COUNTRY_INPUT_KEYS, SELLER_TYPE_VALUES, YES_NO_VALUES } from '../pages/seller-filters.ts';
 
 const description =
   'Compare own offers to matching market sellers. Phase 1 reads all offers (fast, no detail pages) and applies minPrice/maxPrice/minQty filters. Phase 2 navigates to each qualifying card detail page, applies and verifies the seller filter (condition+language from the offer, location from input), and reads the cheapest matching sellers. Use offset+limit to batch large stocks. Leaves the browser on the own-offers page.';
@@ -86,7 +86,7 @@ function validateOutput(raw: unknown): StockMarketComparisonOutput {
   return raw as unknown as StockMarketComparisonOutput;
 }
 
-function mapConditionToFilter(offerCondition: string): ResolvedSellerFilter['condition'] {
+function mapConditionToFilter(offerCondition: string): ResolvedSellerFilter['condition'] | null {
   const normalized = offerCondition.trim().toLowerCase();
   const mapping: Record<string, ResolvedSellerFilter['condition']> = {
     mint: 'mint',
@@ -101,10 +101,10 @@ function mapConditionToFilter(offerCondition: string): ResolvedSellerFilter['con
     any: 'any',
     all: 'any',
   };
-  return mapping[normalized] ?? 'excellent';
+  return mapping[normalized] ?? null;
 }
 
-function mapLanguageToFilter(offerLanguage: string): ResolvedSellerFilter['language'] {
+function mapLanguageToFilter(offerLanguage: string): ResolvedSellerFilter['language'] | null {
   const normalized = offerLanguage.trim().toLowerCase();
   const mapping: Record<string, ResolvedSellerFilter['language']> = {
     english: 'english',
@@ -120,7 +120,7 @@ function mapLanguageToFilter(offerLanguage: string): ResolvedSellerFilter['langu
     't-chinese': 't-chinese',
     't chinesisch': 't-chinese',
   };
-  return mapping[normalized] ?? 'english';
+  return mapping[normalized] ?? null;
 }
 
 function round2(n: number): number {
@@ -165,7 +165,9 @@ export const action: Action = {
   run: async (page: Page, input: Input): Promise<StockMarketComparisonOutput> => {
     const state = detectState(page);
     if (state !== 'own-offers') {
-      throw new AutomationError('wrong_state' as never, `Expected own-offers, got ${state}`);
+      throw new AutomationError('WRONG_STATE', 'source-state', {
+        expected: ['own-offers'], actual: state, operation: 'stock.market-comparison',
+      });
     }
     const auth = await readAuth(page);
     if (!auth.loggedIn) throw new AutomationError('AUTH_REQUIRED', 'stock-market-comparison');
@@ -198,8 +200,8 @@ export const action: Action = {
     const hasMore = qualifying.length > offset + workingSet.length;
 
     if (workingSet.length === 0) {
-      await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      await page.waitForSelector('#UserOffersTable', { state: 'visible', timeout: 60_000 });
+      await ownOffers.gotoAllowed(startUrl);
+      await ownOffers.waitUntilReady(60_000);
       return { state: 'own-offers', offset, count: 0, hasMore, offers: [], auth };
     }
 
@@ -218,15 +220,23 @@ export const action: Action = {
 
     // Phase 2: navigate to each qualifying card detail page directly
     for (const offer of workingSet) {
-      await page.goto(offer.cardUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      await page.waitForSelector('main h1', { state: 'visible', timeout: 60_000 });
-
       const detail = new CardDetailPage(page);
+      await detail.gotoAllowed(offer.cardUrl);
+      await detail.waitUntilReady(60_000);
 
       // Derive filter from the offer's own condition and language + input params
+      const condition = mapConditionToFilter(offer.condition);
+      const language = mapLanguageToFilter(offer.language);
+      if (!condition || !language) {
+        throw new AutomationError('POSTCONDITION_FAILED', 'offer-filter-mapping', {
+          operation: 'stock.market-comparison',
+          expected: { condition: 'recognized-offer-condition', language: 'recognized-offer-language' },
+          actual: { condition: offer.condition, language: offer.language },
+        });
+      }
       const filter: ResolvedSellerFilter = {
-        condition: mapConditionToFilter(offer.condition),
-        language: mapLanguageToFilter(offer.language),
+        condition,
+        language,
         location: baseFilter.location,
         sellerType: baseFilter.sellerType,
         foil: baseFilter.foil,
@@ -239,27 +249,20 @@ export const action: Action = {
       }
       await detail.settleSellerList();
 
-      // Verify the 3 critical filters: condition, language, location
+      // Verify every resolved filter field before reading market sellers.
       const appliedFilter = await detail.readCurrentFilter();
-      const criticalMatch =
-        appliedFilter.condition === filter.condition &&
-        appliedFilter.language === filter.language &&
-        appliedFilter.location === filter.location;
+      const criticalMatch = sameResolvedSellerFilter(appliedFilter, filter);
 
       if (!criticalMatch) {
         await detail.applySellerFilters(filter);
         await detail.submitSellerFilters();
         await detail.settleSellerList();
         const retryFilter = await detail.readCurrentFilter();
-        const retryMatch =
-          retryFilter.condition === filter.condition &&
-          retryFilter.language === filter.language &&
-          retryFilter.location === filter.location;
+        const retryMatch = sameResolvedSellerFilter(retryFilter, filter);
         if (!retryMatch) {
-          throw new AutomationError(
-            'POSTCONDITION_FAILED',
-            `filter-mismatch card=${offer.card} expected lang=${filter.language} cond=${filter.condition} loc=${filter.location} got lang=${retryFilter.language} cond=${retryFilter.condition} loc=${retryFilter.location}`,
-          );
+          throw new AutomationError('FILTER_MISMATCH', 'filter-mismatch', {
+            operation: 'stock.market-comparison', expected: filter, actual: retryFilter,
+          });
         }
       }
 
@@ -289,8 +292,8 @@ export const action: Action = {
     }
 
     // Navigate back to the own-offers page
-    await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await page.waitForSelector('#UserOffersTable', { state: 'visible', timeout: 60_000 });
+    await ownOffers.gotoAllowed(startUrl);
+    await ownOffers.waitUntilReady(60_000);
 
     const sorted = sortResults(results, sortResult);
 

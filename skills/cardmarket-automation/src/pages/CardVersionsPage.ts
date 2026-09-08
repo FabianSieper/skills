@@ -5,6 +5,7 @@ import { SitePage } from './SitePage.ts';
 import { CardDetailPage } from './CardDetailPage.ts';
 import type { Artwork } from '../types.ts';
 import { resolveHref } from '../lib/url.ts';
+import { AutomationError } from '../runtime/errors.ts';
 
 /**
  * Card "Versions" page:
@@ -59,7 +60,7 @@ export class CardVersionsPage extends SitePage {
       });
     });
 
-    return raw.map((t) => {
+    const artworks = raw.map((t) => {
       // ps: [version?, "N Available", "From X €"]  (version may be "")
       const avail = t.ps.find((s) => /Available/i.test(s)) ?? '';
       const from = t.ps.find((s) => /^From /i.test(s)) ?? '';
@@ -75,6 +76,9 @@ export class CardVersionsPage extends SitePage {
         url: resolveHref(t.href),
       };
     });
+    if (artworks.some((artwork) => !artwork.card || !artwork.set || !artwork.url))
+      throw new AutomationError('UI_DRIFT', 'versions-tile-identity');
+    return artworks;
   }
 
   /** Open artwork `index` (0-based) and move to its product detail page. */

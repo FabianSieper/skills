@@ -6,12 +6,17 @@ tasks:
     cmds:
       - node .agents/skills/setup/scripts/check.mjs
   test:
-    desc: Test the builder scaffold
+    desc: Check website concept wiring and the illustrative UI model (no browser)
     cmds:
-      - node skills/website-automation-builder/scripts/test-scaffold.mjs
-      - node skills/website-automation-builder/scripts/test-demo.mjs
+      - node scripts/verify-website-concept.mjs
+      - node --experimental-strip-types --test docs/strict-automation/ui-model.test.mjs
+  test:cardmarket:
+    desc: Typecheck and test the current Cardmarket implementation
+    cmds:
+      - npm --prefix skills/cardmarket-automation run typecheck
+      - npm --prefix skills/cardmarket-automation test
   install:opencode:
-    desc: Install all skills globally for OpenCode
+    desc: Install the Cardmarket runtime skill globally for OpenCode
     cmds:
-      - npx --yes skills add FabianSieper/skills --skill '*' --agent opencode --global --yes
+      - npx --yes skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
       - node scripts/install-deps.mjs
