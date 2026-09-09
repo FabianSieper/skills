@@ -2,7 +2,7 @@ import type { Page } from 'playwright';
 import { config } from '../../site.config.ts';
 import { AutomationError } from '../runtime/errors.ts';
 import { navigate } from '../runtime/guards.ts';
-import { originOf, resolveHref } from '../lib/url.ts';
+import { originOf } from '../lib/url.ts';
 import { readAccount } from '../lib/auth.ts';
 
 /**
@@ -33,10 +33,23 @@ export class SitePage {
     return { accountKey: await readAccount(this.page), onSite: true };
   }
 
-  /** Navigate to an absolute/relative Cardmarket URL with origin + Cloudflare guards. */
-  async gotoAllowed(url: string): Promise<void> {
-    const target = resolveHref(url);
-    await navigate(this.page, target, config.allowedOrigins);
+  /**
+   * Navigate to the site home (config.baseURL + config.homeEntry).
+   * The navigation policy allows raw `goto` ONLY for this destination;
+   * every other state must be reached through the site's own UI.
+   */
+  async goHome(): Promise<void> {
+    await navigate(this.page, config.baseURL + config.homeEntry, config.allowedOrigins);
+    await this.waitForCloudflare();
+  }
+
+  /**
+   * Return to the state that was reached immediately before, using browser
+   * history. This is the only compliant return primitive: forward navigation
+   * is a real UI interaction, and history undoes it in reverse order.
+   */
+  async goBack(): Promise<void> {
+    await this.page.goBack({ timeout: 30_000 });
     await this.waitForCloudflare();
   }
 

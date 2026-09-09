@@ -2,6 +2,45 @@
 
 ## Issues
 
+### 9. Installed skill copy silently stale; no repo→`~/.agents` sync path; generic transport errors
+- **Symptom:** OpenCode skill discovery loaded `~/.agents/skills/cardmarket-automation` (pre-09-08 build) instead of the repo's canonical skill; live `status` returned a generic `INTERNAL` (exit 4) with no operator-facing cause, and the stale SKILL.md guided the operator into the legacy raw-transport pitfall.
+- **Root cause:** `task install:opencode` installs a remote snapshot via `npx skills add` and never syncs local repo work; the installed copy lacked `node_modules`, so even a manual copy failed on missing `playwright`/`esbuild`. Transport failures mapped to a generic `playwright-cli` step and discarded stderr.
+- **Fix:**
+  1. New `scripts/sync-installed.mjs` + `Taskfile sync:agents`: copies the repo skill over the global copy (preserves the target's `node_modules`, excludes `.local`/`.playwright-cli`, removes stale top-level entries), idempotent.
+  2. Freshness guard: the CLI envelope (success and error) now carries `version` + `implementationHash` (hash covers `src/**`, `site.config.ts`, `package.json`, `package-lock.json` only — docs never invalidate it); `SKILL.md` pins the expected values and instructs to stop and re-sync on mismatch.
+  3. `runCli` failures now report a subcommand-level step (`playwright-cli:tab-select`, ...) plus a bounded stderr `cause` (≤240 chars) on `TIMEOUT`/`ATTACH_FAILED`.
+  4. `package.json` bumped 0.2.0 → 0.3.0.
+- **Verification:** `npm run typecheck` clean; `npm test` 63/63; concept validator ok (45 links / 15 actions); `npm run cli -- list` envelope reports `version 0.3.0` + pinned hash; installed copy synced and validated.
+- **Status:** ✅ DONE — live browser verification (Cardmarket tab) still pending
+
+### 10. Tab selection assumed a Cardmarket tab; open non-cardmarket (debug) tabs unusable
+- **Symptom:** With a debug tab group already open in Chrome, `status` failed with `BROWSER_REQUIRED no-cardmarket-tab` (the controlled group contained only the extension's Welcome tab); an already-open non-cardmarket tab could not be used, and `Allow & select` could not see tabs outside the controlled group.
+- **Fix:**
+  1. The transport now selects the first Cardmarket tab, or — if none — the first existing non-extension tab; `BROWSER_REQUIRED no-controllable-tab` only when the group has no usable tab at all.
+  2. When a selected tab is outside Cardmarket at action entry, the generated bundle navigates it to the configured home entry via `SitePage.goHome()` — the only raw `goto` the navigation policy allows (operator directive 2026-09-09: use any open tab, navigate to cardmarket if not already there).
+  3. `SKILL.md` documents that existing tabs (e.g. from a debug tab group) are brought under control by dragging them into the `Playwright · playwright-cli` group.
+  4. `package.json` bumped 0.3.0 → 0.4.0; `SKILL.md` freshness pin re-pinned to the new hash.
+- **Status:** ✅ DONE — typecheck clean, 63/63 tests pass, concept validator ok (45 links / 15 actions); live browser verification pending (needs a user-dragged tab in the group)
+
+### 8. CLI transport: `selectCardmarketTab()` broke on `playwright-cli` 0.1.19 `tab-list` output
+- **Symptom:** `npm run cli -- status` / `run info` returned `INTERNAL` (exit 4) with the browser session attached; one cli test failed expecting a structured prerequisite error.
+- **Root cause:** `playwright-cli 0.1.19` `tab-list --json` returns a wrapper object `{"result": "<markdown tab list>"}` (rendered via `renderTabsMarkdown`), not a JSON array of `{index,url,title}`. The old code did `JSON.parse` (succeeded) and then called `.findIndex` on the object → raw `TypeError` → mapped to `INTERNAL`.
+- **Fix:** `src/runtime/cli-browser.ts` now uses `tab-list --raw` and a tolerant `parseTabList()` that handles three payload shapes: JSON array (older CLI), JSON wrapper `{"result": "..."}` (current CLI), and plain markdown lines `- <i>: (current) [title](url)`. Unknown output still throws `CLI_PROTOCOL('tab-list')`; a parsed list without a `https://www.cardmarket.com` tab throws `BROWSER_REQUIRED('no-cardmarket-tab')`.
+- **Verification:** new `tests/cli-browser.test.ts` (5 cases); `npm run typecheck` clean; `npm test` 63/63 pass in repo and in the installed `.agents` copy after sync; installed CLI `status` now returns `BROWSER_REQUIRED no-cardmarket-tab` (exit 3) instead of `INTERNAL`.
+- **Status:** ✅ DONE
+
+### 7. Navigation transport policy: UI-only forward, history return, home-only goto
+- **User rule:** In Cardmarket we navigate only via UI interaction; raw `goto` is reserved for the home page when we want back there.
+- **Fix:**
+  1. `SitePage`: removed `gotoAllowed(url)`; added `goHome()` (raw goto to `config.baseURL + config.homeEntry`) and `goBack()` (browser history).
+  2. `SearchPage`: `openSearchEntry()` now switches to the `/en/Magic` surface via the real top-nav "Magic: The Gathering" link (with a `goHome()` retry) instead of raw goto to `searchEntry`.
+  3. `OwnOffersPage`: added `rowIndexFor(articleId)` + `openOfferById(articleId)` (UI row click) and `goBack()`; added `applyFilters(OwnOfferFilter)` coercion for restoring a captured filter state.
+  4. `CardDetailPage`: added `backToVersions(expectedUrl)` (real "Show Versions" button click + URL verification).
+  5. `nav-home` / `info` actions use the new primitives.
+  6. New shared helper `src/actions/stock-common.ts` (`startPageOf`, `pageOfIndex`, `asFilter`, `restoreOwnOffers`): both stock flows restore the user's exact start page (home → menu chain → re-apply filter → walk to original page) after finishing; Phase 2 walks own-offers pages with `goToNextPage()` + `openOfferById()` + `goBack()` instead of raw goto to `cardUrl`.
+- **Verification:** `grep` finds no `gotoAllowed` under `src`; typecheck clean; concept verify ok (45 links / 15 actions). Live re-run of `stock.market-comparison` pending (browser session dropped during the session).
+- **Status:** ✅ DONE — live CLI re-verification pending
+
 ### 6. `stock.market-comparison` capped at 10 offers + flexible output
 - **Root cause:** The old action iterated pages with `rowCount()` + `offersOnCurrentPage()` + `goToNextPage()` and opened each row via `openOffer(localIndex)`. After `page.goto(ownOffersUrl)` the pagination state was stale, so `hasNextPage()` returned `false` and only the first 10 rows (one page) were processed. Additionally, `extractOffers()` (the proven all-pages path) was not used for the initial data collection.
 - **Fix:**

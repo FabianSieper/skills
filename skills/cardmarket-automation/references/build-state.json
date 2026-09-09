@@ -17,6 +17,9 @@
   "phase": "PARTIAL_CONTRACT_MIGRATION",
   "liveValidation": "not_run_for_current_slice",
   "liveNote": "Historical live-validation records below are retained as evidence for the superseded action surface only. No live Cardmarket navigation or account write was performed for the current contract slice.",
+  "navigationPolicy": "2026-09-09: Navigation transport policy introduced — forward via real UI interaction, return via browser-history goBack(), raw goto only to the site home (goHome()). gotoAllowed() removed from all POMs; SearchPage top-nav Magic switch; CardDetailPage.backToVersions(); stock flows walk own-offers pages with goToNextPage/openOfferById/goBack and restore the user's original start page (home → menu chain → filter → page) afterward.",
+  "liveUiVerification": "2026-09-08/09: own-offers menu chain, row→detail click, history.back() return, and top/bottom pagination next controls live-verified in the user's Chrome. stock.market-comparison end-to-end CLI re-run pending (browser session dropped mid-session).",
+  "transportFix": "2026-09-09: selectCardmarketTab() reworked — playwright-cli 0.1.19 tab-list returns markdown (or a {\"result\"} JSON wrapper), not a tab array; parseTabList() now tolerates array/wrapper/markdown and maps a missing Cardmarket tab to BROWSER_REQUIRED('no-cardmarket-tab') instead of INTERNAL. Installed .agents copy re-synced.",
   "search2026Regression": "2026-09-05 live: /en -> form#searchForm/#ProductSearchInput/#search-btn = 0, /en/Magic = 1. Repair: site.config.ts +searchEntry '/en/Magic'; SearchPage.openHome() -> openSearchEntry() mit gotoAllowed(searchEntry). Alle 3 Aktionen re-validiert; typecheck ok + 30/30 Tests.",
   "sellerFilterFeature": "Historical 2026-09-05 cards.price evidence; superseded by the current registered nav.filter/info contract. It is not current-slice live evidence.",
   "implemented": {
@@ -30,8 +33,8 @@
     "docs": ["references/actions.md", "references/flows.md", "references/selectors.md", "references/verification.md", "SKILL.md", "examples"]
   },
   "verified": {
-    "typecheck": "tsc --noEmit: keine Fehler",
-    "tests": "node --test: 58/58 pass for the current contract slice",
+    "typecheck": "tsc --noEmit: keine Fehler (2026-09-09 navigation policy rewrite)",
+    "tests": "node --test: all pass except cli.test.ts 'run info'/'status' which require the live Chrome session (attach blocks ~30s vs 10s test timeout); they pass with the session attached",
     "cliBrowserFree": "list + describe status/nav.search: ok; status reports the attached extension relay as unknown/off-site with safe entry actions",
     "cliRunInput": "run <action> supports --json, --input or omitted {} input; disabled writes return NOT_VERIFIED before browser access"
   },

@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { readFile, stat } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { config } from '../site.config.ts';
@@ -19,8 +19,12 @@ const runId = randomUUID();
 const started = Date.now();
 let invokedAction: string | null = null;
 let invokedPhase = 'parse';
+let packageVersion = '0.0.0';
+let implementationHash = '';
 async function main(): Promise<unknown> {
-  const runtimeConfig = {...config, implementationHash:await implementationFingerprint(project)};
+  implementationHash = await implementationFingerprint(project);
+  try { packageVersion = (JSON.parse(await readFile(join(project,'package.json'),'utf8')) as {version?:string}).version ?? packageVersion; } catch {}
+  const runtimeConfig = {...config, implementationHash};
   const engine = new Engine(root, runtimeConfig, actions,
     (action, phase, input, preview) => invokeBrowser(project, root, action, phase, input, preview));
   const args = (() => {
@@ -77,14 +81,14 @@ async function main(): Promise<unknown> {
   }
 }
 main().then(data => {
-  process.stdout.write(JSON.stringify({protocolVersion:1,ok:true,runId,action:invokedAction,phase:invokedPhase,durationMs:Date.now()-started,data})+'\n');
+  process.stdout.write(JSON.stringify({protocolVersion:1,ok:true,runId,action:invokedAction,phase:invokedPhase,durationMs:Date.now()-started,version:packageVersion,implementationHash,data})+'\n');
 }).catch(raw => {
   const error = normalizeError(raw);
   const recovery = recoveryFor(error.code);
   const context = error.context ?? {};
   const reportedState = isStateId(context.state) ? context.state : isStateId(context.actual) ? context.actual : null;
   process.stdout.write(JSON.stringify({ok:false,runId,durationMs:Date.now()-started,
-    protocolVersion:1,action:invokedAction,phase:invokedPhase,state:reportedState,
+    protocolVersion:1,action:invokedAction,phase:invokedPhase,state:reportedState,version:packageVersion,implementationHash,
     effects:{ui:error.code==='UNKNOWN_COMMIT'?'unknown':'none',commit:error.code==='UNKNOWN_COMMIT'?'unknown':'none'},
     availableActions:[],
     error:{code:error.code,message:error.message,...(error.step?{step:error.step}:{}),...context,

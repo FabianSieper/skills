@@ -149,9 +149,32 @@ The former implementation opened the login form and replayed an action. That
 behavior was deliberately removed in the current strict slice; the bullets that
 used to describe it are retained only in git history, not as operating guidance.
 
+## 2026-09-08/09: Navigation-policy live verification (UI-only forward, history return)
+
+- **Live:** full UI chain to Own Offers Singles (account menu → Selling → My
+  Offers → Singles tab), row click → card detail (client-side, no redirect),
+  `history.back()` returns to the offers table; the two
+  `a.pagination-control` elements (top and bottom) are identical, page-level
+  `readNextControl` tolerates 0/1/2.
+- **Live:** 109 Singles offers across 6 pages (account Hayrus, balance
+  59.01 €).
+- **Fix:** `gotoAllowed` removed from all POMs; added `SitePage.goHome()` /
+  `goBack()`, `SearchPage` top-nav Magic switch,
+  `CardDetailPage.backToVersions()`, `OwnOffersPage.openOfferById()` /
+  `applyFilters()` and the shared `stock-common.ts` helpers (start-page
+  restore: home → menu chain → filter → page).
+- **Static:** `grep` finds no `gotoAllowed` under `src`; typecheck clean;
+  concept verify ok (45 links / 15 actions); tests pass except
+  cli.test.ts `run info` / `status`, which require the live Chrome session
+  (attach blocks ~30s vs the 10s test timeout).
+- **Pending:** end-to-end CLI re-run of `stock.market-comparison` (browser
+  session dropped mid-session).
+
 ## Known Gaps
-- Historical state-machine surface was live validated (2026-09-06);
-  the current contract slice still has no live navigation verification.
+- Historical state-machine surface was live validated (2026-09-06); the
+  2026-09-08/09 navigation-policy work was live-verified for the own-offers
+  chain, but the current contract slice still lacks a live
+  `stock.market-comparison` end-to-end re-run.
 - Preise als Text im deutschen Format – Downstream-Parsing nötig.
 - Such-Einstieg hängt an `searchEntry` = `/en/Magic`; entfernt Cardmarket das
   Top-Bar-Form auch von Game-Seiten, wieder `UI_DRIFT` → Einstieg per read-only

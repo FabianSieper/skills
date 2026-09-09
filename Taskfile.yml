@@ -20,3 +20,7 @@ tasks:
     cmds:
       - npx --yes skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
       - node scripts/install-deps.mjs
+  sync:agents:
+    desc: Sync the repo Cardmarket skill into the installed global copy (preserves node_modules)
+    cmds:
+      - node scripts/sync-installed.mjs

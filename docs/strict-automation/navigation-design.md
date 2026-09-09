@@ -32,6 +32,25 @@ extension is a diagnostic result with the exact prerequisite, not an invitation
 for the operator to invent an alternative. Session reuse and stable tab binding
 still need the transport verification recorded in the migration plan.
 
+## Navigation transport policy
+
+Every movement inside the site follows one fixed rule:
+
+- **Forward:** only through real UI interaction — links, buttons, tabs,
+  pagination controls, form submission. POM methods encode these; no POM
+  method may raw-`goto` a constructed site URL.
+- **Return:** only through browser history (`goBack()`), which undoes the
+  forward step in reverse.
+- **Raw `goto`:** only to the configured site home entry, exposed as
+  `goHome()`. Use it to re-anchor after a navigation reset; everything after
+  re-anchoring must again be UI navigation.
+
+Rationale: on client-rendered SPA surfaces a raw `goto` to a constructed detail
+URL can hit server-side redirects and leave the POM in an unrecognized state,
+while a UI click stays client-side and always lands on a recognizable surface.
+History returns keep the navigation stack consistent, so later forward steps
+resume from the expected position.
+
 ## What the operating AI should do
 
 Use one common command pattern. The examples below are proposed commands, not

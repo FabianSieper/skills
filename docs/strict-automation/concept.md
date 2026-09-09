@@ -209,6 +209,12 @@ may enumerate all supported unblocked pages. Going from another origin requires
 the explicit registered `site.enter` operation on the bound tab. It accepts no
 URL and navigates only to the configured entry. Never hide it in `assertReady`.
 
+The transport of POM steps is fixed: forward steps are real UI interactions
+(clicks, form submissions), return steps are browser history that undoes the
+immediately preceding forward step, and raw navigation is limited to the
+configured home entry used to re-anchor. No POM step may raw-navigate to a
+constructed page URL.
+
 A transition may have several declared outcomes, for example search can produce
 results or a verified empty-results page. An empty result is `ok:true` with
 `outcome:"empty"`; wrong state, missing control and unverified destination are

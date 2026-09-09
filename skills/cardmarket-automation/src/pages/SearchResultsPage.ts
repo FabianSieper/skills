@@ -65,14 +65,13 @@ export class SearchResultsPage extends SitePage {
     );
   }
 
-  /** Follow the next arrow (via its href) and wait for the new tiles. */
+  /** Click the next arrow and wait for the new tiles. */
   async goToNext(): Promise<boolean> {
     if (await this.nextControl.count() === 0) return false;
-    const href = await this.nextControl.getAttribute('href');
-    if (!href || (await this.nextControl.evaluate((el) => el.className.includes('disabled')))) {
+    if (await this.nextControl.evaluate((el) => el.className.includes('disabled'))) {
       return false;
     }
-    await this.gotoAllowed(href);
+    await this.nextControl.click();
     await this.page.waitForSelector('a.galleryBox', { timeout: 30_000 });
     return true;
   }
@@ -108,13 +107,6 @@ export class SearchResultsPage extends SitePage {
     await tile.click();
     await this.page.waitForURL(/\/Products\/Singles\//, { timeout: 30_000 });
     await this.waitForCloudflare();
-    return new CardDetailPage(this.page);
-  }
-
-  /** Jump straight to a detail url (absolute or relative). */
-  async openByUrl(url: string): Promise<CardDetailPage> {
-    const abs = resolveHref(url);
-    await this.gotoAllowed(abs);
     return new CardDetailPage(this.page);
   }
 

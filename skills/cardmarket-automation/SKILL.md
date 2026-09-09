@@ -17,7 +17,10 @@ steps.
   switch browsers/tabs. A missing or mismatched session is a hard error. If the
   session does not exist yet, `attach` opens the extension's one-time Welcome
   tab; the user picks an existing tab there ("Allow & select") and the Welcome
-  tab is removed. Never re-`attach` while a session exists, never `tab-new`.
+  tab is removed. Existing tabs (for example from a debug tab group) are
+  brought under control only by dragging them into the `Playwright ·
+  playwright-cli` group; never re-`attach` while a session exists, never
+  `tab-new`.
 - Observe first. `status` is pure: it does not navigate, accept cookies, open a
   login form, fill fields, change filters or retry an action.
 - An unrecognized or outside-site page is `unknown`. Stop and use only an
@@ -39,6 +42,25 @@ steps.
   from the immediately preceding bounded `info` result and re-observe on any
   mismatch. The target-reference migration remains explicitly open (see
   `docs/strict-automation/migration.md`).
+
+## Navigation policy
+
+All movement inside Cardmarket follows one fixed rule:
+
+- **Forward:** only through real UI interaction — links, buttons, tabs,
+  pagination controls, form submission. POM methods encode these; no POM
+  method may raw-`goto` a constructed Cardmarket URL.
+- **Return:** only through browser history (`SitePage.goBack()`), which
+  undoes the forward step in reverse.
+- **Raw `goto`:** only to the site home (`config.baseURL + config.homeEntry`,
+  `SitePage.goHome()`), used to re-anchor after a navigation reset. Everything
+  after re-anchoring must again be UI navigation.
+
+Rationale: Cardmarket detail/seller pages are client-rendered SPA surfaces; a
+raw `goto` to a constructed URL can hit server-side redirects and leave the
+POM in an unrecognized state, while a UI click stays client-side and always
+lands on a recognizable surface. History returns keep the navigation stack
+consistent, so later forward steps resume from the expected position.
 
 ## States and observation
 
@@ -247,12 +269,60 @@ the raw-browser failure modes (stale refs, `about:blank`, tab churn).
   detach, close, kill or create tabs. If a session does not exist yet, the user
   completes the one-time extension handoff in the browser; never re-`attach`
   while a session exists and never `tab-new`.
+- Tab selection is internal: the transport prefers a Cardmarket tab in the
+  controlled group; if none exists, it selects any existing non-extension tab
+  (for example a debug tab) and the action navigates it to the configured home
+  entry — the only raw `goto` the navigation policy allows. `BROWSER_REQUIRED
+  no-controllable-tab` means the group has no usable tab at all (only the
+  extension handoff page); the user then drags one existing tab into the
+  `Playwright · playwright-cli` group.
 - On `BROWSER_REQUIRED`, `ATTACH_FAILED` or `SESSION_MISMATCH`, the user fixes
   the exact existing session in the attached browser (see the error table); you
   do not open another browser.
 
+### Why raw `goto` to Cardmarket detail URLs fails
+
+Never construct or navigate to Cardmarket detail URLs by hand (e.g.
+`playwright-cli goto https://www.cardmarket.com/en/Magic/Products/Singles/...`).
+Two independent failure modes occur:
+
+1. **URL structure is deeper than it looks.** Cardmarket singles URLs require the
+   full path `/en/Magic/Products/Singles/<Set-Slug>/<Card-Slug>`. A URL missing
+   the set slug (e.g. `.../Singles/Quantum-Misalignment`) is intercepted by
+   Cardmarket's router and redirected to the base `/Singles` listing. A URL
+   with an incorrect or non-matching set+card combination is redirected to the
+   set page. The exact slug values are determined by Cardmarket's internal
+   routing; guessing them does not work.
+
+2. **The POM state detector rejects unrecognized surfaces.** Even when a `goto`
+   lands on a plausible URL, the POM's `CardDetailPage.waitUntilReady` checks
+   for `main h1` (the card title). If the page is a redirect intermediate, a
+   set listing, or any non-detail surface, the state is classified as `unknown`.
+   Subsequent actions fail with `UNKNOWN_STATE` or `WRONG_STATE`.
+
+The correct path to any card detail page is through registered CLI actions:
+- `nav.search {query} → info → nav.open {index}` (from search results)
+- `nav.own-offers → nav.own-offers.open {index}` (from own offers listing)
+
+These actions perform the real UI click (row link / version button) and
+origin-guarded history returns, with Cloudflare waits and proper state
+detection, per the Navigation policy.
+
 Builder-level transport notes (why the CLI is atomic and never raw) live in
 [references/transport.md](references/transport.md).
+
+## Freshness and host limits
+
+- Every CLI result contains `version` and `implementationHash`. This file is
+  written against `version: 0.4.0` and
+  `implementationHash: 468538a6877cf905b5186661184d6c37202b1f6397763fbd58629e5b7e4f69bf`.
+  If a call reports different values, the installed copy is stale: stop and
+  re-sync it from the repository (`task sync:agents`), then re-run
+  `npm run cli -- list`.
+- One action may run up to the bounded action budget (currently 4 minutes).
+  Set your host command/agent timeout to at least 300 seconds. A command killed
+  by the host returns no envelope; re-observe with a read action before
+  assuming the outcome, and never blindly re-run a write.
 
 ## Verification and known migration boundary
 

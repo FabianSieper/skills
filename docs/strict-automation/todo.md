@@ -133,9 +133,28 @@ All items below remain open. Detailed acceptance gates are in
 - Seller-filter postconditions now read back every resolved field. Missing
   auth/DOM evidence, unknown offer condition/language mappings and settlement
   timeouts fail closed instead of silently defaulting or reporting a quote.
-- Comparison navigation uses `gotoAllowed()` and POM readiness checks; the
-  remaining raw `Page` boundary is the legacy action-handler type, not an
-  unguarded navigation call.
+- Comparison navigation uses UI clicks, browser-history `goBack()` returns and
+  home-only raw `goto` per the navigation transport policy; the remaining raw
+  `Page` boundary is the legacy action-handler type, not an unguarded
+  navigation call.
+- 2026-09-09: navigation transport policy fixed — forward steps are real UI
+  interaction, return steps are browser history, raw navigation is limited to
+  the configured home entry (`goHome()`). `gotoAllowed()` is removed from all
+  POMs; stock flows restore the user's original start page (filter + page)
+  after completion.
+- 2026-09-09: installed-copy freshness (Cardmarket): the global skill install
+  had silently drifted from the repo; added `scripts/sync-installed.mjs` and a
+  `sync:agents` task, a `version` + `implementationHash` freshness guard in the
+  CLI envelope (hash covers code/config/manifest only, so docs never invalidate
+  it), and subcommand-level transport steps with bounded stderr causes.
+  `SKILL.md` pins the expected values and adds host-timeout guidance (≥300s;
+  a host-killed command returns no envelope).
+- 2026-09-09: tab-selection policy (Cardmarket): the transport now selects any
+  existing non-extension tab when no Cardmarket tab exists in the controlled
+  group, and an action entry on an off-site tab navigates it to the configured
+  home entry (reusing the existing home-only raw `goto`); `BROWSER_REQUIRED
+  no-controllable-tab` means the group has no usable tab at all. Version 0.4.0,
+  `SKILL.md` pin re-pinned.
 - `assertReady` no longer performs hidden navigation, consent or login actions;
   login is a user-owned prerequisite and writes are never auto-replayed.
 - `npm ci` succeeded for the pinned Cardmarket package; typecheck passed. After

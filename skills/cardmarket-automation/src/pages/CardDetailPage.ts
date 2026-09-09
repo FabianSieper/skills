@@ -5,7 +5,7 @@ import { uniqueVisible, clickUnique } from '../runtime/guards.ts';
 import { SitePage } from './SitePage.ts';
 import { parsePrice, parseQty } from '../lib/parse.ts';
 import type { CardInfo, OfferCondition, OfferLanguage, ResolvedSellerFilter, SellerOffer, UserOffer, UserOfferChanges } from '../types.ts';
-import { buildFilterTargets, type FilterTargets, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry } from './seller-filters.ts';
+import { buildFilterTargets, type FilterTargets, reverseCondition, reverseLanguage, reverseSellerType, reverseYesNo, reverseCountry, LANGUAGE_VALUES } from './seller-filters.ts';
 import { OFFER_CONDITION_LABELS, OFFER_CONDITION_VALUES, OFFER_LANGUAGE_LABELS, OFFER_LANGUAGE_VALUES } from './user-offer-filters.ts';
 import { resolveHref } from '../lib/url.ts';
 import type { Preview } from '../runtime/engine.ts';
@@ -171,17 +171,27 @@ export class CardDetailPage extends SitePage {
     return (await this.page.locator('a:has-text("Show Versions")').count()) > 0;
   }
 
-  /** Open the "Show Versions" target and wait for the Versions page. */
+  /** Click the "Show Versions" link and wait for the Versions page. */
   async openVersions(): Promise<void> {
     const link = this.page.locator('a:has-text("Show Versions")');
-    const url = await this.versionsUrl();
-    if (!url) {
-      await clickUnique(link, 'versions-link');
-      await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
-      await this.waitForCloudflare();
-      return;
-    }
-    await this.gotoAllowed(url);
+    await clickUnique(link, 'versions-link');
+    await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
+    await this.waitForCloudflare();
+  }
+
+  /**
+   * Return from the detail page to the Versions page by clicking the
+   * "Show Versions" link (forward navigation via UI, never raw `goto`),
+   * and verify that we land on exactly the expected versions URL.
+   */
+  async backToVersions(expectedUrl: string): Promise<void> {
+    const link = this.page.locator('a:has-text("Show Versions")');
+    await clickUnique(link, 'versions-link');
+    await this.page.waitForURL(/\/Cards\/[^/]+\/Versions/, { timeout: 30_000 });
+    await this.waitForCloudflare();
+    const current = this.page.url().replace(/\/$/, '');
+    const expected = expectedUrl.replace(/\/$/, '');
+    if (current !== expected) throw new AutomationError('UI_DRIFT', 'versions-return');
   }
 
   async hasFilterForm(): Promise<boolean> {
@@ -244,6 +254,25 @@ export class CardDetailPage extends SitePage {
             { timeout: 15_000 },
           )
           .catch(() => {});
+      }
+    }
+    // Validate that required language/condition checkboxes actually exist on
+    // this detail page before attempting to apply them. Cardmarket only renders
+    // checkboxes for languages/conditions that have at least one listing.
+    if (targets.language) {
+      const exists = await this.page.evaluate((value: string) => {
+        const form = document.querySelector('form[action*="Product_Filter_FilterProduct"]');
+        return Boolean(form?.querySelector(`input[name="language[${value}]"]`));
+      }, targets.language);
+      if (!exists) {
+        const langName = reverseLanguage(targets.language);
+        throw new AutomationError('FILTER_NOT_AVAILABLE', 'language', {
+          operation: 'applySellerFilters',
+          page: this.page.url(),
+          expected: { language: langName },
+          actual: 'not available on this detail page',
+          cause: `Language "${langName}" is not available on this card detail page. Cardmarket only renders checkboxes for languages that have at least one listing.`,
+        });
       }
     }
     // Set the whole form state in one evaluate. check()/uncheck()/selectOption()

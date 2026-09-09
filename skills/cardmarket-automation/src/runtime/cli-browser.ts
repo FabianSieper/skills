@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { build } from 'esbuild';
 import { config } from '../../site.config.ts';
-import { AutomationError, type ErrorCode } from './errors.ts';
+import { AutomationError, type ErrorCode, type ErrorContext } from './errors.ts';
 import type { Action, Preview } from './engine.ts';
 import type { Input, Json } from './input.ts';
 import { actionContract } from './contracts.ts';
@@ -19,7 +19,56 @@ export interface BrowserResult { accountKey: string; value: Json; state?: StateI
 
 function cliArgs(...args: string[]): string[] { return args; }
 
+export type TabInfo = {index: number; url: string; title: string};
+export function parseTabList(stdout: string): TabInfo[] {
+  const trimmed = stdout.trim();
+  if (trimmed.startsWith('[')) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(trimmed); }
+    catch { throw new AutomationError('CLI_PROTOCOL', 'tab-list'); }
+    if (!Array.isArray(parsed)) throw new AutomationError('CLI_PROTOCOL', 'tab-list');
+    return (parsed as Array<Record<string, unknown>>).map((t, i) => ({
+      index: typeof t.index === 'number' ? t.index : i,
+      url: typeof t.url === 'string' ? t.url : '',
+      title: typeof t.title === 'string' ? t.title : ''
+    }));
+  }
+  let text = trimmed;
+  if (trimmed.startsWith('{')) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(trimmed); }
+    catch { throw new AutomationError('CLI_PROTOCOL', 'tab-list'); }
+    const result = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>).result : undefined;
+    if (typeof result !== 'string') throw new AutomationError('CLI_PROTOCOL', 'tab-list');
+    text = result;
+  }
+  const tabs: TabInfo[] = [];
+  for (const line of text.split('\n')) {
+    const m = line.match(/^- (\d+):(?: \(current\))? \[([^\]]*)\]\(([^)]*)\)/);
+    if (m) tabs.push({index: Number(m[1] ?? '0'), title: m[2] ?? '', url: m[3] ?? ''});
+  }
+  if (tabs.length === 0 && !/^(No open tabs\.|- \d+:)/.test(text.trim())) throw new AutomationError('CLI_PROTOCOL', 'tab-list');
+  return tabs;
+}
+export function chooseWorkTab(tabs: TabInfo[]): TabInfo | undefined {
+  return tabs.find(t => t.url.startsWith(config.baseURL))
+    ?? tabs.find(t => t.url !== '' && !t.url.startsWith('chrome-extension:'))
+    ?? tabs[0];
+}
+async function selectWorkTab(): Promise<void> {
+  const {stdout} = await runCli(cliArgs('-s=' + config.browser.session, 'tab-list', '--raw'), 15_000);
+  const workTab = chooseWorkTab(parseTabList(stdout));
+  if (!workTab) throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab');
+  await runCli(cliArgs('-s=' + config.browser.session, 'tab-select', String(workTab.index)), 10_000);
+}
+
+function causeContext(stderr: string | undefined): ErrorContext | undefined {
+  const cause = (stderr ?? '').trim().slice(0, 240);
+  return cause ? {cause} : undefined;
+}
+
 async function runCli(args: string[], timeoutMs = 20_000): Promise<{stdout:string;stderr:string}> {
+  const step = `playwright-cli:${args.find(arg => !arg.startsWith('-')) ?? 'cli'}`;
   try {
     const result = await execFileAsync(config.browser.cliCommand, args, {
       timeout: timeoutMs, maxBuffer: 2 * 1024 * 1024, env: process.env
@@ -29,8 +78,8 @@ async function runCli(args: string[], timeoutMs = 20_000): Promise<{stdout:strin
     const error = raw as NodeJS.ErrnoException & {stderr?: string; killed?: boolean; signal?: string};
     if (error.code === 'ENOENT') throw new AutomationError('ATTACH_FAILED', 'playwright-cli-not-found');
     if (error.code === 'ETIMEDOUT' || error.killed || error.signal === 'SIGTERM')
-      throw new AutomationError('TIMEOUT', 'playwright-cli');
-    throw new AutomationError('ATTACH_FAILED', 'playwright-cli');
+      throw new AutomationError('TIMEOUT', step, causeContext(error.stderr) ?? {cause: `bounded budget of ${timeoutMs} ms exceeded`});
+    throw new AutomationError('ATTACH_FAILED', step, causeContext(error.stderr));
   }
 }
 
@@ -52,7 +101,18 @@ export async function sessionAttached(): Promise<boolean> {
 }
 
 export async function ensureAttached(): Promise<void> {
-  if (await sessionAttached()) return;
+  // Retry a few times to handle transient list failures (WebSocket drops,
+  // timing) before concluding the session is gone. Re-attaching is one-shot:
+  // it opens a new Welcome tab and a second relay that cannot share tabs.
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      if (await sessionAttached()) return;
+    } catch {
+      // Transient list failure; retry.
+    }
+    if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 500));
+  }
   const attach = config.browser.attach;
   const target = attach.mode === 'extension' ? `--extension=${attach.target}` : `--cdp=${attach.target}`;
   try {
@@ -169,6 +229,7 @@ export async function invokeBrowser(
   const wrapper = `async page => { ${bundled}\nreturn await __siteAction.invoke(page); }`;
   await writeFile(path, wrapper, {mode:0o600,flag:'wx'});
   try {
+    await selectWorkTab();
     const {stdout} = await runCli(cliArgs(`-s=${config.browser.session}`,'--raw','run-code',`--filename=${path}`), config.actionBudgetMs);
     try { return assertBrowserPayload(JSON.parse(stdout.trim())); }
     catch (error) {

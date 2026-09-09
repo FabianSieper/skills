@@ -60,14 +60,65 @@ export class OwnOffersPage extends SitePage {
     await uniqueVisible(this.table, 'own-offers-table', timeoutMs);
   }
 
-  /** Cardmarket's next control at the bottom of the stock table. */
-  private get nextControl(): Locator {
-    return this.page.locator('main a.pagination-control[data-direction="next"]');
+  /**
+   * Open the own-offers Singles view through the site's own UI:
+   *   1. already on the view -> done
+   *   2. account menu (Selling -> My Offers) -> overview, then the Singles tab
+   *   3. home fallback (only allowed raw goto) -> retry the account menu
+   */
+  async open(): Promise<void> {
+    if (await this.tableVisible()) {
+      await this.waitUntilReady();
+      return;
+    }
+    if (await this.enterFromMenu()) {
+      await this.ensureSinglesView();
+      await this.waitUntilReady();
+      if (await this.tableVisible()) return;
+    }
+    await this.goHome();
+    await this.enterFromMenu();
+    await this.ensureSinglesView();
+    await this.waitUntilReady();
   }
 
-  async open(): Promise<void> {
-    await this.gotoAllowed(config.ownOffersEntry);
-    await this.waitUntilReady();
+  private async tableVisible(): Promise<boolean> {
+    const table = this.table;
+    return (await table.count()) === 1 && (await table.isVisible().catch(() => false));
+  }
+
+  private async enterFromMenu(): Promise<boolean> {
+    const myOffers = this.myOffersItem;
+    if ((await myOffers.count()) >= 1 && (await myOffers.first().isVisible().catch(() => false))) {
+      await myOffers.first().click();
+      await this.waitUntilReady();
+      return true;
+    }
+    const selling = this.sellingToggle;
+    if ((await selling.count()) !== 1) return false;
+    await selling.click();
+    if ((await myOffers.count()) >= 1 && (await myOffers.first().isVisible().catch(() => false))) {
+      await myOffers.first().click();
+      await this.waitUntilReady();
+      return true;
+    }
+    return false;
+  }
+
+  private async ensureSinglesView(): Promise<void> {
+    const path = new URL(this.page.url()).pathname;
+    if (path.endsWith(config.ownOffersEntry)) return;
+    const tab = this.page.locator(`a[href="${config.ownOffersEntry}"]`);
+    await tab.first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {});
+    if ((await tab.count()) === 1) await tab.click();
+  }
+
+  private get sellingToggle(): Locator {
+    return this.page.locator('a.dropdown-toggle', { hasText: 'Selling' });
+  }
+
+  private get myOffersItem(): Locator {
+    return this.page.locator('.account-menu a', { hasText: 'My Offers' });
   }
 
   async hasFilterForm(): Promise<boolean> {
@@ -209,20 +260,42 @@ export class OwnOffersPage extends SitePage {
     return offers;
   }
 
-  async hasNextPage(): Promise<boolean> {
-    const count = await this.nextControl.count();
-    if (count === 0) return false;
-    if (count !== 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'own-offers-next');
-    return this.nextControl.evaluate((element) =>
-      !element.className.includes('disabled') && Boolean(element.getAttribute('href')),
+  /**
+   * Resolve the page-level next control. Cardmarket renders the stock
+   * pagination OUTSIDE `#UserOffersTable`, and the view carries the control
+   * twice per page (above AND below the table) with identical hrefs. The
+   * lookup therefore operates on the whole page and tolerates exactly 0, 1,
+   * or 2 matches; a disabled control means "no next page", mismatched hrefs
+   * or any other count is ambiguous (selector drift).
+   */
+  private async readNextControl(): Promise<Locator | null> {
+    const controls = this.page.locator('a.pagination-control[data-direction="next"]');
+    const count = await controls.count();
+    if (count === 0) return null;
+    if (count > 2) throw new AutomationError('AMBIGUOUS_SELECTOR', 'own-offers-next');
+    const states = await controls.evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const element = node as HTMLAnchorElement;
+        return {
+          href: element.href ?? null,
+          disabled: element.className.includes('disabled') || element.hasAttribute('disabled'),
+        };
+      }),
     );
+    if (states.some((state) => state.disabled || state.href === null)) return null;
+    const hrefs = new Set(states.map((state) => state.href));
+    if (hrefs.size !== 1) throw new AutomationError('AMBIGUOUS_SELECTOR', 'own-offers-next');
+    return controls.last();
+  }
+
+  async hasNextPage(): Promise<boolean> {
+    return (await this.readNextControl()) !== null;
   }
 
   async goToNextPage(): Promise<boolean> {
-    if (!(await this.hasNextPage())) return false;
-    const href = await this.nextControl.getAttribute('href');
-    if (!href) throw new AutomationError('UI_DRIFT', 'own-offers-next');
-    await this.gotoAllowed(href);
+    const next = await this.readNextControl();
+    if (next === null) return false;
+    await next.click();
     await this.waitUntilReady();
     return true;
   }
@@ -267,5 +340,33 @@ export class OwnOffersPage extends SitePage {
     await this.page.waitForURL(/\/Products\/Singles\//, { timeout: 30_000 });
     await this.waitForCloudflare();
     return new CardDetailPage(this.page);
+  }
+
+  /**
+   * Find the row index of an offer by its articleId, reading the modal trigger
+   * (`data-modal` carries `idArticle=<articleId>`) instead of guessing from
+   * positional order.
+   */
+  async rowIndexFor(articleId: number): Promise<number | null> {
+    const found = await this.page.evaluate((articleId: number) => {
+      const rows = Array.from(document.querySelectorAll('#UserOffersTable .table-body .article-row a[data-modal]'));
+      return rows.findIndex((row) => {
+        const match = /idArticle=(\d+)/.exec(row.getAttribute('data-modal') ?? '');
+        return match !== null && Number(match[1]) === articleId;
+      });
+    }, articleId);
+    return found >= 0 ? found : null;
+  }
+
+  /**
+   * Open the detail page of a specific offer by clicking its row link - the
+   * only compliant way into a detail page (raw `goto` is home-only).
+   * Throws UI_DRIFT when the row is not on the current page.
+   */
+  async openOfferById(articleId: number): Promise<CardDetailPage> {
+    const index = await this.rowIndexFor(articleId);
+    if (index === null)
+      throw new AutomationError('UI_DRIFT', `offer-row-${articleId}`);
+    return this.openOffer(index);
   }
 }

@@ -3,7 +3,6 @@ import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
 import type { Fields, Input } from '../runtime/input.ts';
 import { isStateId, type NavOutput } from '../types.ts';
-import { config } from '../../site.config.ts';
 import { SitePage } from '../pages/SitePage.ts';
 import { detectState } from '../lib/state.ts';
 
@@ -25,7 +24,7 @@ export const action: Action = {
   outputDescription,
   validateOutput,
   run: async (page: Page, _input: Input) => {
-    await new SitePage(page).gotoAllowed(config.baseURL + config.homeEntry);
+    await new SitePage(page).goHome();
     const state = detectState(page);
     if (state !== 'start') throw new AutomationError('POSTCONDITION_FAILED');
     return { status: 'ok', state };

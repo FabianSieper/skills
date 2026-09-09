@@ -187,7 +187,7 @@ export const action: Action = {
         const quantities = sellers.map((seller) => parseQty(seller.quantity));
         const maxSellerQuantity = quantities.length ? Math.max(...quantities) : 0;
         checks.push({ ...(base[i] as Artwork), maxSellerQuantity, sellersAtLeast: quantities.filter((q) => q >= minQty).length, qualifies: maxSellerQuantity >= minQty });
-        await detail.gotoAllowed(versionsUrl);
+        await detail.backToVersions(versionsUrl);
       }
       artworks = checks;
     }

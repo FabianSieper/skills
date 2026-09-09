@@ -4,7 +4,7 @@ import { detectState } from '../lib/state.ts';
 import { readAuth } from '../lib/auth.ts';
 import { parsePrice } from '../lib/parse.ts';
 import { OwnOffersPage } from '../pages/OwnOffersPage.ts';
-import { CardDetailPage } from '../pages/CardDetailPage.ts';
+import { asFilter, pageOfIndex, restoreOwnOffers, startPageOf } from './stock-common.ts';
 
 import { AutomationError } from '../runtime/errors.ts';
 import type { Action } from '../runtime/engine.ts';
@@ -182,6 +182,8 @@ export const action: Action = {
 
     const ownOffers = new OwnOffersPage(page);
     const startUrl = page.url();
+    const stockFilter = asFilter(await ownOffers.readCurrentFilter());
+    const startPage = startPageOf(startUrl);
 
     // Phase 1: read all own offers via proven pagination (no detail pages)
     const { offers: allOffers } = await ownOffers.extractOffers(0, true);
@@ -200,8 +202,7 @@ export const action: Action = {
     const hasMore = qualifying.length > offset + workingSet.length;
 
     if (workingSet.length === 0) {
-      await ownOffers.gotoAllowed(startUrl);
-      await ownOffers.waitUntilReady(60_000);
+      await restoreOwnOffers(page, stockFilter, startPage);
       return { state: 'own-offers', offset, count: 0, hasMore, offers: [], auth };
     }
 
@@ -218,10 +219,22 @@ export const action: Action = {
 
     const results: MarketComparisonRow[] = [];
 
-    // Phase 2: navigate to each qualifying card detail page directly
+    // Phase 2: open each qualifying offer through its own-offers row (UI
+    // click, page by page); raw `goto` is home-only.
+    const stockOffers = await restoreOwnOffers(page, stockFilter, 1);
+    let currentStockPage = 1;
     for (const offer of workingSet) {
-      const detail = new CardDetailPage(page);
-      await detail.gotoAllowed(offer.cardUrl);
+      const allIndex = allOffers.findIndex((candidate) => candidate.articleId === offer.articleId);
+      if (allIndex < 0) throw new AutomationError('UI_DRIFT', `offer-index-${offer.articleId}`);
+      const targetPage = pageOfIndex(allIndex);
+      if (targetPage < currentStockPage)
+        throw new AutomationError('UI_DRIFT', `stock-page-order-${offer.articleId}`);
+      while (currentStockPage < targetPage) {
+        if (!(await stockOffers.goToNextPage()))
+          throw new AutomationError('UI_DRIFT', `stock-page-${targetPage}`);
+        currentStockPage++;
+      }
+      const detail = await stockOffers.openOfferById(offer.articleId);
       await detail.waitUntilReady(60_000);
 
       // Derive filter from the offer's own condition and language + input params
@@ -244,24 +257,41 @@ export const action: Action = {
         altered: baseFilter.altered,
       };
 
-      if (await detail.applySellerFilters(filter)) {
+      let filterApplied = false;
+      let effectiveFilter: ResolvedSellerFilter = filter;
+      try {
+        filterApplied = await detail.applySellerFilters(filter);
+      } catch (err) {
+        if (err instanceof AutomationError && err.code === 'FILTER_NOT_AVAILABLE' && filter.language !== 'any') {
+          const fallback: ResolvedSellerFilter = {
+            ...filter,
+            language: 'any',
+          };
+          filterApplied = await detail.applySellerFilters(fallback);
+          effectiveFilter = fallback;
+        } else {
+          throw err;
+        }
+      }
+
+      if (filterApplied) {
         await detail.submitSellerFilters();
       }
       await detail.settleSellerList();
 
       // Verify every resolved filter field before reading market sellers.
       const appliedFilter = await detail.readCurrentFilter();
-      const criticalMatch = sameResolvedSellerFilter(appliedFilter, filter);
+      const criticalMatch = sameResolvedSellerFilter(appliedFilter, effectiveFilter);
 
       if (!criticalMatch) {
-        await detail.applySellerFilters(filter);
+        await detail.applySellerFilters(effectiveFilter);
         await detail.submitSellerFilters();
         await detail.settleSellerList();
         const retryFilter = await detail.readCurrentFilter();
-        const retryMatch = sameResolvedSellerFilter(retryFilter, filter);
+        const retryMatch = sameResolvedSellerFilter(retryFilter, effectiveFilter);
         if (!retryMatch) {
           throw new AutomationError('FILTER_MISMATCH', 'filter-mismatch', {
-            operation: 'stock.market-comparison', expected: filter, actual: retryFilter,
+            operation: 'stock.market-comparison', expected: effectiveFilter, actual: retryFilter,
           });
         }
       }
@@ -289,11 +319,12 @@ export const action: Action = {
         belowMarket,
         diff,
       });
+      await stockOffers.goBack();
+      await stockOffers.waitUntilReady();
     }
 
-    // Navigate back to the own-offers page
-    await ownOffers.gotoAllowed(startUrl);
-    await ownOffers.waitUntilReady(60_000);
+    // Navigate back to the original own-offers page
+    await restoreOwnOffers(page, stockFilter, startPage);
 
     const sorted = sortResults(results, sortResult);
 

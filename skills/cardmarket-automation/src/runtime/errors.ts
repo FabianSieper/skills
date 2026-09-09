@@ -5,7 +5,7 @@ export type ErrorCode = 'INVALID_INPUT' | 'UNKNOWN_ACTION' | 'AUTH_REQUIRED' |
   'UNKNOWN_COMMIT' | 'BUSY' | 'TIMEOUT' | 'INTERNAL' | 'NOT_CONFIGURED' | 'BUILD_ERROR' |
   'WRONG_STATE' | 'UNKNOWN_STATE' | 'STALE_CONTEXT' | 'FILTER_MISMATCH' |
   'SESSION_MISMATCH' | 'CONSENT_REQUIRED' | 'SESSION_QUARANTINED' | 'OUTPUT_LIMIT' |
-  'BUILD_INVALID' | 'NOT_VERIFIED';
+  'BUILD_INVALID' | 'NOT_VERIFIED' | 'FILTER_NOT_AVAILABLE';
 export type ErrorContext = Readonly<{
   /** Last observed state when the transport could report one. */
   state?: string;
@@ -47,7 +47,8 @@ const messages: Record<ErrorCode, string> = {
   SESSION_QUARANTINED: 'A previous write has unresolved commit state. Reconcile that attempt before any new account write.',
   OUTPUT_LIMIT: 'The bounded result did not fit the output limit. Use the supplied continuation or smaller read.',
   BUILD_INVALID: 'The compiled action artifact or manifest is invalid. Repair and rebuild the skill before running it.',
-  NOT_VERIFIED: 'This action lacks the required fixture or live evidence and is disabled.'
+  NOT_VERIFIED: 'This action lacks the required fixture or live evidence and is disabled.',
+  FILTER_NOT_AVAILABLE: 'The requested filter option is not available on this page. Cardmarket only renders checkboxes for options that have at least one listing.'
 };
 export class AutomationError extends Error {
   readonly code: ErrorCode;
