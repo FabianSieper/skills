@@ -2,6 +2,18 @@
 
 ## Issues
 
+### 11. Session lifecycle: data commands re-attached (hung on stale relay); no explicit human handoff
+- **Symptom:** A data command (`status`/`run`) with a missing or stale session re-ran `attach`; with a dead relay that hung for the full attach budget before failing, and there was no explicit operator-facing step to finish the one-time extension handoff.
+- **Root cause:** `ensureAttached()` ran `attach` on every data command with no bounded wait, so a stale relay was never distinguished from a live session; the human handoff (drag a tab / complete the Welcome page) was implicit.
+- **Fix:**
+  1. `site.config.ts`: added `attachWaitMs: 90_000` (explicit bounded handoff wait).
+  2. `cli-browser.ts`: split `ensureAttached(mode)`. `fast` (data commands) never attaches — it fails closed with `BROWSER_REQUIRED('session-missing'|'no-controllable-tab')` or `ATTACH_FAILED('relay-stale')` and points at `doctor`. `handoff` (`doctor`/`connect`) is the only path that runs the one-time `attach`, a post-attach sanity re-check, and `waitUsable(attachWaitMs)` so a stale relay is bounded instead of hanging.
+  3. Added `BrowserState` (`attached`, `live`, `relayStale`, `drifted`, `tabCount`) + `currentBrowserState()` and `tabDrift()` (post-action tab-count drift) in the envelope; `chooseWorkTab()` now requires a non-extension tab.
+  4. `cli.ts`: `connect`/`doctor` and all envelopes carry `browser`; `doctorRecovery()` maps browser failures to `npm run cli -- doctor`.
+  5. `SKILL.md`: documents the one maintained work tab, no raw `playwright-cli`, fail-closed → `doctor`, and the new recovery steps; freshness re-pinned.
+- **Verification:** `npm run typecheck` clean; `npm test` 65/65; concept validator ok (45 links / 15 actions); repo + installed envelope hash matches SKILL.md (`2b1607…`).
+- **Status:** ✅ DONE — live browser verification pending (needs a user-dragged tab in the group)
+
 ### 9. Installed skill copy silently stale; no repo→`~/.agents` sync path; generic transport errors
 - **Symptom:** OpenCode skill discovery loaded `~/.agents/skills/cardmarket-automation` (pre-09-08 build) instead of the repo's canonical skill; live `status` returned a generic `INTERNAL` (exit 4) with no operator-facing cause, and the stale SKILL.md guided the operator into the legacy raw-transport pitfall.
 - **Root cause:** `task install:opencode` installs a remote snapshot via `npx skills add` and never syncs local repo work; the installed copy lacked `node_modules`, so even a manual copy failed on missing `playwright`/`esbuild`. Transport failures mapped to a generic `playwright-cli` step and discarded stderr.

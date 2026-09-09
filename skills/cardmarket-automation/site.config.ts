@@ -18,6 +18,8 @@ export const config = {
   timeoutMs: 15_000,
   // Bounded action deadline; human login/consent is handled outside the runtime.
   actionBudgetMs: 240_000,
+  // Bounded wait for the one-time extension handoff after a fresh or stale attach.
+  attachWaitMs: 90_000,
   planTtlMs: 600_000,
   // A lock whose owner process is dead (or whose age exceeds this generous bound) is
   // reaped so a crashed/killed run does not wedge the CLI into permanent BUSY.

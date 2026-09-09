@@ -245,7 +245,8 @@ phase, state (when known), step, expected/actual context, effects and
 | code | safe next step |
 |---|---|
 | `INVALID_INPUT`, `UNKNOWN_ACTION` | read `list`/`describe`; fix the request |
-| `BROWSER_REQUIRED`, `ATTACH_FAILED`, `SESSION_MISMATCH` | user/operator fixes the exact existing session; do not launch another browser |
+| `BROWSER_REQUIRED`, `ATTACH_FAILED` (session setup) | run `doctor` (the one explicit handoff step) and finish it in the browser; do not launch another browser |
+| `SESSION_MISMATCH` | inspect the exact attached session; do not launch another browser |
 | `UNKNOWN_STATE`, `WRONG_STATE`, `STALE_CONTEXT` | run `status`/`info`, then choose a currently legal action |
 | `AUTH_REQUIRED`, `CONSENT_REQUIRED`, `HUMAN_REQUIRED` | user handles the visible blocker in the attached browser |
 | `UI_DRIFT`, `AMBIGUOUS_SELECTOR`, `BUILD_INVALID`, `NOT_VERIFIED` | stop; builder repairs the POM/contract/evidence |
@@ -266,9 +267,14 @@ run raw `playwright-cli` commands (`goto`, `fill`, `click`, `press`, `snapshot`,
 the raw-browser failure modes (stale refs, `about:blank`, tab churn).
 
 - Only the shared `chrome` session is ever touched. Do not launch, attach,
-  detach, close, kill or create tabs. If a session does not exist yet, the user
-  completes the one-time extension handoff in the browser; never re-`attach`
-  while a session exists and never `tab-new`.
+  detach, close, kill or create tabs, and never run `attach` yourself. Data
+  commands fail closed when the session is not live — `session-missing`
+  (no session), `relay-stale` (listed but relay dead) or `no-controllable-tab`
+  (group has no usable tab) — and point you at `doctor`. The one explicit
+  human-facing step is `doctor` (and `connect`): it performs the one-time
+  attach and waits, bounded, for you to finish the extension handoff in the
+  browser. Run it as a deliberate setup/recovery step, never as a data command;
+  never re-`attach` while a session exists and never `tab-new`.
 - Tab selection is internal: the transport prefers a Cardmarket tab in the
   controlled group; if none exists, it selects any existing non-extension tab
   (for example a debug tab) and the action navigates it to the configured home
@@ -276,9 +282,10 @@ the raw-browser failure modes (stale refs, `about:blank`, tab churn).
   no-controllable-tab` means the group has no usable tab at all (only the
   extension handoff page); the user then drags one existing tab into the
   `Playwright · playwright-cli` group.
-- On `BROWSER_REQUIRED`, `ATTACH_FAILED` or `SESSION_MISMATCH`, the user fixes
-  the exact existing session in the attached browser (see the error table); you
-  do not open another browser.
+- On `BROWSER_REQUIRED` or `ATTACH_FAILED` for the session (`session-missing`,
+  `relay-stale` or `no-controllable-tab`), run `doctor` as a deliberate step and
+  complete the one-time handoff in the browser. On `SESSION_MISMATCH`, inspect
+  the exact attached session. You never open or launch another browser.
 
 ### Why raw `goto` to Cardmarket detail URLs fails
 
@@ -315,7 +322,7 @@ Builder-level transport notes (why the CLI is atomic and never raw) live in
 
 - Every CLI result contains `version` and `implementationHash`. This file is
   written against `version: 0.4.0` and
-  `implementationHash: 468538a6877cf905b5186661184d6c37202b1f6397763fbd58629e5b7e4f69bf`.
+  `implementationHash: 2b16073200a95f6b2c2402d20442882cdef0110cc1c29ddecce5f2cafcfbe896`.
   If a call reports different values, the installed copy is stale: stop and
   re-sync it from the repository (`task sync:agents`), then re-run
   `npm run cli -- list`.

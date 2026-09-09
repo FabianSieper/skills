@@ -19,7 +19,34 @@ export interface BrowserResult { accountKey: string; value: Json; state?: StateI
 
 function cliArgs(...args: string[]): string[] { return args; }
 
+function sleep(ms: number): Promise<void> { return new Promise(r => setTimeout(r, ms)); }
+
 export type TabInfo = {index: number; url: string; title: string};
+
+/**
+ * Session and tab-group state of the shared relay, observed by the CLI itself.
+ * This is the single source of truth for the operator: never inspect the
+ * browser or its tab groups manually.
+ */
+export interface BrowserState {
+  session: string;
+  /** Session exists in `playwright-cli list` (daemon socket alive). */
+  attached: boolean;
+  /** Relay answered `tab-list` (extension + browser reachable). */
+  live: boolean;
+  /** Session was listed but its relay was dead; a one-time re-handshake ran. */
+  stale: boolean;
+  /** Controlled tab group (index/url/title), latest observation. */
+  tabs: TabInfo[];
+  /** The one tab the transport maintains for this invocation, if any. */
+  workTab: TabInfo | null;
+  /** Tab group changed between the pre- and post-action observation. */
+  drifted: boolean;
+}
+
+let current: BrowserState | null = null;
+export function currentBrowserState(): BrowserState | null { return current; }
+
 export function parseTabList(stdout: string): TabInfo[] {
   const trimmed = stdout.trim();
   if (trimmed.startsWith('[')) {
@@ -50,16 +77,30 @@ export function parseTabList(stdout: string): TabInfo[] {
   if (tabs.length === 0 && !/^(No open tabs\.|- \d+:)/.test(text.trim())) throw new AutomationError('CLI_PROTOCOL', 'tab-list');
   return tabs;
 }
+
+/**
+ * Choose the single maintained work tab: prefer a Cardmarket tab, then any
+ * non-extension tab (for example a debug tab the user dragged into the group).
+ * Extension handoff tabs are never chosen; a group that contains only
+ * extension tabs yields `undefined` and fails with `no-controllable-tab`.
+ */
 export function chooseWorkTab(tabs: TabInfo[]): TabInfo | undefined {
   return tabs.find(t => t.url.startsWith(config.baseURL))
-    ?? tabs.find(t => t.url !== '' && !t.url.startsWith('chrome-extension:'))
-    ?? tabs[0];
+    ?? tabs.find(t => !t.url.startsWith('chrome-extension:'));
 }
-async function selectWorkTab(): Promise<void> {
-  const {stdout} = await runCli(cliArgs('-s=' + config.browser.session, 'tab-list', '--raw'), 15_000);
-  const workTab = chooseWorkTab(parseTabList(stdout));
-  if (!workTab) throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab');
-  await runCli(cliArgs('-s=' + config.browser.session, 'tab-select', String(workTab.index)), 10_000);
+
+/** True when the tab group composition changed between two observations. */
+export function tabDrift(before: TabInfo[], after: TabInfo[]): boolean {
+  if (before.length !== after.length) return true;
+  const key = (t: TabInfo) => `${t.url}\u0000${t.title}`;
+  const seen = new Map<string, number>();
+  for (const t of before) seen.set(key(t), (seen.get(key(t)) ?? 0) + 1);
+  for (const t of after) {
+    const count = seen.get(key(t)) ?? 0;
+    if (count === 0) return true;
+    seen.set(key(t), count - 1);
+  }
+  return false;
 }
 
 function causeContext(stderr: string | undefined): ErrorContext | undefined {
@@ -83,6 +124,11 @@ async function runCli(args: string[], timeoutMs = 20_000): Promise<{stdout:strin
   }
 }
 
+function errorContext(error: unknown): ErrorContext | undefined {
+  if (error instanceof AutomationError) return error.context;
+  return {cause: error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240)};
+}
+
 function treeContainsSession(value: unknown, session: string): boolean {
   if (value === session) return true;
   if (Array.isArray(value)) return value.some(v => treeContainsSession(v, session));
@@ -100,27 +146,151 @@ export async function sessionAttached(): Promise<boolean> {
   catch { throw new AutomationError('CLI_PROTOCOL', 'session-list'); }
 }
 
-export async function ensureAttached(): Promise<void> {
-  // Retry a few times to handle transient list failures (WebSocket drops,
-  // timing) before concluding the session is gone. Re-attaching is one-shot:
-  // it opens a new Welcome tab and a second relay that cannot share tabs.
-  const maxRetries = 3;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+/** Liveness probe: the relay must answer `tab-list`. `null` means dead/unknown. */
+async function listTabs(): Promise<TabInfo[] | null> {
+  try {
+    const {stdout} = await runCli(cliArgs('-s=' + config.browser.session, 'tab-list', '--raw'), 15_000);
+    return parseTabList(stdout);
+  } catch {
+    return null;
+  }
+}
+
+function recordState(session: string, attached: boolean, live: boolean, stale: boolean, tabs: TabInfo[]): BrowserState {
+  const state: BrowserState = {session, attached, live, stale, tabs, workTab: null, drifted: false};
+  current = state;
+  return state;
+}
+
+/**
+ * Select the one maintained tab and record it. `BROWSER_REQUIRED
+ * no-controllable-tab` when the group has no usable tab at all.
+ */
+async function selectWorkTab(state: BrowserState): Promise<BrowserState> {
+  const workTab = chooseWorkTab(state.tabs);
+  if (!workTab) throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab');
+  try {
+    await runCli(cliArgs('-s=' + state.session, 'tab-select', String(workTab.index)), 10_000);
+  } catch (error) {
+    throw new AutomationError('ATTACH_FAILED', 'tab-select', errorContext(error));
+  }
+  const selected = {...state, workTab};
+  current = selected;
+  return selected;
+}
+
+const POLL_MS = 2_000;
+// If no tab ever appears (not even the extension Welcome tab) the extension is
+// not connected at all; fail early instead of burning the full handoff window.
+const PROBE_MS = 8_000;
+
+/**
+ * Bounded wait for the one-time extension handoff to yield a controllable
+ * tab: no tabs or only the extension Welcome tab means the user has not
+ * finished ("Allow & select") yet. Fails closed after `deadlineMs`, or early
+ * when no tab ever appears (nothing connected).
+ */
+async function waitUsable(deadlineMs: number, initial: TabInfo[] | null): Promise<TabInfo[]> {
+  const started = Date.now();
+  let seen = initial;
+  let anyTab = seen !== null && seen.length > 0;
+  for (;;) {
+    const tabs = await listTabs();
+    if (tabs) { seen = tabs; anyTab = anyTab || tabs.length > 0; }
+    if (seen && chooseWorkTab(seen)) return seen;
+    const elapsed = Date.now() - started;
+    if (!anyTab && elapsed + POLL_MS > PROBE_MS) break;
+    if (elapsed + POLL_MS > deadlineMs) break;
+    await sleep(POLL_MS);
+  }
+  throw new AutomationError('BROWSER_REQUIRED', 'attach-wait');
+}
+
+/**
+ * Point the operator at the explicit, human-facing `doctor` step. `doctor`
+ * performs the one-time attach and the bounded handoff wait (up to
+ * `attachWaitMs`), which a data command must never do itself.
+ */
+function doctorRecovery(prerequisite: string): ErrorContext['recovery'] {
+  return {disposition:'handoff',owner:'operator',command:'npm run cli -- doctor',prerequisite};
+}
+
+/**
+ * Enforce the session lifecycle in two modes:
+ *  - `handoff` (connect/doctor): the explicit, human-facing step. It performs
+ *    the one-time attach and the bounded handoff wait (up to `attachWaitMs`).
+ *  - `fast` (every data command): never blocks on a human step and never runs
+ *    `attach`. If the session is missing or the relay is not usable it fails
+ *    closed and points the operator at `doctor` — mirroring how login/consent
+ *    live outside the bounded runtime.
+ *  - session exists, relay live, usable tab     -> proceed; never re-attach
+ *  - session exists, relay live, no usable tab  -> fast: fail closed;
+ *    handoff: bounded wait for the user's "Allow & select"
+ *  - session listed, relay dead (stale)         -> fast: fail closed;
+ *    handoff: run the documented one-time re-handshake
+ *  - session missing                            -> fast: fail closed;
+ *    handoff: fresh attach
+ */
+export async function ensureAttached(mode: 'fast' | 'handoff'): Promise<BrowserState> {
+  const session = config.browser.session;
+  let attached = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      if (await sessionAttached()) return;
+      attached = await sessionAttached();
+      if (attached) break;
     } catch {
       // Transient list failure; retry.
     }
-    if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 500));
+    if (attempt < 2) await sleep(500);
   }
+
+  // Fast data commands never run the human-facing attach: a missing session
+  // fails closed and points the operator at `doctor` (the setup handoff).
+  if (!attached && mode === 'fast') {
+    recordState(session, false, false, false, []);
+    throw new AutomationError('BROWSER_REQUIRED', 'session-missing',
+      {recovery:doctorRecovery('The shared Chrome session is not started. Run doctor to open the one-time extension handoff, then complete it in the browser.')});
+  }
+
+  let tabs: TabInfo[] | null = null;
+  if (attached) tabs = await listTabs();
+
+  if (tabs) {
+    const state = recordState(session, true, true, false, tabs);
+    if (chooseWorkTab(tabs)) return selectWorkTab(state);
+    if (mode === 'fast') {
+      throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab',
+        {recovery:doctorRecovery('The controlled group has no usable tab (only the extension handoff page). Run doctor and finish the handoff, or drag an existing tab into the Playwright · playwright-cli group.')});
+    }
+    const waited = await waitUsable(config.attachWaitMs, tabs);
+    return selectWorkTab(recordState(session, true, true, false, waited));
+  }
+
+  // Stale: listed but relay dead. Fast commands fail closed; only `doctor`
+  // runs the documented one-time re-handshake.
+  const stale = attached;
+  if (stale && mode === 'fast') {
+    recordState(session, true, false, true, []);
+    throw new AutomationError('ATTACH_FAILED', 'relay-stale',
+      {recovery:doctorRecovery('The session is listed but its relay is dead (stale). Run doctor to perform the one-time re-handshake, then complete it in the browser.')});
+  }
+
   const attach = config.browser.attach;
   const target = attach.mode === 'extension' ? `--extension=${attach.target}` : `--cdp=${attach.target}`;
   try {
-    await runCli(cliArgs('attach', target, `--session=${config.browser.session}`), 30_000);
-  } catch {
-    throw new AutomationError('BROWSER_REQUIRED', 'attach-open-browser');
+    await runCli(cliArgs('attach', target, `--session=${session}`), 30_000);
+  } catch (error) {
+    throw new AutomationError('BROWSER_REQUIRED', 'attach-open-browser', errorContext(error));
   }
-  if (!await sessionAttached()) throw new AutomationError('ATTACH_FAILED', 'session-not-visible');
+  try {
+    if (!(await sessionAttached())) throw new AutomationError('ATTACH_FAILED', 'session-not-visible');
+  } catch (error) {
+    throw error instanceof AutomationError ? error : new AutomationError('ATTACH_FAILED', 'session-list', errorContext(error));
+  }
+  const waited = await waitUsable(config.attachWaitMs, null);
+  const state = recordState(session, true, true, stale, waited);
+  if (!chooseWorkTab(waited)) throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab');
+  return selectWorkTab(state);
 }
 
 function assertBrowserPayload(raw: unknown): BrowserResult {
@@ -148,11 +318,22 @@ function assertBrowserPayload(raw: unknown): BrowserResult {
   return {accountKey: object.accountKey, value: object.value as Json, ...(state ? { state } : {})};
 }
 
+/** Best-effort post-action tab observation; never fails the action. */
+async function refreshDrift(state: BrowserState): Promise<void> {
+  try {
+    const {stdout} = await runCli(cliArgs('-s=' + state.session, 'tab-list', '--raw'), 15_000);
+    const tabs = parseTabList(stdout);
+    current = {...state, tabs, workTab: chooseWorkTab(tabs) ?? state.workTab, drifted: tabDrift(state.tabs, tabs)};
+  } catch {
+    // Keep the pre-action observation.
+  }
+}
+
 export async function invokeBrowser(
   project: string, root: string, action: Action, phase: Phase, input: Input, preview?: Preview
 ): Promise<BrowserResult> {
   if (!config.configured) throw new AutomationError('NOT_CONFIGURED');
-  await ensureAttached();
+  await ensureAttached('fast');
 
   const actionPath = resolve(action.modulePath.startsWith('file:') ? fileURLToPath(action.modulePath) : action.modulePath);
   const sitePagePath = resolve(project, 'src/pages/SitePage.ts');
@@ -228,8 +409,8 @@ export async function invokeBrowser(
   const path = join(dir, `${randomUUID()}.js`);
   const wrapper = `async page => { ${bundled}\nreturn await __siteAction.invoke(page); }`;
   await writeFile(path, wrapper, {mode:0o600,flag:'wx'});
+  const state = currentBrowserState();
   try {
-    await selectWorkTab();
     const {stdout} = await runCli(cliArgs(`-s=${config.browser.session}`,'--raw','run-code',`--filename=${path}`), config.actionBudgetMs);
     try { return assertBrowserPayload(JSON.parse(stdout.trim())); }
     catch (error) {
@@ -238,5 +419,6 @@ export async function invokeBrowser(
     }
   } finally {
     await unlink(path).catch(() => {});
+    if (state) await refreshDrift(state);
   }
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTabList, chooseWorkTab } from '../src/runtime/cli-browser.ts';
+import { parseTabList, chooseWorkTab, tabDrift } from '../src/runtime/cli-browser.ts';
 
 test('parseTabList reads markdown tab headers', () => {
   const out = '- 0: (current) [Welcome](chrome-extension://x/connect.html)\n- 1: [Cardmarket](https://www.cardmarket.com/en/Magic)';
@@ -35,11 +35,21 @@ test('parseTabList rejects unknown protocol output', () => {
   assert.throws(() => parseTabList('{"other": true}'), {code: 'CLI_PROTOCOL'});
 });
 
-test('chooseWorkTab prefers cardmarket, then any non-extension tab, then first tab', () => {
+test('chooseWorkTab prefers cardmarket, then any non-extension tab; extension-only yields none', () => {
   const mk = (url: string, index: number) => ({index, url, title: ''});
   assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0), mk('https://www.cardmarket.com/en', 1)])!.index, 1);
   assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0), mk('about:blank', 1)])!.index, 1);
-  assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0), mk('chrome-extension://y/b', 1)])!.index, 0);
-  assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0)])!.index, 0);
+  assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0), mk('chrome-extension://y/b', 1)]), undefined);
+  assert.equal(chooseWorkTab([mk('chrome-extension://x/a', 0)]), undefined);
   assert.equal(chooseWorkTab([]), undefined);
+});
+
+test('tabDrift detects tab group composition changes', () => {
+  const mk = (index: number, url: string, title: string) => ({index, url, title});
+  const a = [mk(0, 'chrome-extension://x/a', 'Welcome'), mk(1, 'https://www.cardmarket.com/en/Magic', 'Cardmarket')];
+  assert.equal(tabDrift(a, a.map(tab => ({...tab}))), false);
+  assert.equal(tabDrift(a, [a[0]!]), true);
+  assert.equal(tabDrift(a, [a[0]!, mk(1, 'https://www.cardmarket.com/en', 'Cardmarket')]), true);
+  assert.equal(tabDrift(a, [a[0]!, mk(1, 'https://www.cardmarket.com/en/Magic', 'Cards')]), true);
+  assert.equal(tabDrift(a, [a[0]!, a[1]!, mk(2, 'about:blank', '')]), true);
 });

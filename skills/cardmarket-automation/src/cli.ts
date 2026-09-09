@@ -8,7 +8,7 @@ import { actions } from './actions/index.ts';
 import { actionContract } from './runtime/contracts.ts';
 import { Engine, withLock } from './runtime/engine.ts';
 import { implementationFingerprint } from './runtime/fingerprint.ts';
-import { ensureAttached, invokeBrowser } from './runtime/cli-browser.ts';
+import { currentBrowserState, ensureAttached, invokeBrowser } from './runtime/cli-browser.ts';
 import { AutomationError, normalizeError, exitCode, recoveryFor } from './runtime/errors.ts';
 import { isStateId } from './types.ts';
 
@@ -68,10 +68,10 @@ async function main(): Promise<unknown> {
             enabled:contract.enabled,...(contract.disabledReason ? {disabledReason:contract.disabledReason} : {})} : {}),next:action.next};
       })};
     case 'describe': syntax(true,[]); return engine.describe(id!);
-    case 'connect': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{await ensureAttached();
-      return {site:config.name,session:config.browser.session,attached:true,browserLaunch:false};});
-    case 'doctor': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{await ensureAttached();
-      return {site:config.name,session:config.browser.session,attached:true,configured:config.configured,browserLaunch:false};});
+    case 'connect': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{const browser = await ensureAttached('handoff');
+      return {site:config.name,session:config.browser.session,attached:true,browserLaunch:false,browser};});
+    case 'doctor': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{const browser = await ensureAttached('handoff');
+      return {site:config.name,session:config.browser.session,attached:true,configured:config.configured,browserLaunch:false,browser};});
     case 'status': syntax(false,[]); return engine.run('status',{});
     case 'run': syntax(true,['input','json']); return engine.run(id!,await input());
     case 'plan': syntax(true,['input','json']); return engine.plan(id!,await input());
@@ -81,14 +81,14 @@ async function main(): Promise<unknown> {
   }
 }
 main().then(data => {
-  process.stdout.write(JSON.stringify({protocolVersion:1,ok:true,runId,action:invokedAction,phase:invokedPhase,durationMs:Date.now()-started,version:packageVersion,implementationHash,data})+'\n');
+  process.stdout.write(JSON.stringify({protocolVersion:1,ok:true,runId,action:invokedAction,phase:invokedPhase,durationMs:Date.now()-started,version:packageVersion,implementationHash,browser:currentBrowserState(),data})+'\n');
 }).catch(raw => {
   const error = normalizeError(raw);
   const recovery = recoveryFor(error.code);
   const context = error.context ?? {};
   const reportedState = isStateId(context.state) ? context.state : isStateId(context.actual) ? context.actual : null;
   process.stdout.write(JSON.stringify({ok:false,runId,durationMs:Date.now()-started,
-    protocolVersion:1,action:invokedAction,phase:invokedPhase,state:reportedState,version:packageVersion,implementationHash,
+    protocolVersion:1,action:invokedAction,phase:invokedPhase,state:reportedState,version:packageVersion,implementationHash,browser:currentBrowserState(),
     effects:{ui:error.code==='UNKNOWN_COMMIT'?'unknown':'none',commit:error.code==='UNKNOWN_COMMIT'?'unknown':'none'},
     availableActions:[],
     error:{code:error.code,message:error.message,...(error.step?{step:error.step}:{}),...context,
