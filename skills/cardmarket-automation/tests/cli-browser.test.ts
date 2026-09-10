@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTabList, chooseWorkTab, tabDrift } from '../src/runtime/cli-browser.ts';
+import { parseTabList, chooseWorkTab, tabDrift, classifyTabListFailure } from '../src/runtime/cli-browser.ts';
 
 test('parseTabList reads markdown tab headers', () => {
   const out = '- 0: (current) [Welcome](chrome-extension://x/connect.html)\n- 1: [Cardmarket](https://www.cardmarket.com/en/Magic)';
@@ -52,4 +52,18 @@ test('tabDrift detects tab group composition changes', () => {
   assert.equal(tabDrift(a, [a[0]!, mk(1, 'https://www.cardmarket.com/en', 'Cardmarket')]), true);
   assert.equal(tabDrift(a, [a[0]!, mk(1, 'https://www.cardmarket.com/en/Magic', 'Cards')]), true);
   assert.equal(tabDrift(a, [a[0]!, a[1]!, mk(2, 'about:blank', '')]), true);
+});
+
+test('classifyTabListFailure maps transport failures', () => {
+  assert.equal(classifyTabListFailure('Browser is not open.', false), 'not-open');
+  assert.equal(classifyTabListFailure('Target closed', false), 'relay-dead');
+  assert.equal(classifyTabListFailure('WebSocket disconnected', false), 'relay-dead');
+  assert.equal(classifyTabListFailure('Page error', false), 'relay-dead');
+  assert.equal(classifyTabListFailure('connection closed', false), 'relay-dead');
+  assert.equal(classifyTabListFailure('socket hang up', false), 'relay-dead');
+  assert.equal(classifyTabListFailure('protocol error', false), 'protocol');
+  assert.equal(classifyTabListFailure('Unexpected token', false), 'protocol');
+  assert.equal(classifyTabListFailure('SyntaxError', false), 'protocol');
+  assert.equal(classifyTabListFailure('something else', false), 'unknown');
+  assert.equal(classifyTabListFailure('anything', true), 'relay-dead');
 });

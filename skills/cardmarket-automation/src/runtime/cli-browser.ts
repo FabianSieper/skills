@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -34,8 +34,9 @@ export interface BrowserState {
   attached: boolean;
   /** Relay answered `tab-list` (extension + browser reachable). */
   live: boolean;
-  /** Session was listed but its relay was dead; a one-time re-handshake ran. */
+  /** Session was listed but its relay was dead. */
   stale: boolean;
+  waiting: boolean;
   /** Controlled tab group (index/url/title), latest observation. */
   tabs: TabInfo[];
   /** The one tab the transport maintains for this invocation, if any. */
@@ -46,6 +47,36 @@ export interface BrowserState {
 
 let current: BrowserState | null = null;
 export function currentBrowserState(): BrowserState | null { return current; }
+
+let stateRoot: string | null = null;
+export function setBrowserStateRoot(root: string): void { stateRoot = resolve(root); }
+
+type AttachMemo = { at: number; outcome: 'timeout' | 'success' };
+const ATTACH_RECENT_MS = 10 * 60_000;
+function attachMemoPath(): string | null { return stateRoot ? join(stateRoot, 'attach-memo.json') : null; }
+async function readAttachMemo(): Promise<AttachMemo | null> {
+  const path = attachMemoPath();
+  if (!path) return null;
+  try {
+    const data = JSON.parse(await readFile(path, 'utf8')) as unknown;
+    if (!data || typeof data !== 'object') return null;
+    const memo = data as Record<string, unknown>;
+    if (typeof memo.at !== 'number' || (memo.outcome !== 'timeout' && memo.outcome !== 'success')) return null;
+    if (Date.now() - memo.at > ATTACH_RECENT_MS) return null;
+    return { at: memo.at, outcome: memo.outcome };
+  } catch { return null; }
+}
+async function writeAttachMemo(outcome: AttachMemo['outcome']): Promise<void> {
+  const path = attachMemoPath();
+  if (!path || !stateRoot) return;
+  await mkdir(stateRoot, { recursive: true, mode: 0o700 }).catch(() => {});
+  await writeFile(path, JSON.stringify({ at: Date.now(), outcome }), { mode: 0o600 }).catch(() => {});
+}
+async function clearAttachMemo(): Promise<void> {
+  const path = attachMemoPath();
+  if (!path) return;
+  await unlink(path).catch(() => {});
+}
 
 export function parseTabList(stdout: string): TabInfo[] {
   const trimmed = stdout.trim();
@@ -146,18 +177,39 @@ export async function sessionAttached(): Promise<boolean> {
   catch { throw new AutomationError('CLI_PROTOCOL', 'session-list'); }
 }
 
-/** Liveness probe: the relay must answer `tab-list`. `null` means dead/unknown. */
-async function listTabs(): Promise<TabInfo[] | null> {
+type ProbeReason = 'ok' | 'not-open' | 'relay-dead' | 'protocol' | 'unknown';
+function failureText(error: unknown): string {
+  if (error instanceof AutomationError)
+    return [error.step, error.context?.cause, error.message].filter(Boolean).join(' ').slice(0, 240);
+  if (error instanceof Error) return `${error.name} ${error.message}`.slice(0, 240);
+  return String(error).slice(0, 240);
+}
+export function classifyTabListFailure(cause: string, attached: boolean): ProbeReason {
+  const lower = cause.toLowerCase();
+  if (attached) return 'relay-dead';
+  if (lower.includes('is not open') || lower.includes('not open')) return 'not-open';
+  if (/(browser|target|page|websocket|socket)[\s:,-]*(closed|disconnect|reset|error)/.test(lower) ||
+      lower.includes('connection closed') || lower.includes('econnreset') || lower.includes('socket hang up'))
+    return 'relay-dead';
+  if (lower.includes('protocol') || lower.includes('unexpected') || lower.includes('syntaxerror') || lower.includes('parse'))
+    return 'protocol';
+  return 'unknown';
+}
+async function probeTabs(attached: boolean): Promise<{ tabs: TabInfo[] | null; reason: ProbeReason }> {
   try {
     const {stdout} = await runCli(cliArgs('-s=' + config.browser.session, 'tab-list', '--raw'), 15_000);
-    return parseTabList(stdout);
-  } catch {
-    return null;
+    return {tabs: parseTabList(stdout), reason: 'ok'};
+  } catch (error) {
+    if (error instanceof AutomationError && error.code === 'CLI_PROTOCOL') return {tabs: null, reason: 'protocol'};
+    return {tabs: null, reason: classifyTabListFailure(failureText(error), attached)};
   }
 }
+async function stopSession(): Promise<void> {
+  try { await runCli(cliArgs('-s=' + config.browser.session, 'close'), 10_000); } catch {}
+}
 
-function recordState(session: string, attached: boolean, live: boolean, stale: boolean, tabs: TabInfo[]): BrowserState {
-  const state: BrowserState = {session, attached, live, stale, tabs, workTab: null, drifted: false};
+function recordState(session: string, attached: boolean, live: boolean, stale: boolean, waiting: boolean, tabs: TabInfo[]): BrowserState {
+  const state: BrowserState = {session, attached, live, stale, waiting, tabs, workTab: null, drifted: false};
   current = state;
   return state;
 }
@@ -180,30 +232,28 @@ async function selectWorkTab(state: BrowserState): Promise<BrowserState> {
 }
 
 const POLL_MS = 2_000;
-// If no tab ever appears (not even the extension Welcome tab) the extension is
-// not connected at all; fail early instead of burning the full handoff window.
 const PROBE_MS = 8_000;
 
-/**
- * Bounded wait for the one-time extension handoff to yield a controllable
- * tab: no tabs or only the extension Welcome tab means the user has not
- * finished ("Allow & select") yet. Fails closed after `deadlineMs`, or early
- * when no tab ever appears (nothing connected).
- */
-async function waitUsable(deadlineMs: number, initial: TabInfo[] | null): Promise<TabInfo[]> {
+async function waitForHandoff(deadlineMs: number): Promise<BrowserState | null> {
+  const session = config.browser.session;
   const started = Date.now();
-  let seen = initial;
-  let anyTab = seen !== null && seen.length > 0;
+  let anyTab = false;
   for (;;) {
-    const tabs = await listTabs();
-    if (tabs) { seen = tabs; anyTab = anyTab || tabs.length > 0; }
-    if (seen && chooseWorkTab(seen)) return seen;
+    let attached = false;
+    try { attached = await sessionAttached(); } catch {}
+    if (attached) {
+      const probe = await probeTabs(true);
+      if (probe.tabs) {
+        anyTab = anyTab || probe.tabs.length > 0;
+        if (chooseWorkTab(probe.tabs)) return selectWorkTab(recordState(session, true, true, false, false, probe.tabs));
+      }
+    }
     const elapsed = Date.now() - started;
     if (!anyTab && elapsed + POLL_MS > PROBE_MS) break;
     if (elapsed + POLL_MS > deadlineMs) break;
     await sleep(POLL_MS);
   }
-  throw new AutomationError('BROWSER_REQUIRED', 'attach-wait');
+  return null;
 }
 
 /**
@@ -231,66 +281,100 @@ function doctorRecovery(prerequisite: string): ErrorContext['recovery'] {
  *  - session missing                            -> fast: fail closed;
  *    handoff: fresh attach
  */
-export async function ensureAttached(mode: 'fast' | 'handoff'): Promise<BrowserState> {
+function handoffRecovery(): ErrorContext['recovery'] {
+  return {disposition:'handoff', owner:'user', prerequisite:'Complete the existing Playwright connect/welcome tab by choosing the tab and clicking "Allow & select". Use doctor --reset only if that tab is missing or broken.'};
+}
+async function freshAttachFlow(): Promise<BrowserState> {
   const session = config.browser.session;
-  let attached = false;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      attached = await sessionAttached();
-      if (attached) break;
-    } catch {
-      // Transient list failure; retry.
-    }
-    if (attempt < 2) await sleep(500);
-  }
-
-  // Fast data commands never run the human-facing attach: a missing session
-  // fails closed and points the operator at `doctor` (the setup handoff).
-  if (!attached && mode === 'fast') {
-    recordState(session, false, false, false, []);
-    throw new AutomationError('BROWSER_REQUIRED', 'session-missing',
-      {recovery:doctorRecovery('The shared Chrome session is not started. Run doctor to open the one-time extension handoff, then complete it in the browser.')});
-  }
-
-  let tabs: TabInfo[] | null = null;
-  if (attached) tabs = await listTabs();
-
-  if (tabs) {
-    const state = recordState(session, true, true, false, tabs);
-    if (chooseWorkTab(tabs)) return selectWorkTab(state);
-    if (mode === 'fast') {
-      throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab',
-        {recovery:doctorRecovery('The controlled group has no usable tab (only the extension handoff page). Run doctor and finish the handoff, or drag an existing tab into the Playwright · playwright-cli group.')});
-    }
-    const waited = await waitUsable(config.attachWaitMs, tabs);
-    return selectWorkTab(recordState(session, true, true, false, waited));
-  }
-
-  // Stale: listed but relay dead. Fast commands fail closed; only `doctor`
-  // runs the documented one-time re-handshake.
-  const stale = attached;
-  if (stale && mode === 'fast') {
-    recordState(session, true, false, true, []);
-    throw new AutomationError('ATTACH_FAILED', 'relay-stale',
-      {recovery:doctorRecovery('The session is listed but its relay is dead (stale). Run doctor to perform the one-time re-handshake, then complete it in the browser.')});
-  }
-
   const attach = config.browser.attach;
   const target = attach.mode === 'extension' ? `--extension=${attach.target}` : `--cdp=${attach.target}`;
   try {
     await runCli(cliArgs('attach', target, `--session=${session}`), 30_000);
   } catch (error) {
-    throw new AutomationError('BROWSER_REQUIRED', 'attach-open-browser', errorContext(error));
+    if (error instanceof AutomationError && error.code === 'TIMEOUT') {
+      await writeAttachMemo('timeout');
+      recordState(session, false, false, false, true, []);
+      const waited = await waitForHandoff(config.attachWaitMs);
+      if (waited) { await clearAttachMemo(); return waited; }
+      throw new AutomationError('BROWSER_REQUIRED', 'handoff-waiting', {recovery:handoffRecovery()});
+    }
+    throw new AutomationError('ATTACH_FAILED', 'attach-open-browser', errorContext(error));
   }
-  try {
-    if (!(await sessionAttached())) throw new AutomationError('ATTACH_FAILED', 'session-not-visible');
-  } catch (error) {
-    throw error instanceof AutomationError ? error : new AutomationError('ATTACH_FAILED', 'session-list', errorContext(error));
+  await clearAttachMemo();
+  let attached = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { attached = await sessionAttached(); if (attached) break; } catch {}
+    if (attempt < 2) await sleep(500);
   }
-  const waited = await waitUsable(config.attachWaitMs, null);
-  const state = recordState(session, true, true, stale, waited);
-  if (!chooseWorkTab(waited)) throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab');
-  return selectWorkTab(state);
+  if (!attached) throw new AutomationError('ATTACH_FAILED', 'session-not-visible');
+  const settled = await waitForHandoff(config.attachWaitMs);
+  if (settled) return settled;
+  const probe = await probeTabs(true);
+  if (probe.reason === 'relay-dead') throw new AutomationError('ATTACH_FAILED', 'relay-stale', {recovery:doctorRecovery('The freshly attached session is listed but its relay is dead. Run doctor --reset to perform a clean re-handshake.')});
+  throw new AutomationError('BROWSER_REQUIRED', 'handoff-waiting', {recovery:handoffRecovery()});
+}
+export async function ensureAttached(mode: 'fast' | 'handoff', options: { forceFresh?: boolean } = {}): Promise<BrowserState> {
+  const session = config.browser.session;
+  let attached = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { attached = await sessionAttached(); if (attached) break; } catch {}
+    if (attempt < 2) await sleep(500);
+  }
+  if (options.forceFresh && attached) {
+    await stopSession();
+    await clearAttachMemo();
+    attached = false;
+  }
+  if (!attached && mode === 'fast') {
+    recordState(session, false, false, false, false, []);
+    throw new AutomationError('BROWSER_REQUIRED', 'session-missing',
+      {recovery:doctorRecovery('The shared Chrome session is not started. Run doctor to open the one-time extension handoff, then complete it in the browser.')});
+  }
+  if (attached) {
+    const probe = await probeTabs(true);
+    if (probe.tabs) {
+      const state = recordState(session, true, true, false, false, probe.tabs);
+      if (chooseWorkTab(probe.tabs)) return selectWorkTab(state);
+      if (mode === 'fast') {
+        throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab',
+          {recovery:doctorRecovery('The controlled group has no usable tab (only the extension handoff page). Run doctor and finish the handoff, or drag an existing tab into the Playwright · playwright-cli group.')});
+      }
+      const waited = await waitForHandoff(config.attachWaitMs);
+      if (waited) return waited;
+      throw new AutomationError('BROWSER_REQUIRED', 'no-controllable-tab',
+        {recovery:doctorRecovery('The controlled group has no usable tab. Finish the handoff in the existing Playwright tab or drag an existing tab into the Playwright · playwright-cli group.')});
+    }
+    if (probe.reason === 'protocol') {
+      recordState(session, true, false, false, false, []);
+      throw new AutomationError('CLI_PROTOCOL', 'tab-list');
+    }
+    if (probe.reason === 'relay-dead') {
+      recordState(session, true, false, true, false, []);
+      if (mode === 'fast') {
+        throw new AutomationError('ATTACH_FAILED', 'relay-stale',
+          {recovery:doctorRecovery('The session is listed but its relay is dead (stale). Run doctor to perform the one-time re-handshake, then complete it in the browser.')});
+      }
+      await stopSession();
+      await clearAttachMemo();
+      return freshAttachFlow();
+    }
+    recordState(session, true, false, false, false, []);
+    throw new AutomationError('ATTACH_FAILED', 'relay-unknown',
+      {recovery:doctorRecovery('The listed session returned an unrecognized tab-list failure. Run doctor to inspect it; do not re-attach repeatedly.')});
+  }
+  recordState(session, false, false, false, false, []);
+  const memo = await readAttachMemo();
+  if (memo) {
+    recordState(session, false, false, false, true, []);
+    const waited = await waitForHandoff(config.attachWaitMs);
+    if (waited) { await clearAttachMemo(); return waited; }
+    const probe = await probeTabs(true);
+    if (probe.reason === 'relay-dead') throw new AutomationError('ATTACH_FAILED', 'relay-stale',
+      {recovery:doctorRecovery('The session is listed but its relay is dead. Run doctor --reset to perform a clean re-handshake.')});
+    throw new AutomationError('BROWSER_REQUIRED', 'handoff-waiting', {recovery:handoffRecovery()});
+  }
+  await clearAttachMemo();
+  return freshAttachFlow();
 }
 
 function assertBrowserPayload(raw: unknown): BrowserResult {

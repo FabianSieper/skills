@@ -2,6 +2,18 @@
 
 ## Issues
 
+### 12. Session lifecycle hardened: handoff waiting, stale relays, explicit reset, one controlled tab
+- **Symptom:** A timeout or dead relay left no safe bounded distinction between “waiting for handoff”, “listed but stale”, and “fresh attach”; repeated `doctor` could create another Welcome tab, and weak agents could bypass the closed CLI with raw `playwright-cli list/close/kill-all` or switch/open tabs.
+- **Root cause:** The previous lifecycle only asked whether the session was attached and used a post-attach wait; it had no attach memo, no `waiting`/`stale` state, no force-fresh reset, and docs did not ban global stop commands or raw session inspection.
+- **Fix:**
+  1. `cli-browser.ts`: `BrowserState` now records `attached`, `live`, `stale` and `waiting`; `probeTabs()` / `classifyTabListFailure()` distinguish `not-open`, `relay-dead`, `protocol` and `unknown`; `stopSession()` uses the per-session `close` primitive; `waitForHandoff()` bounds extension handoff; an attach memo suppresses duplicate attach attempts; `freshAttachFlow()` performs at most one fresh attach; `ensureAttached('fast'|'handoff', {forceFresh})` implements the lifecycle.
+  2. `cli.ts`: `setBrowserStateRoot(.local)` stores the memo; `doctor --reset` is the explicit force-fresh operator step; unknown flags return structured `INVALID_INPUT`.
+  3. Tests: added `classifyTabListFailure` transport classification and `doctor --bogus` invalid-flag coverage; suite is 67/67.
+  4. Docs: `SKILL.md` and `references/transport.md` now enforce one current/controlled tab, ban raw session commands (`list`, `close`, `kill-all`, `close-all`, `detach`, `tab-select`, etc.), explain waiting/zombie states, and document `doctor --reset`.
+  5. `package.json` bumped 0.4.0 → 0.5.0 and SKILL freshness re-pinned.
+- **Verification:** `npm run typecheck` clean; `npm test` 67/67; concept validator rerun after docs; live browser E2E still pending (needs a user-dragged tab or healthy shared Chrome session).
+- **Status:** ✅ DONE — live verification pending
+
 ### 11. Session lifecycle: data commands re-attached (hung on stale relay); no explicit human handoff
 - **Symptom:** A data command (`status`/`run`) with a missing or stale session re-ran `attach`; with a dead relay that hung for the full attach budget before failing, and there was no explicit operator-facing step to finish the one-time extension handoff.
 - **Root cause:** `ensureAttached()` ran `attach` on every data command with no bounded wait, so a stale relay was never distinguished from a live session; the human handoff (drag a tab / complete the Welcome page) was implicit.

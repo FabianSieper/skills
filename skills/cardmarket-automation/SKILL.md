@@ -13,14 +13,17 @@ steps.
 ## Non-negotiable boundaries
 
 - Attach to the existing shared Chrome session `chrome` (user-global rule: one
-  relay/tab group for all browsing agents); never launch, replace, close or
-  switch browsers/tabs. A missing or mismatched session is a hard error. If the
+  relay/tab group for all browsing agents) and use only the one current/controlled
+  tab maintained by the CLI. Never launch, replace, close, kill, detach,
+  switch browsers/tabs, create tabs, or run raw `playwright-cli` browser
+  commands yourself. A missing or mismatched session is a hard error. If the
   session does not exist yet, `attach` opens the extension's one-time Welcome
   tab; the user picks an existing tab there ("Allow & select") and the Welcome
   tab is removed. Existing tabs (for example from a debug tab group) are
   brought under control only by dragging them into the `Playwright ·
-  playwright-cli` group; never re-`attach` while a session exists, never
-  `tab-new`.
+  playwright-cli` group; never re-`attach` while a healthy session exists,
+  never `tab-new`, and use `doctor --reset` only for a broken/stale session or
+  an explicitly requested reset.
 - Observe first. `status` is pure: it does not navigate, accept cookies, open a
   login form, fill fields, change filters or retry an action.
 - An unrecognized or outside-site page is `unknown`. Stop and use only an
@@ -162,6 +165,7 @@ npm run cli -- run info --input /tmp/cardmarket-info.json
 npm run cli -- plan user.offer.update --json '{"articleId":123,"price":1.23}'
 npm run cli -- execute --plan <plan-id> --approve <approval-hash>
 npm run cli -- doctor
+npm run cli -- doctor --reset
 ```
 
 The shell is only a transport for these fixed commands. Do not pass arbitrary
@@ -245,7 +249,7 @@ phase, state (when known), step, expected/actual context, effects and
 | code | safe next step |
 |---|---|
 | `INVALID_INPUT`, `UNKNOWN_ACTION` | read `list`/`describe`; fix the request |
-| `BROWSER_REQUIRED`, `ATTACH_FAILED` (session setup) | run `doctor` (the one explicit handoff step) and finish it in the browser; do not launch another browser |
+| `BROWSER_REQUIRED`, `ATTACH_FAILED` (session setup) | run `doctor` (the one explicit handoff step) and finish it in the browser; for a stale relay or explicitly broken session use `doctor --reset`; do not launch another browser or re-attach repeatedly |
 | `SESSION_MISMATCH` | inspect the exact attached session; do not launch another browser |
 | `UNKNOWN_STATE`, `WRONG_STATE`, `STALE_CONTEXT` | run `status`/`info`, then choose a currently legal action |
 | `AUTH_REQUIRED`, `CONSENT_REQUIRED`, `HUMAN_REQUIRED` | user handles the visible blocker in the attached browser |
@@ -262,26 +266,33 @@ and this table are the complete operator guidance.
 
 The transport is fixed and internal: the CLI attaches to the shared
 `playwright-cli` session `chrome` and issues atomic `run-code` calls. You never
-run raw `playwright-cli` commands (`goto`, `fill`, `click`, `press`, `snapshot`,
-`attach`, `tab-new`). Doing so bypasses the closed contract and re-introduces
-the raw-browser failure modes (stale refs, `about:blank`, tab churn).
+run raw `playwright-cli` browser commands (`list`, `attach`, `close`,
+`kill-all`, `close-all`, `detach`, `tab-select`, `tab-new`, `goto`, `fill`,
+`click`, `press`, `snapshot`). Doing so bypasses the closed contract and
+re-introduces the raw-browser failure modes (stale refs, `about:blank`, tab
+churn, duplicate handoff tabs and global process kills).
 
-- Only the shared `chrome` session is ever touched. Do not launch, attach,
-  detach, close, kill or create tabs, and never run `attach` yourself. Data
-  commands fail closed when the session is not live — `session-missing`
-  (no session), `relay-stale` (listed but relay dead) or `no-controllable-tab`
-  (group has no usable tab) — and point you at `doctor`. The one explicit
-  human-facing step is `doctor` (and `connect`): it performs the one-time
-  attach and waits, bounded, for you to finish the extension handoff in the
-  browser. Run it as a deliberate setup/recovery step, never as a data command;
-  never re-`attach` while a session exists and never `tab-new`.
+- Only the shared `chrome` session is ever touched, and only the one current/controlled
+  tab is used. Do not launch, attach, detach, close, kill or create tabs
+  yourself. Data commands fail closed when the session is not live —
+  `session-missing` (no session), `relay-stale` (listed but relay dead) or
+  `no-controllable-tab` (group has no usable tab) — and point you at
+  `doctor`. The one explicit human-facing step is `doctor` (and `connect`): it
+  performs the one-time attach and waits, bounded, for you to finish the
+  extension handoff in the browser. If the handoff is already waiting, finish
+  the existing Playwright connect/welcome tab instead of re-running
+  `doctor`; use `doctor --reset` only when that tab is missing/broken or the
+  relay is stale. Never re-`attach` while a healthy session exists and never
+  `tab-new`.
 - Tab selection is internal: the transport prefers a Cardmarket tab in the
   controlled group; if none exists, it selects any existing non-extension tab
   (for example a debug tab) and the action navigates it to the configured home
   entry — the only raw `goto` the navigation policy allows. `BROWSER_REQUIRED
   no-controllable-tab` means the group has no usable tab at all (only the
   extension handoff page); the user then drags one existing tab into the
-  `Playwright · playwright-cli` group.
+  `Playwright · playwright-cli` group. The envelope's `browser` object is the
+  only session source of truth: `attached` (listed), `live` (relay answered),
+  `stale` (listed but relay dead) and `waiting` (handoff pending).
 - On `BROWSER_REQUIRED` or `ATTACH_FAILED` for the session (`session-missing`,
   `relay-stale` or `no-controllable-tab`), run `doctor` as a deliberate step and
   complete the one-time handoff in the browser. On `SESSION_MISMATCH`, inspect
@@ -321,8 +332,8 @@ Builder-level transport notes (why the CLI is atomic and never raw) live in
 ## Freshness and host limits
 
 - Every CLI result contains `version` and `implementationHash`. This file is
-  written against `version: 0.4.0` and
-  `implementationHash: 2b16073200a95f6b2c2402d20442882cdef0110cc1c29ddecce5f2cafcfbe896`.
+   written against `version: 0.5.0` and
+   `implementationHash: 95d4ec8980f9e8d9f73507cf5cfb8facd5f3a65740c74240c2a54507098393ff`.
   If a call reports different values, the installed copy is stale: stop and
   re-sync it from the repository (`task sync:agents`), then re-run
   `npm run cli -- list`.

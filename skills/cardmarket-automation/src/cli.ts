@@ -8,13 +8,14 @@ import { actions } from './actions/index.ts';
 import { actionContract } from './runtime/contracts.ts';
 import { Engine, withLock } from './runtime/engine.ts';
 import { implementationFingerprint } from './runtime/fingerprint.ts';
-import { currentBrowserState, ensureAttached, invokeBrowser } from './runtime/cli-browser.ts';
+import { currentBrowserState, ensureAttached, invokeBrowser, setBrowserStateRoot } from './runtime/cli-browser.ts';
 import { AutomationError, normalizeError, exitCode, recoveryFor } from './runtime/errors.ts';
 import { isStateId } from './types.ts';
 
 process.umask(0o077);
 const project = resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root = resolve(project,'.local');
+setBrowserStateRoot(root);
 const runId = randomUUID();
 const started = Date.now();
 let invokedAction: string | null = null;
@@ -28,7 +29,7 @@ async function main(): Promise<unknown> {
   const engine = new Engine(root, runtimeConfig, actions,
     (action, phase, input, preview) => invokeBrowser(project, root, action, phase, input, preview));
   const args = (() => {
-    try { return parseArgs({options:{input:{type:'string'},json:{type:'string'},plan:{type:'string'},approve:{type:'string'}},
+    try { return parseArgs({options:{input:{type:'string'},json:{type:'string'},plan:{type:'string'},approve:{type:'string'},reset:{type:'boolean'}},
       strict:true,allowPositionals:true}); }
     catch { throw new AutomationError('INVALID_INPUT'); }
   })();
@@ -70,7 +71,7 @@ async function main(): Promise<unknown> {
     case 'describe': syntax(true,[]); return engine.describe(id!);
     case 'connect': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{const browser = await ensureAttached('handoff');
       return {site:config.name,session:config.browser.session,attached:true,browserLaunch:false,browser};});
-    case 'doctor': syntax(false,[]); return withLock(root, runtimeConfig.lockStaleMs, async()=>{const browser = await ensureAttached('handoff');
+    case 'doctor': syntax(false,['reset']); return withLock(root, runtimeConfig.lockStaleMs, async()=>{const browser = await ensureAttached('handoff',{forceFresh:args.values.reset === true});
       return {site:config.name,session:config.browser.session,attached:true,configured:config.configured,browserLaunch:false,browser};});
     case 'status': syntax(false,[]); return engine.run('status',{});
     case 'run': syntax(true,['input','json']); return engine.run(id!,await input());

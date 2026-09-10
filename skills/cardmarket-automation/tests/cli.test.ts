@@ -45,3 +45,8 @@ test('unverified Cardmarket writes fail closed before browser access',()=>{
   assert.equal(result.json.error.code,'NOT_VERIFIED');
   assert.equal(result.json.error.recovery.owner,'builder');
 });
+test('doctor rejects unknown flags before browser access',()=>{
+  const result=run(['doctor','--bogus']);
+  assert.equal(result.status,2);
+  assert.equal(result.json.error.code,'INVALID_INPUT');
+});
