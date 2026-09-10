@@ -297,6 +297,15 @@ churn, duplicate handoff tabs and global process kills).
   `relay-stale` or `no-controllable-tab`), run `doctor` as a deliberate step and
   complete the one-time handoff in the browser. On `SESSION_MISMATCH`, inspect
   the exact attached session. You never open or launch another browser.
+- If you cannot connect to or drive the Cardmarket tab you opened (reads fail,
+  the tab will not come under control, or the session reads disconnected or
+  stale), tell the user to make sure both hold: (1) the Playwright extension
+  relay / debug session in Chrome is active (the shared `chrome` session is
+  `attached` and `live`, not stale); (2) the Cardmarket tab you opened is the
+  active, in-focus tab. The relay tracks only the one tab it controls, so a
+  Cardmarket tab the user opened separately is not the one it drives. Then
+  re-observe with `status`; never launch another browser, re-attach repeatedly
+  or `tab-new`.
 
 ### Why raw `goto` to Cardmarket detail URLs fails
 
