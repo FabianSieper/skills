@@ -50,7 +50,6 @@ configuration as a side effect of setup.
    ```bash
    npm install -g @go-task/cli
    npm install -g @playwright/cli@0.1.19
-   npm ci --prefix "<REPOSITORY_ROOT>/skills/cardmarket-automation"
    ```
 
    Run only the commands required by the audit. Git and Node themselves are
@@ -65,8 +64,9 @@ configuration as a side effect of setup.
    ```
 
 6. Report installed versions, anything still blocked, and whether tests ran.
-   Report the Chrome extension as conditional: it is needed for live browser
-   automation, not for repository setup or browser-free tests.
+   Report the Chrome extension as conditional for the default authoring
+   architecture. Also state that this audit cannot verify the host-session
+   Unified Computer Use MCP required by Cardmarket.
 
 ## Failure handling
 

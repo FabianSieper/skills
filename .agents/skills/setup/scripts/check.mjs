@@ -78,7 +78,7 @@ function isRepositoryRoot(directory) {
     existsSync(join(directory, "README.md")) &&
     existsSync(join(directory, ".agents", "skills", "website-automation-builder", "SKILL.md")) &&
     existsSync(
-      join(directory, "skills", "cardmarket-automation", "package.json"),
+      join(directory, "skills", "cardmarket-automation", "SKILL.md"),
     )
   );
 }
@@ -147,37 +147,6 @@ function commandFinding({
     found,
     fix,
     detail: path,
-  });
-}
-
-function localDependencies(root, npmAvailable) {
-  const relative = join("skills", "cardmarket-automation");
-  const directory = join(root, relative);
-  const expected = "package-lock.json dependencies satisfied";
-  if (!npmAvailable) {
-    return finding({
-      id: "cardmarket-dependencies",
-      label: "Cardmarket npm dependencies",
-      status: "blocked",
-      expected,
-      fix: `npm ci --prefix ${JSON.stringify(directory)}`,
-      detail: "npm is unavailable",
-    });
-  }
-  const result = run("npm", ["ls", "--depth=0", "--json"], {
-    cwd: directory,
-    timeout: 30_000,
-  });
-  return finding({
-    id: "cardmarket-dependencies",
-    label: "Cardmarket npm dependencies",
-    status: result.ok ? "ok" : "missing",
-    expected,
-    found: result.ok ? "installed" : null,
-    fix: `npm ci --prefix ${JSON.stringify(directory)}`,
-    detail: result.ok
-      ? relative
-      : result.stderr || "npm reports missing or invalid dependencies",
   });
 }
 
@@ -330,9 +299,6 @@ findings.push(
     fix: `npm install -g @playwright/cli@${PLAYWRIGHT_CLI_VERSION}`,
   }),
 );
-
-const npmAvailable = Boolean(npmPath);
-findings.push(localDependencies(root, npmAvailable));
 
 const playwright = findings.find((item) => item.id === "playwright-cli");
 findings.push(chromeExtensionFinding(playwright?.status === "ok"));

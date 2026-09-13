@@ -10,10 +10,12 @@ tests, generated artifacts and operating instructions. It also applies when
 changing the builder or the website-automation concept itself.
 
 Follow the skill's reading routes to the canonical concept in
-`docs/strict-automation/`. Use playwright-cli as the browser transport. Keep the
-operating agent's interface simple and enforce the state/effect/error contracts
-in tooling. Do not invent an alternative architecture or treat legacy Cardmarket
-behavior as permission to bypass the concept.
+`docs/strict-automation/`. The default authored runtime uses playwright-cli.
+The explicit exception is `skills/cardmarket-automation`: it uses only the
+Unified Computer Use MCP and must retain its hard `mcp__cua_repl.js` prerequisite
+gate, fresh accessibility-state checks, scenario navigation rules, and disabled
+durable writes. Do not reintroduce its removed CLI/POM runtime or another
+fallback transport.
 
 This requirement applies whether the host implicitly discovers the skill or
 not. If the file cannot be read, report that specific missing prerequisite;

@@ -15,7 +15,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm --prefix skills/cardmarket-automation ci
-      - run: npm --prefix skills/cardmarket-automation run typecheck
-      - run: npm --prefix skills/cardmarket-automation test
-      - run: node skills/cardmarket-automation/node_modules/typescript/bin/tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions docs/strict-automation/ui-model.ts docs/strict-automation/ui-model.type-test.ts
+      - run: node scripts/verify-cardmarket-skill.mjs

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Sync the repo's Cardmarket skill over the installed global copy so OpenCode's
-// skill discovery never loads a stale build. Preserves the target's node_modules
-// (owned by scripts/install-deps.mjs) and removes stale target entries.
+// skill discovery never loads stale instructions. Replaces the installed skill
+// completely except for private local state.
 //
 // Usage: node scripts/sync-installed.mjs [target-dir]
 // Default target: ~/.agents/skills/cardmarket-automation
@@ -10,7 +10,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 
-const EXCLUDE = new Set(['node_modules', '.local', '.playwright-cli', '.DS_Store']);
+const EXCLUDE = new Set(['.local', '.DS_Store']);
 const repoRoot = resolve(import.meta.dirname, '..');
 const source = resolve(repoRoot, 'skills/cardmarket-automation');
 const target = resolve(process.argv[2] ?? join(homedir(), '.agents/skills/cardmarket-automation'));
@@ -38,13 +38,12 @@ async function walk(rel) {
   }
 }
 
-const sourceTop = new Set((await readdir(source, { withFileTypes: true })).filter(e => !EXCLUDE.has(e.name)).map(e => e.name));
 let removedStale = 0;
 for (const entry of await readdir(target, { withFileTypes: true })) {
-  if (entry.name === 'node_modules' || !sourceTop.has(entry.name)) continue;
+  if (EXCLUDE.has(entry.name)) continue;
   await rm(join(target, entry.name), { recursive: true, force: true });
   removedStale += 1;
 }
 
 await walk('');
-console.log(`synced ${source} -> ${target}: copied ${copiedFiles.size} files, removed ${removedStale} stale entries, node_modules preserved`);
+console.log(`synced ${source} -> ${target}: copied ${copiedFiles.size} files, removed ${removedStale} stale entries`);

@@ -40,24 +40,12 @@ for (const path of docs) {
     }
   }
 }
-const migrationPath = join(design, 'migration.md');
-let mappedActions = 0;
-if (existsSync(migrationPath)) {
-  const migration = readFileSync(migrationPath, 'utf8');
-  const actionsDir = join(root, 'skills/cardmarket-automation/src/actions');
-  for (const name of readdirSync(actionsDir).filter(name => name.endsWith('.action.ts'))) {
-    const text = readFileSync(join(actionsDir, name), 'utf8');
-    const id = text.match(/\bid:\s*['"]([^'"]+)['"]/)?.[1];
-    if (!id || !migration.includes('`' + id + '`')) errors.push(`Unmapped action: ${name}`);
-    else mappedActions++;
-  }
-}
 for (const file of ['Taskfile.yml', '.github/workflows/test.yml']) {
   const text = readFileSync(join(root, file), 'utf8');
   if (text.includes('node skills/website-automation-builder/')) {
     errors.push(`${file}: invokes the removed builder`);
   }
 }
-console.log(JSON.stringify({ok: errors.length === 0, checkedLinks, mappedActions,
+console.log(JSON.stringify({ok: errors.length === 0, checkedLinks,
   scope: 'authoring-wiring-and-documents-only', errors}, null, 2));
 process.exitCode = errors.length ? 1 : 0;

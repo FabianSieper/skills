@@ -1,75 +1,64 @@
-# Flows
+# Supported Computer Use flows
 
-## Detect Current State
-1. `status` – pure observation of `state`, URL, auth certainty and blockers.
-2. `info` – bounded state-specific data read when the current state is known.
+All flows use the single bound Unified Computer Use tab. Observe fresh AX state
+before and after every interaction and verify exact business identity. Stop on
+ambiguity, blockers, or UI drift.
 
-## Require Login
-Login is a user-owned prerequisite, not an implicit workflow.
-1. Run `status` and inspect `authKnown`/blockers.
-2. If an account action returns `AUTH_REQUIRED`, have the user log in or complete MFA in the already-attached browser.
-3. Re-run the same read or transition action after the user confirms completion.
-4. Never replay a write after login, timeout or an uncertain response; verify or reconcile first.
+## Find and read a card
 
-## Find a Card
-1. `nav.search { query }`
-2. `info` – read result tiles
-3. choose a tile index from `cards`
-4. `nav.open { index }`
-5. `info` – read detail
+1. From the Cardmarket home/game surface, locate one visible Magic search field.
+2. Set the query with `setValue`; do not submit with Enter.
+3. Click the unique visible Search control and re-observe.
+4. Verify a results surface or an explicit empty state.
+5. Read at most 50 visible results. Preserve card name, set/printing, displayed
+   image/variant evidence, URL, and “from” price classification.
+6. Open only the result whose visible identity matches the requested target.
+7. Verify the detail title and printing context before reporting detail data.
 
-## Read Card Detail
-1. `nav.open { index }`
-2. `info { ...requested seller filter }` – `info {}` applies the canonical seller default.
+## Read sellers
 
-`info` applies and verifies the exact seller filter before it reads other offers. Do not use a seller list whose returned `filter` differs from the requested comparison filter.
+1. Verify the exact detail identity.
+2. Locate the seller-filter region and apply requested values. If the user gave
+   none, use Excellent-or-better, English, Germany, any seller type, and leave
+   foil/signed/altered unrestricted.
+3. Submit through the unique visible UI control.
+4. Re-observe and read every effective filter value back.
+5. Read at most 50 seller rows. Report filter semantics, timestamp, sorting, and
+   coverage. A partial list is never a global minimum.
 
-## Read Versions
-1. `nav.versions`
-2. `info`
-3. optional `nav.artwork { index }`
-4. `info`
+## Read versions or artworks
 
-## Check Seller Quantities Across Versions
-1. `nav.versions`
-2. `info { limit, minQty }`
-3. inspect `artworks[].qualifies`, `maxSellerQuantity`, and `sellersAtLeast`
+1. From verified detail, click the visible versions/reprints/artwork control.
+2. Verify the versions surface still names the same parent card.
+3. Read at most 50 visible variants with set, artwork/image evidence,
+   availability, and “from” price classification.
+4. If one exact variant is requested, click it by full visible identity and
+   verify the resulting detail page before reading seller prices.
 
-## Read Own Offers
-1. Ensure the browser is logged in (`info` → `auth.loggedIn: true`).
-2. Navigate to the required card detail state.
-3. `user.offers`
-4. Inspect `offers[]`, especially `articleId`, `condition`, `language`, `price`, and `quantity`.
+## Read own offers
 
-## Read Own Offers Listing
-1. Ensure the browser is logged in (`info` → `auth.loggedIn: true`).
-2. `nav.own-offers` – Selling → My Offers → Singles.
-3. For a card search, `nav.own-offers.filter { cardName: "Forest" }`.
-4. `info` – read the current page and active stock filter.
-5. To list all offers, call `info { all: true }`. It follows every enabled bottom next-page control, checks the filter remains unchanged, and stops only after the last page (`complete: true`).
+1. Require a visibly authenticated account state. If login or MFA is needed,
+   hand control to the user and wait for confirmation before re-observing.
+2. Navigate through visible Selling → My Offers → Singles controls.
+3. Verify the own-offers heading, filter region, and table.
+4. Apply requested stock filters, submit once, and read all effective values
+   back.
+5. Read at most 50 rows per page and 20 pages. Deduplicate using visible article
+   identity. Report `complete:false` if the terminal page or filter continuity
+   cannot be proven.
 
-## Compare an Own Offer with Other Sellers
-1. On `own-offers`, filter by `cardName` when appropriate and run `info` to identify the current-page row index.
-2. `nav.own-offers.open { index }` – opens the listing's card-name detail link.
-3. `info { ...requested seller filter }` – omit the filter fields for the canonical seller default; otherwise pass all requested values.
-4. Compare the stock row's `price` with `sellers[]`. The returned `filter` is the exact filter used for that comparison. If relevant, use `nav.versions` from the detail page to inspect other print variants.
+## Compare own and market offers
 
-## Update One Own Offer
-1. `user.offers`
-2. If `count > 1`, ask the user which `articleId` should be changed.
-3. Receive an explicit instruction for the exact change(s).
-4. `plan user.offer.update { articleId, ...changes }`
-5. Review the plan preview and obtain user approval.
-6. `execute --plan <planId> --approve <approvalHash>`
-7. `user.offers` – verify the business state.
+For each bounded own-offer target, bind the exact article/card identity and its
+condition, language, variant flags, quantity, and price. Open the matching card
+through its visible link, apply compatible seller filters, read them back, and
+collect bounded seller prices. Return to the immediately preceding stock page
+with browser history and verify the stock filter/page context before continuing.
 
-## Error Handling
-- `wrong_state`: run `info`, then choose a transition valid for the returned state.
-- `not_available`: report or choose another path.
-- `not_found`: re-run `info` and use an available index.
-- `UI_DRIFT` / `AMBIGUOUS_SELECTOR`: stop and report to builder.
-- `BROWSER_REQUIRED`: hard stop.
-- `HUMAN_REQUIRED`: wait for manual Cloudflare solve.
-- `AUTH_REQUIRED`: user handles login/MFA in the visible attached browser; re-run the same read/transition only after confirmation. There is no automatic login or write replay.
-- `PLAN_CHANGED`: create and review a new plan.
-- `PLAN_USED` / `UNKNOWN_COMMIT`: do not retry; verify with `user.offers`.
+Stop rather than compare incompatible or unknown variants. Distinguish the own
+price, product-wide “from” data, and matching seller prices.
+
+## Unsupported writes
+
+Offer creation, editing, deletion, and bulk price updates are disabled. Do not
+open an edit workflow as a workaround and do not submit any durable change.

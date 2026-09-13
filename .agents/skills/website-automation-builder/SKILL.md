@@ -5,9 +5,11 @@ description: Required project workflow for creating, editing, extending, refacto
 
 # Website Automation Builder
 
-Build understandable, guarded website automation using **playwright-cli** in the
-user's existing browser. This is a project-local authoring skill; its canonical
-concept lives in this repository. Do not install it as a standalone runtime skill.
+Build understandable, guarded website automation. The default architecture uses
+**playwright-cli** in the user's existing browser. Cardmarket is an explicit
+repository exception: its operating skill uses only Unified Computer Use and
+must stop when `mcp__cua_repl.js` is unavailable. Do not install this authoring
+skill as a standalone runtime skill.
 
 ## Required reading
 
@@ -36,17 +38,19 @@ The TypeScript example illustrates contracts only. It is not a complete runtime.
    action declaration. Extend existing structures; ordinary site changes must
    not alter the shared engine. Reuse registered steps for bounded workflows.
 3. Establish evidence for selectors, identity, loading/empty states, filters and
-   commit boundaries. For actual UI discovery use playwright-cli in the intended
-   existing session. Do not open/replace/close the browser, invent unseen
-   selectors, access hidden stores or substitute direct APIs/another driver.
-4. Implement the change with executable guards. Use one schema/registry to
-   generate help, manifest, graph and resolved defaults. Keep selectors inside
-   POMs/components; do not give raw Page/Locator or arbitrary code to actions or
-   operating agents. Runtime uses compiled bundles through playwright-cli.
+   commit boundaries. For actual UI discovery use the affected skill's declared
+   transport: Unified Computer Use for Cardmarket, otherwise playwright-cli.
+   Do not invent unseen selectors, access hidden stores or silently substitute
+   another driver.
+4. Implement the change with executable guards where the runtime owns code. For
+   Cardmarket, keep the operating surface as focused MCP instructions with a
+   hard availability gate, one bound tab, fresh AX state, explicit scenarios,
+   verified postconditions and no transport fallback. Default generated runtimes
+   use compiled bundles through playwright-cli.
 5. Verify affected behavior and relevant rejection/race cases. Run the affected
-   package's documented checks; use `npm run verify` when implemented. The
-   current Cardmarket package has `typecheck` and `test`, not `verify` or a
-   precompiled CLI. Do not claim proposed commands already exist.
+   package's documented checks; use `npm run verify` when implemented. Cardmarket
+   has no package runtime; run `task test:cardmarket`. Do not claim live behavior
+   from document-only verification.
 6. Run `node scripts/verify-website-concept.mjs` from repository root for this
    authoring skill's wiring and document checks. Record what was actually tested,
    exact remaining live risks and changed action evidence. No unverified claim
@@ -74,9 +78,9 @@ The TypeScript example illustrates contracts only. It is not a complete runtime.
 
 ## Existing debt and missing evidence
 
-The old builder/scaffold was removed because it encoded a different contract.
-Do not resurrect it as the approved starting template. The shared production
-runtime and Cardmarket migration remain open in the tracker.
+The old builder/scaffold and Cardmarket CLI/POM compatibility runtime were
+removed. Do not resurrect either as an approved starting point. Cardmarket's
+focused Unified Computer Use instructions are not proof of live UI verification.
 
 Apply the concept to the requested change. Do not expand a small repair into an
 unrequested migration of everything. Record unchanged legacy deviations and do

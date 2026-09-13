@@ -11,16 +11,14 @@ tasks:
       - node scripts/verify-website-concept.mjs
       - node --experimental-strip-types --test docs/strict-automation/ui-model.test.mjs
   test:cardmarket:
-    desc: Typecheck and test the current Cardmarket implementation
+    desc: Validate the focused Unified Computer Use Cardmarket skill
     cmds:
-      - npm --prefix skills/cardmarket-automation run typecheck
-      - npm --prefix skills/cardmarket-automation test
+      - node scripts/verify-cardmarket-skill.mjs
   install:opencode:
     desc: Install the Cardmarket runtime skill globally for OpenCode
     cmds:
       - npx --yes skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
-      - node scripts/install-deps.mjs
   sync:agents:
-    desc: Sync the repo Cardmarket skill into the installed global copy (preserves node_modules)
+    desc: Replace the installed global Cardmarket copy with the focused repo skill
     cmds:
       - node scripts/sync-installed.mjs

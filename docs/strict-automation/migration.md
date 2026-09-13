@@ -1,23 +1,21 @@
 # Evidence, adversarial review and migration
 
-Status: partial implementation, 2026-09-08. The builder was replaced by a
-project-local authoring skill and the first Cardmarket contract slice is now in
-the runtime. The complete migration remains open and is not production-ready.
+Status: historical CLI/POM migration record. On 2026-09-13 the Cardmarket
+compatibility runtime described below was removed and replaced by a focused
+Unified Computer Use operating skill. The default strict architecture remains
+the authoring reference for other website runtimes; Cardmarket is an explicit
+transport exception and durable writes remain disabled.
 Normative proposal: [concept.md](concept.md). Type design:
 [typescript-design.md](typescript-design.md). Progress: [todo.md](todo.md).
 
-## Current implementation slice (verified in this checkout)
+## Removed implementation slice (historical evidence)
 
-The Cardmarket runtime now has an explicit `unknown` state, a single executable
-contract registry (`src/runtime/contracts.ts`), pure `status` observation,
-state-aware destination checks, inline/empty JSON input, and structured
-recovery context. `SitePage.assertReady()` no longer navigates, accepts consent
-or opens login. The browser adapter uses only `playwright-cli` and does not
-automatically log in or replay a failed write. The Cardmarket `typecheck` passes.
-Both write contracts are explicitly disabled with `NOT_VERIFIED` until the
-strict staging, journal and live-evidence gate is complete.
+The removed Cardmarket runtime had an explicit `unknown` state, a contract
+registry, pure status observation, state-aware destination checks and structured
+recovery. Its historical browser adapter and package checks are no longer an
+operating interface. Durable writes remain disabled in the replacement skill.
 
-This is an incremental compatibility layer, not completion of gates I01–I07.
+This was an incremental compatibility layer, not completion of gates I01–I07.
 Numeric collection indexes, raw `Page` action handlers, invocation-time
 bundling, full tab identity, and the durable cross-plan write journal remain
 open. No live browser or account write was performed by this slice.
@@ -28,20 +26,20 @@ These are repository observations from this task, not live-site findings.
 
 | Evidence | Consequence | New contract |
 |---|---|---|
-| [state.ts](../../skills/cardmarket-automation/src/lib/state.ts) previously defaulted every unmatched URL to `start` | Unknown pages looked supported | **Implemented:** unmatched routes are `unknown`; DOM-backed recognition remains open |
-| [SitePage.ts](../../skills/cardmarket-automation/src/pages/SitePage.ts) previously navigated in `assertReady` and attempted accept-all cookies | A prerequisite check changed UI and consent | **Implemented:** pure readiness; explicit consent/navigation remain separate |
-| [engine.ts](../../skills/cardmarket-automation/src/runtime/engine.ts) previously had no typed source/destination fields | Agent had to infer legality | **Partial:** registry guards now drive dispatch metadata and destination checks |
-| [nav-open](../../skills/cardmarket-automation/src/actions/nav-open.action.ts) uses index and accepts all five states in output validation | Reordered target or wrong destination can pass a weak contract | Bound target references and destination/identity postconditions |
-| [actions tests](../../skills/cardmarket-automation/tests/actions.test.ts) explicitly accept `detail` output for several different nav actions | Current tests encode weak destination semantics | Transition-specific positive and negative outcomes |
-| [info](../../skills/cardmarket-automation/src/actions/info.action.ts) applies filters, paginates and can visit detail pages | “Read current state” has hidden transitions | Pure observations plus explicit bounded workflows |
-| [market comparison](../../skills/cardmarket-automation/src/actions/stock-market-comparison.action.ts) previously called `page.goto` directly | Actions could bypass POM navigation policy | **Fixed:** navigation now uses UI clicks, browser-history `goBack()` returns and home-only raw `goto` (navigation transport policy); raw `Page` action handlers remain migration debt |
-| [browser adapter](../../skills/cardmarket-automation/src/runtime/cli-browser.ts) bundles on every invocation and repeats phases after AUTH_REQUIRED | Runtime latency and possible write replay path | Precompile, explicit login, no automatic execute replay |
+| removed state recognizer previously defaulted every unmatched URL to `start` | Unknown pages looked supported | The active MCP skill requires origin plus visible page evidence |
+| removed base page previously changed UI during readiness | A prerequisite check changed UI and consent | The active skill observes before interaction |
+| removed engine initially lacked typed source/destination fields | Agent had to infer legality | Scenario-specific source and destination checks are explicit instructions |
+| removed open action used an ordinal index | Reordered targets could be selected | Re-resolve full visible business identity after every rerender |
+| removed action tests accepted weak destinations | Wrong destinations could pass | Fresh AX destination and identity verification is mandatory |
+| removed info action mixed filters, pagination and visits | Reads had hidden transitions | The active flows name every UI-changing stage |
+| removed market comparison contained browser navigation code | Navigation policy could be bypassed | Only visible UI navigation and guarded immediate history return are allowed |
+| removed browser adapter bundled on invocation | Runtime and replay complexity | No local runtime remains; Unified Computer Use is mandatory |
 | Same adapter recognizes a session name recursively anywhere in session JSON | Name presence is weaker than compatible attached-session proof | Exact session/tab/protocol validation |
-| [CLI](../../skills/cardmarket-automation/src/cli.ts) previously required regular input files | Copyable instructions could fail | **Implemented:** `--json` and absent input default to `{}` |
-| [errors.ts](../../skills/cardmarket-automation/src/runtime/errors.ts) previously retained only code/optional step | Model could not identify expected/actual recovery | **Partial:** structured context and typed recovery now survive the CLI envelope |
-| [detail POM](../../skills/cardmarket-automation/src/pages/CardDetailPage.ts) prepare opens/closes an edit form; execute checks four changed-field groups | Planning is not pure; verification lacks explicit checks for foil/signed/altered/comments | Explicit staging; every planned field verified |
-| [bulk update](../../skills/cardmarket-automation/src/actions/stock-bulk-price-update.action.ts) uses parallel arrays and sequential writes with an aggregate result | Pairing errors and partial progress ambiguity | Item objects and per-item durable journal |
-| [build-state](../../skills/cardmarket-automation/references/build-state.json) previously listed historical `cards.search/price/artworks` actions as current | Historical success cannot prove the current registry | **Implemented:** current action list and current fixture evidence are separated from `historicalEvidence` |
+| removed CLI required local input conventions | Operating ceremony and package dependencies | The agent now uses the MCP directly |
+| removed error layer initially lost recovery context | Model could not identify safe recovery | The active skill stops and reports the concrete blocker |
+| removed detail POM had an incomplete write lifecycle | Planning and verification were not sufficient | Durable writes are disabled |
+| removed bulk action had pairing and partial-progress risk | Ambiguous effects | Durable writes are disabled |
+| removed build-state mixed historical and current evidence | Historical success could look current | Active files contain no historical runtime evidence |
 | Removed builder's `references/runtime-contract.md` explicitly says next is not a global state machine | Builder and requested strict state contract differ | Replace narrative next guidance with enforced state/edge registry |
 | Removed builder's `references/write-safety.md` requires pure prepare, unlike Cardmarket | Template and site have divergent invariants | One versioned safety runtime and migration parity check |
 
@@ -203,8 +201,7 @@ The following initial caller inventory guided the completed updates:
 - `README.md`: builder installation/discovery distinction and runtime commands.
 - Builder scripts/template/demo: root calculations, asset paths, generated help
   and validation inputs, plus a repository-wide old-path search.
-- `scripts/install-deps.mjs`: inspect discovery behavior even though the initial
-  literal-path search found no builder path there.
+- The former Cardmarket dependency installer was removed with its local runtime.
 - Root `todo.md`: preserve unrelated tasks and update a path only when the
   relocation actually occurs. `TODOs.md` remains the source request.
 
