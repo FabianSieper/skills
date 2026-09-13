@@ -1,10 +1,10 @@
 # Evidence, adversarial review and migration
 
 Status: historical CLI/POM migration record. On 2026-09-13 the Cardmarket
-compatibility runtime described below was removed and replaced by a focused
-munim-computer-use operating skill. The default strict architecture remains
-the authoring reference for other website runtimes; Cardmarket is an explicit
-transport exception and durable writes remain disabled.
+compatibility runtime described below was removed, and the entire default
+concept was moved to focused munim-computer-use skills in the Cardmarket shape.
+The CLI/POM/Playwright content below is historical evidence, not the active
+normative architecture. Durable Cardmarket writes remain disabled.
 Normative proposal: [concept.md](concept.md). Type design:
 [typescript-design.md](typescript-design.md). Progress: [todo.md](todo.md).
 

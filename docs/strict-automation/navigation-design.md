@@ -1,185 +1,141 @@
-# Easy navigation and extension, with playwright-cli
+# Navigation ergonomics with munim-computer-use
 
-Revision 2 supplement, 2026-09-08. Proposed, not implemented. This resolves gaps
-in the initial [concept](concept.md); it does not claim every possible website
-failure is knowable in advance. Unrecognized situations must remain observable,
-bounded and unable to trigger guessed interactions.
+Status: normative supplement, revision 3, 2026-09-13. This resolves navigation,
+observation, recovery and authoring ergonomics for the default focused MCP
+skill. It does not claim every website failure is knowable in advance.
+Unrecognized situations remain observable, bounded and unable to trigger guessed
+interactions.
 
-## Transport stays playwright-cli
+## Transport is munim-computer-use
 
 ```text
-AI uses our business commands
-  → shared contract runtime
-    → compiled page/component operations
-      → playwright-cli run-code
-        → existing attached browser
+agent
+  → skill decision table
+    → munim-computer-use_* tools
+      → visible browser UI and accessibility state
+        → bounded result
 ```
 
-The installed executable reports `0.1.19`; `--version` and `--help` were checked.
-The later read-only setup audit also inspected CLI session/channel inventory.
-No session was attached or browser page inspected.
-Official documentation supports passing a function file to `run-code`; the
-adapter must supply that compiled function rather than runtime imports.
-See [Playwright CLI running-code documentation](https://github.com/microsoft/playwright-cli/blob/main/skills/playwright-cli/references/running-code.md).
+The agent uses the generic computer-use tools against the bound browser:
+`activate_app`, `list_apps`, `get_app_state`, `click`, `type_text`,
+`set_value`, `press_key`, `scroll`, and optional `screenshot`.
 
-Use Playwright's locator actionability checks inside POM operations, plus our
-business identity and destination checks. A visible, enabled button does not
-prove that the correct card's data finished loading.
-See [Playwright auto-waiting](https://playwright.dev/docs/actionability).
+Safari is preferred. Chrome is allowed only as a browser fallback using the same
+generic tools. `munim-computer-use_browser_*` is not the canonical transport.
+No other driver, CLI, shell automation, Web search or direct HTTP path is
+allowed.
 
-Never silently switch to another browser driver or API. An incompatible CLI or
-extension is a diagnostic result with the exact prerequisite, not an invitation
-for the operator to invent an alternative. Session reuse and stable tab binding
-still need the transport verification recorded in the migration plan.
-
-## Navigation transport policy
+## Navigation policy
 
 Every movement inside the site follows one fixed rule:
 
-- **Forward:** only through real UI interaction — links, buttons, tabs,
-  pagination controls, form submission. POM methods encode these; no POM
-  method may raw-`goto` a constructed site URL.
-- **Return:** only through browser history (`goBack()`), which undoes the
-  forward step in reverse.
-- **Raw `goto`:** only to the configured site home entry, exposed as
-  `goHome()`. Use it to re-anchor after a navigation reset; everything after
-  re-anchoring must again be UI navigation.
+- **Forward:** only through real visible UI interaction — links, buttons, tabs,
+  pagination controls, form submission.
+- **Return:** only through browser history, which undoes the immediately
+  preceding verified forward step.
+- **Direct navigation:** only to the configured site home entry, used to
+  re-anchor the bound tab or open one initial tab when no usable site tab
+  exists.
 
-Rationale: on client-rendered SPA surfaces a raw `goto` to a constructed detail
-URL can hit server-side redirects and leave the POM in an unrecognized state,
-while a UI click stays client-side and always lands on a recognizable surface.
-History returns keep the navigation stack consistent, so later forward steps
-resume from the expected position.
+Do not construct object, list, detail, account or stock URLs. Do not use raw
+navigation as a shortcut around a missing or ambiguous control.
 
-## What the operating AI should do
+## Enter-key policy
 
-Use one common command pattern. The examples below are proposed commands, not
-commands available in the current production skill:
+The Return/Enter key is never used to submit a site page form. Set the visible
+search or filter field, then click the unique visible submit/Search control.
 
-```bash
-node <skill-root>/scripts/site-runtime.mjs run card.find --json '{"query":"Forest"}'
-node <skill-root>/scripts/site-runtime.mjs run nav.open --json '{"targetRef":"returned-reference"}'
-node <skill-root>/scripts/site-runtime.mjs run sellers.read
+The browser address bar is the only allowed Enter target. Use it only for
+deliberate home-entry re-anchoring:
+
+```text
+set_value { element_id: <address bar>, value: "https://example.com" }
+press_key { key: "Enter" }
 ```
 
-The first command accepts all its explicitly supported starting states and
-performs the required entry/search transitions internally. The result supplies
-printing/artwork candidates with identity, image evidence and bound opening
-commands. The operator selects from the task's intent. After opening, the result
-supplies seller-reading and version commands; it does not require another status
-or help call. `sellers.read` applies and reports its explicit/default filters.
-Reading the active page without changing those filters has its own pure read.
+If no bound tab exists, open one home-entry tab instead of guessing among tabs.
 
-Ambiguity is not solved by more navigation: report the distinguishing candidates
-and request only a choice that cannot be inferred from the user's instruction.
-Missing input is returned inline as field name, description, type, constraints
-and default; common commands should not require separately reading `describe`.
+## What the operating agent should do
 
-Result action summaries use these alternatives:
+The operator loop is:
 
-```ts
-type Invocation = {
-  executable: 'node';
-  args: readonly string[]; // Includes absolute runtime path and bound inputs.
-  shellCommand: string;   // Generated with platform-specific safe quoting.
-};
-type NextAction =
-  | { state: 'ready'; id: string; purpose: string; command: Invocation }
-  | { state: 'needs_input'; id: string; purpose: string; fields: InputField[] };
-```
+1. Read `SKILL.md` once.
+2. Run the mandatory MCP gate.
+3. Bind exactly one site tab.
+4. Observe fresh state and recognize page/blockers.
+5. Select the navigation row matching the requested goal.
+6. Resolve exactly one visible control.
+7. Interact once.
+8. Observe fresh state and verify destination/identity.
+9. Continue only within the user’s task and report bounded result.
 
-This is a shape illustration; `InputField` comes from the production schema
-registry. Raw website labels are never used as executable text. Fields already
-known from the result are bound automatically. The operator does not compose
-URLs, selectors, indexes, session flags or bundles.
+The agent should not repeatedly read help, invent selectors, quote shell
+commands, compose URLs, choose by ordinal position, or treat the last known
+action list as current.
 
-Failure gives one primary recovery disposition and, where safe, its exact next
-command. If state observation itself failed, say so; do not publish the last
-known action list as current. Repair-required errors additionally identify the
-specific source file, semantic locator ID and failing guard for the builder.
+A missing input or failure returns the missing prerequisite, observed blocker,
+ambiguous candidates or UI drift. It does not publish a guessed next action.
 
-## Navigation cases added in this review
+## Navigation failure cases
 
-All rows are implementation acceptance cases, not executed live tests.
+All rows are skill acceptance cases, not executed live tests.
 
-| Difficulty | Required handling |
+| difficulty | required handling |
 |---|---|
-| URL changes before SPA content, or old card remains visible | Require destination identity and relevant region completion, not URL alone |
-| Page changes while multiple regions are being read | Check identity/revision before and after; one bounded re-observation, otherwise unstable state |
-| Sellers loading while card header is ready | Track region readiness separately; allow header reads, withhold seller reads; no page-wide stop for unrelated widgets |
-| Button appears enabled but is covered, detached or disabled during interaction | Use actionability plus guarded target re-resolution; no forced click or ordinal fallback |
-| DOM rerenders or rows reorder | Re-resolve the same business identity; keep it if context is unchanged, never substitute another row |
-| Autocomplete, debounced search or dependent dropdown | Component owns exact selection and waits for verified selected value/dependent options before submit |
-| Empty result versus loading, failed fetch or hidden rows | Explicit evidence for empty; loading/error/unknown never becomes count zero |
-| Infinite scroll or virtualized table | Declare a bounded load-more workflow; distinguish mounted/loaded/total; pure read never scrolls implicitly |
-| Current tab closes, changes or another matching tab exists | Report binding mismatch and observed candidates; never choose by tab index or first match |
-| Unexpected popup, download, new tab or permission dialog | Report unexpected effect and stop; do not follow, grant permission, close or save by guess |
-| Intentional iframe, popup or download in a future site skill | Require a registered surface/effect adapter and tests; unsupported until added; no generic raw escape |
-| Back/reload restores stale data, changes filters or resubmits a form | No generic back/reload recovery; registered destination route with dirty/effect guards |
-| Login redirects back to a different card or account | Re-observe after the human finishes; resume a read only through its declared route; invalidate incompatible plans |
-| Rate limit, maintenance, offline or persistent spinner | Distinct cause and bounded recovery; no repeated navigation; cooldown applies across CLI invocations |
-| Locale, currency, game section or responsive layout differs | Observe context; support only evidenced variants; never change preferences/viewport implicitly |
-| Focus/menu/hover state changes | Component owns required noncommitting steps; ephemeral presentation data is not a new global node unless legal operations change |
-| Caller interrupted or chat context lost | `status` reports in-flight operation and safe cursor/plan references; new agent does not infer completion or restart work |
-| Runtime lock held by a running operation | Return BUSY plus read-only local progress metadata; never wait for lock merely to report status |
-| User changes the task mid-workflow | Stop at the next declared safe boundary; do not start further chunks; cancellation cannot undo an in-flight write |
-| Partial read needs continuation | Bind cursor to account/context and progress; next command supplied; changed context returns stale cursor |
-| Same easy operation causes repeated status/describe calls | Return compact state, data and bound next commands together; no required discovery ritual |
-| Optional region drifts but another operation is safe | Block only actions depending on that region; core page/identity ambiguity still blocks all domain actions |
+| URL changes before content, or old object remains visible | require destination identity and relevant region evidence, not URL alone |
+| page changes while reading multiple regions | check identity before and after; one bounded re-observation, otherwise unstable state |
+| table loading while header is ready | allow stable header reads; withhold table reads; no page-wide stop for unrelated widget |
+| button covered, detached or disabled during interaction | re-resolve exactly one enabled target; no forced click or coordinate fallback |
+| accessibility tree rerenders or rows reorder | re-resolve same business identity; never substitute another row |
+| autocomplete, debounced search or dependent dropdown | use the documented visible control and verify selected value before submit |
+| empty result versus loading, failure or hidden rows | require explicit empty-state evidence; loading/error/unknown never becomes zero |
+| infinite scroll or virtualized table | use a bounded documented load-more flow; pure read never scrolls implicitly |
+| current tab closes, changes or another matching tab exists | report binding mismatch and candidates; never choose by tab index |
+| unexpected popup, download, new tab or permission dialog | report unexpected effect and stop |
+| back/reload restores stale data or resubmits form | no generic back/reload recovery; use only the immediately preceding verified return |
+| login redirects to different object or account | re-observe after human finishes; resume only through declared route |
+| rate limit, maintenance, offline or persistent spinner | distinct cause and bounded recovery; no repeated navigation |
+| locale, currency, section or layout differs | observe context; support only evidenced variants; never change preferences implicitly |
+| focus/menu/hover state changes | use required noncommitting visible steps; ephemeral presentation is not a new global state unless legal operations change |
+| caller interrupted or context lost | report in-flight uncertainty and safe references; new agent does not infer completion |
+| user changes task mid-workflow | stop at next safe boundary; cancellation cannot undo an in-flight write |
+| partial read needs continuation | bind cursor to context and progress; changed context returns stale cursor |
+| same task causes repeated observation/help calls | return compact state, result and next safe step together |
+| optional region drifts but another operation is safe | block only actions depending on that region; core identity ambiguity blocks all domain actions |
 
-Global blockers and local unavailable regions are different. A consent overlay
-can block interaction across the page; a seller-table loading state need not
-prevent a read of a stable product header. Region failures retain their cause.
-Probe only dependencies of the current page's candidate actions; never perform
-a deep DOM extraction for every action in the registry just to compute status.
+Global blockers and locally unavailable regions are different. A consent or
+login overlay can block the page; a loading table need not prevent reading a
+stable header. Region failures retain their cause.
 
-If the session is busy, status returns `state:null`, no current browser actions,
-and sanitized local operation/progress metadata with freshness timestamps.
-It must not touch the browser without the lock. Stale last-known state may be
-included only as explicitly historical context. There is no claim of reliable
-automatic cancellation until the transport's worker lifecycle has been verified.
+## What the extending agent should edit
 
-## What the extending AI should edit
+Use the same three site concepts everywhere: **state evidence, supported flow,
+navigation decision**.
 
-Use the same three site concepts everywhere: **state schema, POM/component,
-action declaration**. The engine handles all shared lifecycle machinery.
+| change | expected skill edits |
+|---|---|
+| add a page | selector evidence, state row, navigation rows, flow, result requirements |
+| add a filter | selector/control evidence, read-back, no-filter fallback, flow update |
+| add a transition | navigation row, flow step, identity verification |
+| add a dialog | selector evidence, blocker or named state, open/close flow |
+| add a workflow | bounded composition of existing flow steps, branch/stop conditions |
+| add a write path | guarded write flow, confirmation, read-back, restore/test rule |
+| add a transport primitive | explicit reviewed concept change, not silent skill edit |
 
-| Change | Expected site edits | Shared runtime edits |
-|---|---|---|
-| Add a seller filter | Component schema/mapping, read-back and fixture | None |
-| Add a transition on an existing page | POM method, small action declaration, behavior fixture | None |
-| Add a dialog | Parent's node schema/recognizer, component, transitions and fixture | None |
-| Add a page | Page state/recognizer/POM, action declarations and fixture | None |
-| Add a workflow | Registered composition of existing steps, branch/budget fixture | None |
-| Add a new transport primitive/effect kind | Explicit runtime extension and cross-site tests | Deliberate reviewed change |
+Each page should link its selector evidence, flows and navigation decisions.
+Do not require manually synchronized runtime indexes, generated manifests,
+bundles or CLI help.
 
-Each page declaration links its schemas, components and actions. Generate a
-developer index listing node → recognizer → POM/component → action → test file.
-Runtime help can point directly to those source paths when a repair is needed.
-Do not require manually synchronized indexes or documentation tables.
+## Simplicity acceptance gates
 
-The builder supplies one minimal example per action kind. Fixed policy defaults
-are filled by factory functions; source/destination, target identity and effect
-semantics are explicit. Keep a flat public authoring API; an ordinary page
-extension must not need to understand plan storage, subprocess framing, generic
-type internals, hashing or lock recovery. No custom DSL or generic route solver.
-
-`npm run verify` is the single documented builder verification command. It
-generates metadata and checks contracts, affected behavior and runtime parity.
-It must explain failures using the actual page/action/field and source location,
-not only a build stack trace. New site facts still need UI evidence.
-
-## Simplicity has measurable acceptance gates
-
-- A supported search from any declared starting state takes one workflow call.
-- Opening a returned candidate takes one supplied command with no help lookup.
-- An exact selected card's filtered sellers take one command.
-- Every failure provides a safe next instruction or names the human/builder
-  prerequisite; the operator never reconstructs browser mechanics.
+- A supported task from a declared starting state takes one documented flow.
+- Opening a returned candidate uses one supplied visible control and fresh
+  verification, with no help lookup.
+- Reading a bounded table reports coverage without hidden navigation.
+- Every failure provides a safe next instruction or names the human prerequisite.
 - A harmless rerender does not force reselection; a changed identity does.
-- An ordinary action/field extension leaves shared runtime code unchanged and
-  requires no handwritten updates to help, manifest or transition tables.
-- Run operator scenarios using only generated SKILL.md/CLI, and builder scenarios
-  using only builder instructions/site sources. Observe command count, redundant
-  calls, wrong recoveries and files touched. These evaluations remain open;
-  existing unit tests alone do not prove small-model usability.
+- An ordinary page/flow extension leaves other skills unchanged and adds no
+  runtime code.
+- Operator scenarios use only the generated `SKILL.md`, references and MCP
+  tools. Observe call count, redundant observations, wrong recoveries and files
+  touched. Document-only checks alone do not prove live usability.

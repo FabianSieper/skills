@@ -12,7 +12,6 @@ import process from "node:process";
 import { parseArgs } from "node:util";
 
 const NODE_MINIMUM = "22.16.0";
-const PLAYWRIGHT_CLI_VERSION = "0.1.19";
 
 function usage() {
   return `Usage: node scripts/check.mjs [--root <path>] [--json]
@@ -150,53 +149,15 @@ function commandFinding({
   });
 }
 
-function chromeExtensionFinding(playwrightAvailable) {
-  const expected = "installed for the Chrome channel when live automation is used";
-  if (!playwrightAvailable) {
-    return finding({
-      id: "chrome-extension",
-      label: "Playwright Chrome extension",
-      required: false,
-      status: "blocked",
-      expected,
-      detail: "Playwright CLI is unavailable",
-    });
-  }
-  const result = run("playwright-cli", ["list", "--json", "--all"]);
-  if (!result.ok) {
-    return finding({
-      id: "chrome-extension",
-      label: "Playwright Chrome extension",
-      required: false,
-      status: "unknown",
-      expected,
-      detail: result.stderr || "could not inspect Playwright CLI channels",
-    });
-  }
-  try {
-    const channels = JSON.parse(result.stdout).channelSessions;
-    const chrome = Array.isArray(channels)
-      ? channels.find((entry) => entry.channel === "chrome")
-      : null;
-    return finding({
-      id: "chrome-extension",
-      label: "Playwright Chrome extension",
-      required: false,
-      status: chrome?.extensionInstalled === true ? "ok" : "not-configured",
-      expected,
-      found: chrome?.extensionInstalled === true ? "installed" : "not installed",
-      detail: "Manual browser setup; do not install or open it automatically",
-    });
-  } catch {
-    return finding({
-      id: "chrome-extension",
-      label: "Playwright Chrome extension",
-      required: false,
-      status: "unknown",
-      expected,
-      detail: "Playwright CLI returned an unexpected inventory",
-    });
-  }
+function mcpFinding() {
+  return finding({
+    id: "munim-computer-use-mcp",
+    label: "munim-computer-use MCP",
+    required: false,
+    status: "unknown",
+    expected: "host exposes callable munim-computer-use_* tools for live website automation",
+    detail: "Repository audit cannot verify host-session MCP availability; the website skill checks it at use time",
+  });
 }
 
 function printHuman(report) {
@@ -289,26 +250,15 @@ findings.push(
     expected: "Task v3 CLI available on PATH",
     fix: "npm install -g @go-task/cli",
   }),
-  commandFinding({
-    id: "playwright-cli",
-    label: "Playwright CLI",
-    command: "playwright-cli",
-    args: ["--version"],
-    expected: PLAYWRIGHT_CLI_VERSION,
-    accept: (value) => value.trim() === PLAYWRIGHT_CLI_VERSION,
-    fix: `npm install -g @playwright/cli@${PLAYWRIGHT_CLI_VERSION}`,
-  }),
 );
 
-const playwright = findings.find((item) => item.id === "playwright-cli");
-findings.push(chromeExtensionFinding(playwright?.status === "ok"));
+findings.push(mcpFinding());
 
 const report = {
   ok: findings.every((item) => !item.required || item.status === "ok"),
   root,
   requirements: {
     node: `>=${NODE_MINIMUM}`,
-    playwrightCli: PLAYWRIGHT_CLI_VERSION,
   },
   findings,
 };

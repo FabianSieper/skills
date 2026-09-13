@@ -2,10 +2,11 @@
 
 Personal collection of reusable agent skills.
 
-The Cardmarket runtime skill uses the **munim-computer-use MCP**
-(`munim-computer-use_*`) and stops before browser work when those tools are
-unavailable. It has no CLI or package dependencies, and durable Cardmarket writes
-are disabled.
+The Cardmarket runtime skill is the reference implementation of the default
+website-automation concept. It uses the **munim-computer-use MCP**
+(`munim-computer-use_*`), stops before browser work when those tools are
+unavailable, has no CLI or package dependencies, and keeps durable Cardmarket
+writes disabled.
 
 For general website-automation development, [AGENTS.md](AGENTS.md) requires the
 [project-local builder skill](.agents/skills/website-automation-builder/SKILL.md)
@@ -54,5 +55,5 @@ repository-relative. Do not install that authoring skill globally in isolation.
 
 ## Available skills
 
-- `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/POM/navigation concept using playwright-cli.
+- `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/flow/navigation concept using munim-computer-use and the focused Cardmarket-style skill shape.
 - `cardmarket-automation` – Focused MTG search, detail, seller, artwork and own-stock reads through munim-computer-use. Requires the callable `munim-computer-use_*` tools; no fallback and no durable offer writes.

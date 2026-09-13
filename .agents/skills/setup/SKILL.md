@@ -18,11 +18,10 @@ configuration as a side effect of setup.
 - Treat network access, global npm installs, package-manager changes, and writes
   outside the checkout as approval-bearing operations in environments that
   require approval.
-- Never run `playwright-cli attach` or browser/extension installation
-  automatically.
-  Those operations change repository, user, or browser state and need a separate
+- Never configure the munim-computer-use MCP, install browser extensions, or
+  start/replace/restart/close a browser automatically during setup.
+  Those operations change host, user or browser state and need a separate
   explicit request.
-- Never launch, replace, restart, or close a browser during setup.
 
 ## Workflow
 
@@ -49,7 +48,6 @@ configuration as a side effect of setup.
 
    ```bash
    npm install -g @go-task/cli
-   npm install -g @playwright/cli@0.1.19
    ```
 
    Run only the commands required by the audit. Git and Node themselves are
@@ -64,9 +62,9 @@ configuration as a side effect of setup.
    ```
 
 6. Report installed versions, anything still blocked, and whether tests ran.
-   Report the Chrome extension as conditional for the default authoring
-architecture. Also state that this audit cannot verify the host-session
-    munim-computer-use MCP (`munim-computer-use_*`) required by Cardmarket.
+   Report munim-computer-use as a host-session capability. This repository audit
+   cannot verify that the website skill's `munim-computer-use_*` tools are
+   callable in the current host.
 
 ## Failure handling
 
@@ -75,6 +73,5 @@ architecture. Also state that this audit cannot verify the host-session
 - Do not work around permission errors by changing npm ownership, using `sudo`,
   or weakening security settings. Use the environment's approval mechanism or a
   user-scoped package-manager configuration.
-- An unexpected `playwright-cli` version is incompatible, not an invitation to
-  silently upgrade the repository. This checkout pins CLI protocol behavior to
-  0.1.19.
+- An unexpected Task version is incompatible, not an invitation to silently
+  upgrade the repository. Use the version expected by `Taskfile.yml`.

@@ -1,8 +1,9 @@
 # Strict website automation concept — task tracker
 
-Updated: 2026-09-13. Status: concept revision 2 remains the default authoring
-architecture. Cardmarket's partial CLI/POM runtime was removed and replaced by
-a focused munim-computer-use skill; durable Cardmarket writes remain disabled.
+Updated: 2026-09-13. Status: concept revision 3 is the default authoring
+architecture. Website skills use munim-computer-use and mirror the focused
+Cardmarket skill shape; former CLI/POM and Playwright-based concept sections are
+historical and superseded. Durable Cardmarket writes remain disabled.
 
 ## Request and scope
 
@@ -50,10 +51,11 @@ path.
 - [x] Replace Cardmarket's legacy CLI/POM runtime with a focused munim-computer-use
   skill, hard MCP prerequisite gate, scenario navigation, and no write path.
 
-## Open implementation queue — demanding work first
+## Historical compiled-runtime implementation queue
 
-All items below remain open. Detailed acceptance gates are in
-[migration.md](migration.md), section “Ordered implementation, hardest first”.
+The items below were written for the superseded CLI/POM runtime concept. They
+are historical context, not the active default work queue. The active concept now
+requires focused MCP skills in the Cardmarket shape.
 
 - [~] I01: Implement schema-derived UI union, recognition, typed transition
   registry and shared availability/dispatch enforcement in the canonical runtime.
@@ -107,8 +109,8 @@ All items below remain open. Detailed acceptance gates are in
   skill instructions and a CLI alone cannot guarantee it.
 - D16: Empirical unknowns block affected release gates, not concept work. See
   migration.md for defaults and evidence needed.
-- D17: playwright-cli remains the only browser transport and builder exploration
-  tool. The business CLI wraps it; no alternative driver/MCP/API fallback.
+- D17 (superseded by D23): playwright-cli was the historical browser transport.
+  It is no longer part of the default concept.
 - D18: Registered task workflows route from supported start states. Return ready
   bound commands or missing-field schemas; no operator path planning ritual.
 - D19: Region readiness is separate from global blockers. Stable target identity
@@ -118,10 +120,13 @@ All items below remain open. Detailed acceptance gates are in
 - D21: Replace the incompatible builder and scaffold entirely. The new skill is
   a project-local authoring guide referencing the canonical concept, not a claim
   that a compliant scaffold/runtime already exists. Root AGENTS.md requires use.
-- D22: By explicit user direction, Cardmarket is a scoped transport exception.
-  Its operating skill requires callable `munim-computer-use_*` tools, uses one
-  bound Cardmarket tab, stops and offers installation/configuration when absent,
-  has no alternate transport, and keeps durable offer writes disabled.
+- D22: By explicit user direction, Cardmarket uses callable
+  `munim-computer-use_*` tools, one bound Cardmarket tab, a hard stop when the
+  MCP is absent, no alternate transport, and disabled durable offer writes.
+- D23: By explicit user direction, the entire default concept now uses
+  munim-computer-use instead of Playwright. New website skills must mirror the
+  focused Cardmarket skill shape. The former CLI/POM/compiled-runtime concept is
+  historical and no longer normative.
 
 ## Findings so far
 
@@ -205,7 +210,8 @@ implemented or fixture results as live-browser verification.
 - [migration.md](migration.md): source evidence, pressure-test matrix, current
   15-action mapping, ordered migration, relocation callers and empirical unknowns.
 - [navigation-design.md](navigation-design.md): expanded difficult-case review,
-  explicit playwright-cli transport, command ergonomics and extension acceptance.
+  explicit munim-computer-use transport, operator ergonomics and extension
+  acceptance.
 - [ui-model.test.mjs](ui-model.test.mjs): 8 behavior tests, all PASS.
 - [ui-model.type-test.ts](ui-model.type-test.ts): 4 expected compile-time
   rejections plus positive narrowing; strict compilation PASS with installed

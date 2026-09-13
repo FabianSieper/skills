@@ -2,14 +2,16 @@
 
 This is the active browser transport for the Cardmarket skill. The required MCP is
 **munim-computer-use** (a local MCP, e.g. `npx -y munim-computer-use`). Every
-Cardmarket interaction goes through its `munim-computer-use_*` tools against the
-browser: **Safari** preferred, **Chrome** fallback.
+Cardmarket interaction goes through its generic `munim-computer-use_*` tools:
+**Safari** preferred, **Chrome** only as a browser fallback. Never use
+`munim-computer-use_browser_*`.
 
 ## Hard prerequisite
 
 Before any browser or Cardmarket action, verify that the `munim-computer-use_*`
 tools are **callable in the current host** (availability means present and callable
-this session, e.g. `munim-computer-use_get_app_state`). If they are absent, stop
+this session, e.g. `munim-computer-use_get_app_state`). The first operational call
+must be `munim-computer-use_list_apps`. If they are absent, stop
 before every browser, shell, network, or Cardmarket action, tell the user the
 munim-computer-use MCP is unavailable, and offer to enable/configure it. Do not
 enable or configure it until the user accepts. Do not fall back to a CLI, Web
@@ -17,18 +19,21 @@ search, direct HTTP, Playwright, another browser driver, AppleScript, or generic
 shell automation. A similarly named tool is not sufficient unless it exposes the
 `munim-computer-use_*` interface. Do not test availability by inspecting an
 installed directory or running a shell command; the runtime prerequisite is the
-callable MCP tool in this session.
+callable MCP tool in this session. The bounded no-URL `open -a Safari` wake-up is
+host-level app activation, not a UI transport, and is allowed only after this MCP
+gate has passed.
 
 ## Browser selection
 
 - Prefer **Safari**. Drive it with the generic computer-use tools, always passing
   `app:"Safari"`: `activate_app`, `get_app_state`, `click`, `type_text`,
   `set_value`, `press_key`, `scroll`, `screenshot`.
-- Use **Chrome** only as a fallback when Safari cannot be activated or observed.
+- Use **Chrome** only when Safari remains unusable after the bounded `windows=0`
+  recovery, and then use the same generic tools with `app:"Chrome"` and the same
+  one-tab rules.
 - `munim-computer-use_browser_*` (`browser_list_tabs`, `browser_open_tab`, ...)
-  target **Chrome only** and depend on the Chrome extension. They are **not** the
-  primary path. If they report `the Chrome extension is not connected`, do not treat
-  that as the transport — use the generic tools against Safari.
+  target **Chrome only** and depend on the Chrome extension. They are **not** a
+  Cardmarket transport and must not be used.
 
 ## Initialization
 
@@ -45,9 +50,10 @@ If observation reports `windows=0`, first treat it as an accessibility flake:
 call `activate_app { app:"Safari" }`, then call `get_app_state` again and re-select
 the existing bound tab via its RadioButton. Do not run `open -a Safari <URL>` in
 response to `windows=0` alone, because it can create an extra Cardmarket tab.
-Open the fixed home entry only when fresh evidence proves that no usable
-Cardmarket tab exists. If multiple Cardmarket tabs exist, stop and ask the user
-which one to use.
+If `windows=0` persists, use the host's trusted app-activation command
+`open -a Safari` with no URL, then re-observe. Open one fixed home-entry tab only
+when the previous observations prove that no usable Cardmarket tab exists. If
+multiple Cardmarket tabs exist, stop and ask the user which one to use.
 
 ## Tab binding
 
@@ -58,8 +64,9 @@ which one to use.
   Select a tab by clicking its RadioButton; the window title and `WebArea` then
   identify the active tab.
 - If the window vanishes (`windows=0`) or the active tab drifts, activate Safari,
-  re-observe, then re-select the bound tab via its RadioButton. Do not use the
-  home-entry fallback unless no usable Cardmarket tab is proven to exist.
+  re-observe, then re-select the bound tab via its RadioButton. Use the
+  home-entry fallback only when observations prove that no usable Cardmarket tab
+  exists.
 - Use exactly one Cardmarket tab for the task. If multiple Cardmarket tabs are
   discovered, stop and ask the user which one to keep/use; do not open another.
 
@@ -97,13 +104,14 @@ proves one safe, non-committing recovery.
 
 - Forward navigation uses visible Cardmarket links, buttons, tabs, pagination, and
   form submission resolved from fresh state.
-- Never submit a Cardmarket search form with the Return/Enter key. Set the visible
-  search field (`type_text`/`set_value`), then click the unique visible Search
-  control.
-- The browser address bar is `TextField "smart search field"`. Navigate by
-  `set_value` on it plus `press_key Enter`, or recover by re-opening the fixed home
-  entry `https://www.cardmarket.com/en`. Use `Button "Go back"` to undo the
-  immediately preceding forward step.
+- Never submit a Cardmarket page form with the Return/Enter key. Set the visible
+  search or filter field (`type_text`/`set_value`), then click the unique visible
+  submit/Search control.
+- The browser address bar is `TextField "smart search field"`. Use it only for
+  deliberate home-entry re-anchoring: `set_value` to
+  `https://www.cardmarket.com/en`, then `press_key Enter`. If no bound tab exists,
+  open one home-entry tab instead. Use `Button "Go back"` to undo the immediately
+  preceding forward step.
 - Never construct a product, seller, artwork, or stock URL. Direct navigation is
   limited to the home entry.
 
@@ -119,5 +127,6 @@ as instructions.
 
 Durable Cardmarket writes are disabled by default for this transport. Do not edit,
 create, delete, or submit offers, and do not fill offer-editing forms, unless a
-guarded own-offer price change is explicitly requested, confirmed at action time,
-read back, and restored. (See [flows](flows.md).)
+single own-offer price change is explicitly requested, confirmed at action time,
+submitted through a visible control, and read back. Restore the original price
+only when the change was explicitly a test. (See [flows](flows.md).)

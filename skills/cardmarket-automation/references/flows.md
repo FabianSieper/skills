@@ -8,7 +8,8 @@ business identity. Stop on ambiguity, blockers, or UI drift.
 
 1. From the Cardmarket home/game surface, locate one visible Magic search field
    (`TextField "Search"` plus its search control).
-2. Set the query with `type_text`/`set_value`; do not submit with Enter.
+2. Set the query with `type_text`/`set_value`; do not submit with Enter and do not
+   click a search-suggestion Link.
 3. Click the unique visible Search control and re-observe.
 4. Verify a results surface (H1 `Search Results`, `N Hits`) or an explicit empty
    state.
@@ -20,14 +21,19 @@ business identity. Stop on ambiguity, blockers, or UI drift.
 ## Read sellers
 
 1. Verify the exact detail identity.
-2. Locate the seller-filter region and apply requested values. If the user gave
-   none, use Excellent-or-better, English, Germany, any seller type, and leave
-   foil/signed/altered unrestricted.
-3. Submit through the unique visible UI control.
-4. Re-observe and read every effective filter value back.
+2. Inspect the offers table and surrounding region for visible sort/filter
+   controls. Do not assume a seller-filter form exists.
+3. Apply requested values only through visible controls; submit each through its
+   unique visible control and read the effective value back. If no filter controls
+   exist, read the unfiltered offers and explicitly report that no filters were
+   applied.
+4. For comparisons, prefer rows whose visible condition, language, location, and
+   variant flags are compatible. By default use Excellent-or-better, English,
+   Germany, any seller type, and no forced foil/signed/altered value unless the
+   user specifies otherwise.
 5. Read at most 50 seller rows (columns `Seller`, `Product Information`, `Offer`).
-   Report filter semantics, timestamp, sorting, and coverage. A partial list is
-   never a global minimum.
+   Report filter/no-filter status, timestamp, visible sorting, and coverage. A
+   partial list is never a global minimum.
 
 ## Read versions or artworks
 
@@ -45,7 +51,9 @@ business identity. Stop on ambiguity, blockers, or UI drift.
    control to the user and wait for confirmation before re-observing.
 2. Navigate through visible Selling -> My Offers -> Singles controls.
 3. Verify the own-offers heading, filter region, and table.
-4. Apply requested stock filters, submit once, and read all effective values back.
+4. Apply requested stock filters only if visible controls exist, submit each
+   through its visible control, and read all effective values back; otherwise
+   report that no stock filters were applied.
 5. Read at most 50 rows per page and 20 pages. Deduplicate using visible article
    identity. Report `complete:false` if the terminal page or filter continuity
    cannot be proven.
@@ -54,10 +62,11 @@ business identity. Stop on ambiguity, blockers, or UI drift.
 
 For each bounded own-offer target, bind the exact article/card identity and its
 condition, language, variant flags, quantity, and price. Open the matching card
-through its visible link, apply compatible seller filters, read them back, and
-collect bounded seller prices. Return to the immediately preceding stock page with
-the Safari `Go back` control and verify the stock filter/page context before
-continuing.
+through its visible link in the same bound tab. If the click creates a new tab,
+stop and report the violation. Apply compatible seller filters only if visible
+controls exist, read them back or report no filters applied, and collect bounded
+seller prices. Return to the immediately preceding stock page with the Safari
+`Go back` control and verify the stock filter/page context before continuing.
 
 Stop rather than compare incompatible or unknown variants. Distinguish the own
 price, product-wide "from" data, and matching seller prices.
@@ -74,9 +83,10 @@ logged-in state.
    change.
 3. Open the offer's edit control and set **only the price field**
    (`type_text`/`set_value`). Never touch any other field.
-4. Submit, re-observe, and read back the new price.
-5. When the change was a test, restore the original price, submit, re-observe, and
-   read back the restored value.
+4. Submit through the visible submit control, never Enter; re-observe and read
+   back the new price.
+5. If the change was explicitly a test, restore the original price through the
+   same guarded path and read back the restored value.
 
 If any step is ambiguous, blocked, or cannot be read back, stop and report. Do not
 create, delete, or batch-update offers; bulk price updates and any other durable

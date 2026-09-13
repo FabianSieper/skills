@@ -5,17 +5,22 @@
 Before creating, changing, extending, refactoring, repairing or reviewing any
 website-automation skill in this repository, **read and use**
 [website-automation-builder](.agents/skills/website-automation-builder/SKILL.md).
-This includes its POMs, components, actions, workflows, runtime/transport,
-tests, generated artifacts and operating instructions. It also applies when
-changing the builder or the website-automation concept itself.
+This includes its state evidence, flows, transport, tests, generated artifacts
+and operating instructions. It also applies when changing the builder or the
+website-automation concept itself.
 
 Follow the skill's reading routes to the canonical concept in
-`docs/strict-automation/`. The default authored runtime uses playwright-cli.
-The explicit exception is `skills/cardmarket-automation`: it uses only the
-munim-computer-use MCP (`munim-computer-use_*`) and must retain its hard
-prerequisite gate, single bound tab, fresh accessibility-state checks, scenario
-navigation rules, and disabled durable writes. Do not reintroduce its removed CLI/POM runtime,
-another computer-use MCP, or another fallback transport.
+`docs/strict-automation/`. The default website-automation skill uses the
+munim-computer-use MCP (`munim-computer-use_*`) against a visible browser and
+mirrors the focused shape of `skills/cardmarket-automation`: `SKILL.md`,
+`references/transport.md`, `references/flows.md`, `references/selectors.md`,
+`agents/openai.yaml` and `.gitignore`. It must retain the hard prerequisite
+gate, single bound tab, fresh accessibility-state checks, scenario navigation
+rules, and disabled durable writes. Do not reintroduce a CLI, package, compiled
+runtime, scaffold, alternate browser path or another computer-use MCP. A Safari/Chrome
+choice is a browser fallback, not a transport fallback: both browsers must use
+the same generic `munim-computer-use_*` tools, and
+`munim-computer-use_browser_*` is not the canonical path.
 
 This requirement applies whether the host implicitly discovers the skill or
 not. If the file cannot be read, report that specific missing prerequisite;
