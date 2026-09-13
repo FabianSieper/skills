@@ -12,10 +12,10 @@ changing the builder or the website-automation concept itself.
 Follow the skill's reading routes to the canonical concept in
 `docs/strict-automation/`. The default authored runtime uses playwright-cli.
 The explicit exception is `skills/cardmarket-automation`: it uses only the
-Unified Computer Use MCP and must retain its hard `mcp__cua_repl.js` prerequisite
-gate, fresh accessibility-state checks, scenario navigation rules, and disabled
-durable writes. Do not reintroduce its removed CLI/POM runtime or another
-fallback transport.
+munim-computer-use MCP (`munim-computer-use_*`) and must retain its hard
+prerequisite gate, single bound tab, fresh accessibility-state checks, scenario
+navigation rules, and disabled durable writes. Do not reintroduce its removed CLI/POM runtime,
+another computer-use MCP, or another fallback transport.
 
 This requirement applies whether the host implicitly discovers the skill or
 not. If the file cannot be read, report that specific missing prerequisite;

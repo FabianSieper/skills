@@ -17,13 +17,13 @@ local npm dependencies. The previous Cardmarket CLI/POM package was removed.
 
 The Chrome browser and Playwright CLI extension are required only for live
 verification of default authored runtimes. Cardmarket instead requires the
-host-provided Unified Computer Use MCP (`mcp__cua_repl.js`). A repository shell
+host-provided munim-computer-use MCP (`munim-computer-use_*`). A repository shell
 audit cannot prove that session capability; the Cardmarket skill checks it at
 use time, stops when absent, and offers installation/configuration.
 
 ## Evidence in this checkout
 
-- `skills/cardmarket-automation/SKILL.md` declares the hard Unified Computer Use
+- `skills/cardmarket-automation/SKILL.md` declares the hard munim-computer-use
   MCP gate and contains no local runtime dependency.
 - `.agents/skills/website-automation-builder/SKILL.md` defines project-local
   authoring and links to the proposed architecture under `docs/strict-automation`.

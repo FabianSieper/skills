@@ -2,9 +2,10 @@
 
 Personal collection of reusable agent skills.
 
-The Cardmarket runtime skill uses the **Unified Computer Use MCP** and stops
-before browser work when `mcp__cua_repl.js` is unavailable. It has no CLI or
-package dependencies, and durable Cardmarket writes are disabled.
+The Cardmarket runtime skill uses the **munim-computer-use MCP**
+(`munim-computer-use_*`) and stops before browser work when those tools are
+unavailable. It has no CLI or package dependencies, and durable Cardmarket writes
+are disabled.
 
 For general website-automation development, [AGENTS.md](AGENTS.md) requires the
 [project-local builder skill](.agents/skills/website-automation-builder/SKILL.md)
@@ -18,12 +19,12 @@ typechecks the illustrative model. These checks do not establish live-browser
 verification.
 
 The former Cardmarket CLI/POM runtime was removed when the skill moved to direct,
-state-aware Unified Computer Use. Use only the workflow documented in the
-Cardmarket skill.
+state-aware munim-computer-use automation. Use only the workflow documented in
+the Cardmarket skill.
 
-Run the `/setup` skill to audit repository authoring prerequisites. Unified
-Computer Use availability is a host-session capability and is checked by the
-Cardmarket skill itself. The read-only repository audit is also available:
+Run the `/setup` skill to audit repository authoring prerequisites.
+munim-computer-use availability is a host-session capability and is checked by
+the Cardmarket skill itself. The read-only repository audit is also available:
 
 ```bash
 node .agents/skills/setup/scripts/check.mjs
@@ -43,9 +44,10 @@ Alternatively, use the CLI directly:
 npx skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
 ```
 
-Installing the skill does not install Unified Computer Use. At use time the
-skill checks whether `mcp__cua_repl.js` is callable; if not, it stops without
-touching the browser and offers installation/configuration for the current host.
+Installing the skill does not install munim-computer-use. At use time the
+skill checks whether the `munim-computer-use_*` tools are callable; if not, it
+stops without touching the browser and offers installation/configuration for the
+current host.
 
 The builder stays in this checkout under `.agents/skills`; its concept links are
 repository-relative. Do not install that authoring skill globally in isolation.
@@ -53,4 +55,4 @@ repository-relative. Do not install that authoring skill globally in isolation.
 ## Available skills
 
 - `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/POM/navigation concept using playwright-cli.
-- `cardmarket-automation` – Focused MTG search, detail, seller, artwork and own-stock reads through Unified Computer Use. Requires `mcp__cua_repl.js`; no fallback and no durable offer writes.
+- `cardmarket-automation` – Focused MTG search, detail, seller, artwork and own-stock reads through munim-computer-use. Requires the callable `munim-computer-use_*` tools; no fallback and no durable offer writes.

@@ -7,8 +7,9 @@ description: Required project workflow for creating, editing, extending, refacto
 
 Build understandable, guarded website automation. The default architecture uses
 **playwright-cli** in the user's existing browser. Cardmarket is an explicit
-repository exception: its operating skill uses only Unified Computer Use and
-must stop when `mcp__cua_repl.js` is unavailable. Do not install this authoring
+repository exception: its operating skill uses only munim-computer-use
+(`munim-computer-use_*`) and must stop when those tools are unavailable. Do not
+install this authoring
 skill as a standalone runtime skill.
 
 ## Required reading
@@ -39,7 +40,7 @@ The TypeScript example illustrates contracts only. It is not a complete runtime.
    not alter the shared engine. Reuse registered steps for bounded workflows.
 3. Establish evidence for selectors, identity, loading/empty states, filters and
    commit boundaries. For actual UI discovery use the affected skill's declared
-   transport: Unified Computer Use for Cardmarket, otherwise playwright-cli.
+   transport: munim-computer-use for Cardmarket, otherwise playwright-cli.
    Do not invent unseen selectors, access hidden stores or silently substitute
    another driver.
 4. Implement the change with executable guards where the runtime owns code. For
@@ -80,7 +81,7 @@ The TypeScript example illustrates contracts only. It is not a complete runtime.
 
 The old builder/scaffold and Cardmarket CLI/POM compatibility runtime were
 removed. Do not resurrect either as an approved starting point. Cardmarket's
-focused Unified Computer Use instructions are not proof of live UI verification.
+focused munim-computer-use instructions are not proof of live UI verification.
 
 Apply the concept to the requested change. Do not expand a small repair into an
 unrequested migration of everything. Record unchanged legacy deviations and do

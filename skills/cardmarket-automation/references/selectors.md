@@ -1,18 +1,18 @@
 # Page and control evidence
 
-This Computer Use skill resolves controls from fresh accessibility state. The
-older TypeScript POM selectors are legacy evidence only and are not an operating
-interface.
+This munim-computer-use skill resolves controls from fresh accessibility state
+(`munim-computer-use_get_app_state`). The older TypeScript POM selectors are legacy
+evidence only and are not an operating interface.
 
 ## Recognition rules
 
 - URL origin must be exactly `https://www.cardmarket.com`; URL alone is never
   sufficient.
 - A page needs a unique visible heading/context and its expected main region.
-- A control needs exactly one current accessible match inside the relevant
-  business context. Missing or duplicate matches are UI drift.
-- Accessibility indices expire after every interaction or rerender. Always
-  obtain a fresh AX tree before resolving the next target.
+- A control needs exactly one current accessible match inside the relevant business
+  context. Missing or duplicate matches are UI drift.
+- Accessibility element IDs expire after every interaction or rerender. Always
+  obtain a fresh state before resolving the next target.
 - Prefer roles/names and nearby card, set, artwork, seller, or article identity.
   Do not select by visual order alone.
 - Never fall back to guessed coordinates, hidden DOM data, raw HTML, or a URL
@@ -20,13 +20,37 @@ interface.
 
 ## Known semantic surfaces
 
-- Search entry: Magic game shell, visible search textbox, visible Search button.
-- Results: search context plus card result collection or explicit empty message.
-- Detail: one card title plus printing/product context and seller region.
-- Versions: versions/reprints/artworks context tied to the same parent card.
-- Own offers: authenticated Selling → My Offers → Singles heading, stock filter,
-  and offer table.
+- **Start:** Magic game shell (`WebArea` "Cardmarket: Buy & Sell MTG Cards ..."),
+  main search box (`TextField "Search"`, `PopUpButton "Category"`, empty-named
+  search `Button`), category links (`SINGLES`, `BOOSTERS`, ...). A login form
+  (`TextField "Username"`/`"Password"`, `Button "Log in"`) may be overlaid.
+- **Search suggestion dropdown:** after typing, a list of `Link`s of the form
+  `"<Set> <Card> <count> Singles"`, plus `Link "Advanced Singles Search"` and
+  `Link "Show All (N+ Hits)"`.
+- **Results:** H1 `Search Results`; filter region (`PopUpButton "Category"`,
+  `PopUpButton "Expansion"`, `TextField "Name"`, `CheckBox "Exact Match"`,
+  `CheckBox "Only available"`, `Button "Search"`, `PopUpButton "Sort by"`);
+  hit line `N Hits`; `Button " LIST VIEW"`/`" GRID VIEW"`; result `Link`s
+  (image + `Heading "<Set> <Card>"` + `From` price); pagination controls.
+- **Detail:** breadcrumb ending in the card; H1 `<Card> <Set> - Singles`; info
+  block (`Rarity`, `Number`, `Printed in`, `Reprints` with
+  `Link "Show Versions (N)"`/`Link "Show Offers"`, `Available items`, `From`,
+  `Price Trend`, 30/7/1-day average price); rules text; offers table
+  (columns `Seller Location`/`Seller Type`/`Language`/`Min. Condition`/`Extra`/
+  `Quantity`; per-row seller `Link`, condition `Link`, language, price,
+  buy control).
+- **Versions/artworks:** breadcrumb ending in `<Card> - Versions`, H1
+  `<Card> N versions`, `SHOW VERSIONS`/`SHOW OFFERS` controls, and variant
+  `Link`s with set, optional `Version N`, availability, and `From` price evidence.
+  The detail page's `Show Versions (N)` count may differ from the versions page's
+  total version count; verify the parent-card identity rather than assuming the
+  counts are identical.
+- **Own offers:** authenticated Selling -> My Offers -> Singles heading, stock
+  filter, and offer table.
+
+Price values use the German/European format (`0,10 €` — comma decimal separator,
+space before the currency symbol).
 
 Cardmarket can change labels and layout. These descriptions are recognition
-requirements, not permission to guess a selector. If the current AX state does
-not prove the surface or target, stop and report the missing/ambiguous evidence.
+requirements, not permission to guess a selector. If the current state does not
+prove the surface or target, stop and report the missing/ambiguous evidence.

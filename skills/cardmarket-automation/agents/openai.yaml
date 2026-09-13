@@ -1,3 +1,3 @@
 interface:
   display_name: "cardmarket-automation"
-  short_description: "Bounded Cardmarket reads through Unified Computer Use; requires its MCP and disables offer writes"
+  short_description: "Bounded Cardmarket reads through munim-computer-use (Safari via accessibility); requires the callable MCP tools and keeps durable writes disabled by default"

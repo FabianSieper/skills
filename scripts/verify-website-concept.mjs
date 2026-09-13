@@ -46,6 +46,25 @@ for (const file of ['Taskfile.yml', '.github/workflows/test.yml']) {
     errors.push(`${file}: invokes the removed builder`);
   }
 }
+const cardmarketTransportDocs = [
+  'AGENTS.md',
+  'README.md',
+  skill,
+  '.agents/skills/setup/SKILL.md',
+  '.agents/skills/setup/references/requirements.md',
+  'docs/strict-automation/todo.md',
+  'docs/strict-automation/migration.md'
+];
+for (const path of cardmarketTransportDocs) {
+  if (!existsSync(join(root, path))) continue;
+  const text = readFileSync(join(root, path), 'utf8');
+  if (!text.includes('munim-computer-use')) {
+    errors.push(`${path}: missing the active Cardmarket transport reference`);
+  }
+  if (/mcp__cua_repl|Unified Computer Use/.test(text)) {
+    errors.push(`${path}: stale Cardmarket transport reference`);
+  }
+}
 console.log(JSON.stringify({ok: errors.length === 0, checkedLinks,
   scope: 'authoring-wiring-and-documents-only', errors}, null, 2));
 process.exitCode = errors.length ? 1 : 0;

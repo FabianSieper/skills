@@ -2,7 +2,7 @@
 
 Status: historical CLI/POM migration record. On 2026-09-13 the Cardmarket
 compatibility runtime described below was removed and replaced by a focused
-Unified Computer Use operating skill. The default strict architecture remains
+munim-computer-use operating skill. The default strict architecture remains
 the authoring reference for other website runtimes; Cardmarket is an explicit
 transport exception and durable writes remain disabled.
 Normative proposal: [concept.md](concept.md). Type design:
@@ -33,7 +33,7 @@ These are repository observations from this task, not live-site findings.
 | removed action tests accepted weak destinations | Wrong destinations could pass | Fresh AX destination and identity verification is mandatory |
 | removed info action mixed filters, pagination and visits | Reads had hidden transitions | The active flows name every UI-changing stage |
 | removed market comparison contained browser navigation code | Navigation policy could be bypassed | Only visible UI navigation and guarded immediate history return are allowed |
-| removed browser adapter bundled on invocation | Runtime and replay complexity | No local runtime remains; Unified Computer Use is mandatory |
+| removed browser adapter bundled on invocation | Runtime and replay complexity | No local runtime remains; munim-computer-use is mandatory |
 | Same adapter recognizes a session name recursively anywhere in session JSON | Name presence is weaker than compatible attached-session proof | Exact session/tab/protocol validation |
 | removed CLI required local input conventions | Operating ceremony and package dependencies | The agent now uses the MCP directly |
 | removed error layer initially lost recovery context | Model could not identify safe recovery | The active skill stops and reports the concrete blocker |

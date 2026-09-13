@@ -65,8 +65,8 @@ configuration as a side effect of setup.
 
 6. Report installed versions, anything still blocked, and whether tests ran.
    Report the Chrome extension as conditional for the default authoring
-   architecture. Also state that this audit cannot verify the host-session
-   Unified Computer Use MCP required by Cardmarket.
+architecture. Also state that this audit cannot verify the host-session
+    munim-computer-use MCP (`munim-computer-use_*`) required by Cardmarket.
 
 ## Failure handling
 

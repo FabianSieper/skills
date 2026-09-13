@@ -45,16 +45,17 @@ const skill = existsSync(join(skillRoot, 'SKILL.md'))
   : '';
 
 const requirements = [
-  ['Unified Computer Use', /Unified Computer Use/],
-  ['required MCP tool', /mcp__cua_repl\.js/],
-  ['hard stop when MCP is absent', /If it is missing, \*\*stop/],
-  ['installation offer', /Offer to install or configure it/],
-  ['no automatic installation', /Do not install, enable, or configure the MCP until the user accepts/],
-  ['exact first initializer', /await cua\.getState\(\);/],
-  ['fresh AX state', /After every interaction, call\s+`getAXState\(\)`/],
-  ['single bound tab', /Keep the same tab binding/],
+  ['munim-computer-use transport', /munim-computer-use/],
+  ['required MCP tools', /munim-computer-use_\*/],
+  ['hard stop when MCP is absent', /If they are missing, \*\*stop/],
+  ['installation offer', /Offer to enable or configure it/],
+  ['no automatic installation', /Do not enable or configure the MCP until the user accepts/],
+  ['exact observation call', /munim-computer-use_get_app_state/],
+  ['fresh state after interaction', /After every interaction, call\s+`munim-computer-use_get_app_state`/],
+  ['single bound tab', /Keep the same tab for the task/],
+  ['single Cardmarket tab', /Use exactly one Cardmarket tab/],
   ['no Enter search submission', /Never submit Cardmarket search forms with the Return\/Enter key/],
-  ['durable writes disabled', /stock\.bulk-price-update` are disabled/]
+  ['durable writes disabled by default', /Durable Cardmarket writes are disabled by default/]
 ];
 for (const [label, pattern] of requirements) {
   if (!pattern.test(skill)) errors.push(`SKILL.md lacks ${label}`);
@@ -63,7 +64,8 @@ for (const [label, pattern] of requirements) {
 for (const [label, pattern] of [
   ['playwright-cli instruction', /playwright-cli/i],
   ['legacy npm CLI instruction', /npm run cli/i],
-  ['legacy source reference', /src\/(?:actions|pages|runtime)/i]
+  ['legacy source reference', /src\/(?:actions|pages|runtime)/i],
+  ['legacy Unified Computer Use interface', /mcp__cua_repl|cua\.getState|getAXState|Unified Computer Use/]
 ]) {
   if (pattern.test(activeText)) errors.push(`Active Cardmarket files contain ${label}`);
 }
@@ -73,8 +75,8 @@ if (lineCount > 220) errors.push(`SKILL.md is not focused enough: ${lineCount} l
 
 console.log(JSON.stringify({
   ok: errors.length === 0,
-  transport: 'unified-computer-use',
-  requiredTool: 'mcp__cua_repl.js',
+  transport: 'munim-computer-use',
+  requiredTool: 'munim-computer-use',
   files: actualFiles,
   skillLines: lineCount,
   errors

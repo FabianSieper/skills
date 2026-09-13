@@ -2,7 +2,7 @@
 
 Updated: 2026-09-13. Status: concept revision 2 remains the default authoring
 architecture. Cardmarket's partial CLI/POM runtime was removed and replaced by
-a focused Unified Computer Use skill; durable Cardmarket writes remain disabled.
+a focused munim-computer-use skill; durable Cardmarket writes remain disabled.
 
 ## Request and scope
 
@@ -21,8 +21,8 @@ first and a clean, understandable, extensible TypeScript representation of UI.
 The user subsequently explicitly requested removing the old builder and creating
 the project-local replacement. That replacement, root AGENTS.md routing and
 affected repository callers are now implemented. On 2026-09-13 the user then
-requested replacing Cardmarket's browser runtime with Unified Computer Use; the
-legacy Cardmarket CLI/POM package was removed. The focused replacement has
+requested replacing Cardmarket's browser runtime with a computer-use MCP; the
+legacy Cardmarket CLI/POM package was removed. The final focused replacement uses
 document-level validation but no new live-site verification, and no account-write
 path.
 
@@ -47,8 +47,8 @@ path.
 - [x] Add root AGENTS.md mandatory routing, update setup/Task/CI/install docs.
 - [x] Remove 62 legacy builder files; recoverable from baseline git commit.
 - [x] Validate the replacement skill, wiring, checks and final diff.
-- [x] Replace Cardmarket's legacy CLI/POM runtime with a focused Unified Computer
-  Use skill, hard MCP prerequisite gate, scenario navigation, and no write path.
+- [x] Replace Cardmarket's legacy CLI/POM runtime with a focused munim-computer-use
+  skill, hard MCP prerequisite gate, scenario navigation, and no write path.
 
 ## Open implementation queue — demanding work first
 
@@ -119,9 +119,9 @@ All items below remain open. Detailed acceptance gates are in
   a project-local authoring guide referencing the canonical concept, not a claim
   that a compliant scaffold/runtime already exists. Root AGENTS.md requires use.
 - D22: By explicit user direction, Cardmarket is a scoped transport exception.
-  Its operating skill requires callable `mcp__cua_repl.js`, stops and offers
-  installation/configuration when absent, has no alternate transport, and keeps
-  durable offer writes disabled.
+  Its operating skill requires callable `munim-computer-use_*` tools, uses one
+  bound Cardmarket tab, stops and offers installation/configuration when absent,
+  has no alternate transport, and keeps durable offer writes disabled.
 
 ## Findings so far
 
