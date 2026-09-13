@@ -33,16 +33,11 @@ node .agents/skills/setup/scripts/check.mjs
 
 ## Installation
 
-Install the Cardmarket runtime skill globally for OpenCode:
+Fresh-install the Cardmarket runtime skill into the agent-neutral global skills
+directory (`~/.agents/skills/cardmarket-automation`):
 
 ```bash
-task install:opencode
-```
-
-Alternatively, use the CLI directly:
-
-```bash
-npx skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
+task install
 ```
 
 Installing the skill does not install munim-computer-use. At use time the

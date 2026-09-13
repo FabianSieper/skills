@@ -14,10 +14,10 @@ tasks:
     desc: Validate the focused munim-computer-use Cardmarket skill
     cmds:
       - node scripts/verify-cardmarket-skill.mjs
-  install:opencode:
-    desc: Install the Cardmarket runtime skill globally for OpenCode
+  install:
+    desc: Fresh-install the Cardmarket runtime skill into the agent-neutral global skills directory
     cmds:
-      - npx --yes skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
+      - node scripts/install.mjs
   sync:agents:
     desc: Replace the installed global Cardmarket copy with the focused repo skill
     cmds:
