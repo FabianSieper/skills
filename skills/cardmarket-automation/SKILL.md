@@ -20,6 +20,9 @@ The recognized states and the transitions between them are in
 [graph](references/graph.json).
 Read [transport](references/transport.md) before browser work and
 [UI evidence](references/selectors.md) when recognizing a page or control.
+Read each reference at most once: if this skill is discoverable at more than one
+path (a project copy and a global install), use a single canonical path for all of
+its references and never read the same reference twice.
 
 ## Mandatory MCP gate
 

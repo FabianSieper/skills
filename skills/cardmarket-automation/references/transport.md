@@ -55,6 +55,18 @@ If `windows=0` persists, use the host's trusted app-activation command
 when the previous observations prove that no usable Cardmarket tab exists. If
 multiple Cardmarket tabs exist, stop and ask the user which one to use.
 
+## Home-entry convergence
+
+- Prefer the observable UI: with a bound Cardmarket tab, set the address bar to
+  `https://www.cardmarket.com/en` (`set_value`) and press Enter. Open a fresh
+  home-entry tab (the bounded `open -a Safari <URL>`) only when no usable
+  Cardmarket tab exists.
+- Bound the recovery to **at most two** home-entry attempts in total. After each
+  attempt re-observe once and check for a recognized `start` WebArea.
+- If no recognized `start` state appears after the second attempt, stop and report
+  the concrete blocker: the window/tab count and what the last `get_app_state`
+  actually shows. Do not keep re-opening the URL or re-observing in a loop.
+
 ## Tab binding
 
 - Cardmarket runs in one Safari tab. Identify it by its tab title / `WebArea` title.
