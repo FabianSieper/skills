@@ -16,6 +16,8 @@ Navigation is planned: every supported task is a named plan in
 [flows](references/flows.md); each step names the exact control to click, the
 observation that finds it, the action, the observation that verifies it, the
 expected result, and when to stop. You never search the page for your next control.
+The recognized states and the transitions between them are in
+[graph](references/graph.json).
 Read [transport](references/transport.md) before browser work and
 [UI evidence](references/selectors.md) when recognizing a page or control.
 
@@ -129,36 +131,18 @@ at most two per step plus one re-observation after a zero-match verify. No
 `activate_app` after binding unless `windows=0` or binding is lost. A scoped
 observation is still fresh with valid element IDs. A zero match on a documented plan query is UI drift: stop and report, never probe or dump the full tree.
 
-| state | required meaning |
-|---|---|
-| `start` | Cardmarket `/en` or `/en/Magic` plus the expected site/game shell |
-| `results` | search-result heading/context plus a visible result collection or verified empty state |
-| `detail` | one visible card title plus matching product/printing context |
-| `versions` | versions/artworks heading plus collection tied to the same card identity |
-| `own-offers` | logged-in Selling -> My Offers -> Singles surface and stock table/filter |
-| `unknown` | off-site, unsupported route, insufficient evidence, or ambiguous surface |
-
-Also identify blockers independently: loading, consent, challenge, login, native
-dialog, unexpected overlay, or ambiguous controls. `unknown` and blocked states
-never become ready by assumption.
+The recognized states and their required meaning are the source of truth in
+[graph](references/graph.json) (states). Identify blockers independently: loading,
+consent, challenge, login, native dialog, unexpected overlay, or ambiguous
+controls. `unknown` and blocked states never become ready by assumption.
 
 ## Navigation decision table
 
-Use only the row matching the freshly observed state and requested goal; the table is total over every supported (state, goal), and every row names its plan in [flows](references/flows.md).
-
-| observed state | requested goal | only allowed movement | required proof or stop |
-|---|---|---|---|
-| no bound tab | start Cardmarket | plan `reanchor`: open one visible tab at the fixed `/en` home entry | observe the returned tab; repeated creation is forbidden |
-| off-site or `unknown` | enter Cardmarket | plan `reanchor`: `set_value` on the bound tab's address bar + Enter to the fixed `/en` home entry | exact origin plus recognizable start shell |
-| any in-site state | search a card | plan `reanchor` to the `/en` start shell, then plan `search` | results context or explicit empty state |
-| `start` | find a card | plan `search`: set the visible Magic search field, click the plan's Search control | results context or explicit empty state |
-| `results` | open a card | plan `open-result`: click the link whose visible card + set/printing identity matches | detail title and printing identity both match |
-| `detail` | read sellers | plan `read-sellers`: remain on detail; use only visible sort/filter controls the plan names | each applied control reads back, or an explicit no-filter report |
-| `detail` | inspect variants | plan `versions`: click `Link "Show Versions (N)"` | versions surface names the same parent card |
-| `versions` | open a variant | plan `open-variant`: click the exact visible set/artwork identity | detail identity matches that variant |
-| authenticated supported Cardmarket page | read own stock | plan `own-offers`: visible Selling -> My Offers -> Singles navigation | authenticated own-offers heading and table; filter only if the plan names it |
-| `own-offers` | inspect one offer's market | plan `own-offer-market`: click that row's card link by article/card identity | detail matches; `Go back` must later restore filter/page context |
-| any blocked or ambiguous state | any domain goal | no navigation | report blocker or candidates; wait for user/builder |
+Use only the transition matching the freshly observed state and requested goal;
+the transitions are total over every supported (state, goal) and are the source of
+truth in [graph](references/graph.json) (`from`, `goal`, `plan`, `to`). Each named
+plan's bounded scenario, expected result and read-back are in
+[flows](references/flows.md).
 
 There is no generic shortcut between states. In particular, never paste or
 construct detail, version, seller, or stock URLs and never use browser history
@@ -213,6 +197,8 @@ Loading, failure, hidden rows, or incomplete pagination are not zero results.
 
 ## References
 
+- [state graph](references/graph.json) — the recognized states and the transitions
+  between them (states + transitions); the source of truth for navigation structure.
 - [munim-computer-use transport](references/transport.md)
 - [supported UI workflows](references/flows.md)
 - [page and control evidence](references/selectors.md)

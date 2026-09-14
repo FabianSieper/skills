@@ -7,7 +7,8 @@ observation that verifies it, the expected result, and when to stop. You never
 search the page for your next control. The observation budget is hard (window-
 scoped, `query`- or `max_elements`-bounded, per [transport](transport.md)); a zero
 match on a documented `resolve` or `verify` observation is UI drift, so stop and
-report instead of probing or dumping the full tree.
+report instead of probing or dumping the full tree. The states and transitions
+these plans connect are in [graph](graph.json).
 
 Each plan below lists the same fields:
 

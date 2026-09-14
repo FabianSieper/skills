@@ -1,0 +1,12 @@
+{
+  "states": {
+    "entry": { "meaning": "the recognized entry surface", "actions": ["go"] },
+    "target": { "meaning": "the recognized target surface", "actions": [] },
+    "blocked": { "meaning": "loading, consent, challenge, dialog, or ambiguous controls", "actions": [] }
+  },
+  "transitions": [
+    { "from": "entry", "goal": "re-anchor", "plan": "reanchor", "to": "entry" },
+    { "from": "any in-site state", "goal": "reach target", "plan": "go", "to": "target" },
+    { "from": "any blocked or ambiguous state", "goal": "any goal", "plan": null, "to": null }
+  ]
+}

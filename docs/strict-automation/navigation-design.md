@@ -74,6 +74,26 @@ The decision table maps (state, goal) to the plan entry and must be total over
 every supported combination, including re-anchoring from any in-site state. A
 cell without a named plan is a builder gap, not operator discretion.
 
+## Navigation as a state graph
+
+The planned navigation model is a state graph:
+
+- **Nodes** are the recognized states. Each node carries its `meaning` — the bounded
+  recognition evidence, the state readout manifest — and the `actions` it allows (the
+  plan names sourced there). A node is recognized within the hard observation budget,
+  never from an unscoped full tree.
+- **Edges** are the named plans/transitions. Each edge is `from → to`, labeled with the
+  `goal` and a single interaction; `verify` confirms the destination. A zero match or
+  duplicate is a drift stop (no transition, remain + report).
+
+The **decision table is the graph adjacency**: `(state, goal)` maps to exactly one
+edge, total over every supported combination including re-anchoring; a missing cell is
+a builder gap. **Return** (browser history) undoes the immediately preceding verified
+edge. **Re-anchoring** is a named edge from any in-site node to the start node. The
+concrete graph for a site is a [JSON graph artifact](navigation-graph.json); the state
+model and the generated graph stay framework-agnostic (see
+[the reference implementation](typescript-design.md)).
+
 ## Observation budget (hard)
 
 A full unscoped `get_app_state` returns the whole accessibility tree (default
