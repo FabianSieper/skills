@@ -3,9 +3,9 @@
   "states": {
     "start": { "meaning": "Cardmarket /en or /en/Magic plus the expected site/game shell", "actions": ["search"] },
     "results": { "meaning": "search-result heading/context plus a visible result collection or verified empty state", "actions": ["open-result"] },
-    "detail": { "meaning": "one visible card title plus matching product/printing context", "actions": ["read-sellers", "versions", "compare"] },
+    "detail": { "meaning": "one visible card title plus matching product/printing context", "actions": ["read-sellers", "versions", "compare", "price-change"] },
     "versions": { "meaning": "versions/artworks heading plus collection tied to the same card identity", "actions": ["open-variant"] },
-    "own-offers": { "meaning": "logged-in Selling -> My Offers -> Singles surface and stock table/filter", "actions": ["own-offer-market"] },
+    "own-offers": { "meaning": "logged-in Selling -> My Offers overview (category tiles) and, after the Singles (N) tile, the stock table (Name/Info./Offer, no market column)", "actions": ["own-offer-market", "underpriced-scan"] },
     "unknown": { "meaning": "off-site, unsupported route, insufficient evidence, or ambiguous surface", "actions": ["reanchor"] },
     "blocked": { "meaning": "loading, consent, challenge, login, native dialog, unexpected overlay, or ambiguous controls", "actions": [] }
   },
@@ -17,10 +17,12 @@
     { "from": "results", "goal": "open a card", "plan": "open-result", "to": "detail" },
     { "from": "detail", "goal": "read sellers", "plan": "read-sellers", "to": "detail" },
     { "from": "detail", "goal": "compare own offer with matching sellers", "plan": "compare", "to": "detail" },
+    { "from": "detail", "goal": "change one own offer's price (guarded write)", "plan": "price-change", "to": "detail" },
     { "from": "detail", "goal": "inspect variants", "plan": "versions", "to": "versions" },
     { "from": "versions", "goal": "open a variant", "plan": "open-variant", "to": "detail" },
     { "from": "authenticated supported Cardmarket page", "goal": "read own stock", "plan": "own-offers", "to": "own-offers" },
     { "from": "own-offers", "goal": "inspect one offer's market", "plan": "own-offer-market", "to": "detail" },
+    { "from": "own-offers", "goal": "find underpriced own offers", "plan": "underpriced-scan", "to": "own-offers" },
     { "from": "any blocked or ambiguous state", "goal": "any domain goal", "plan": null, "to": null }
   ]
 }

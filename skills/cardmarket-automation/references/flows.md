@@ -93,18 +93,30 @@ Each plan below lists the same fields:
 - `expected`: detail identity matches the clicked variant.
 - `drift stop`: no single matching variant, a duplicate, or a new tab.
 
-## Plan `own-offers` — to the authenticated own-offers surface
+## Plan `own-offers` — to the authenticated own-offers stock table
 
-- `control`: the visible Selling -> My Offers -> Singles navigation controls.
+- `control`: the visible Selling -> My Offers navigation, then the `Singles (N)`
+  category tile on the My Offers overview, and the stock table's visible pagination
+  controls.
 - `disambiguation`: requires a visibly authenticated account; login/MFA is a
-  blocker handed to the user.
-- `resolve`: scoped observation of the Selling navigation in the bound window.
-- `action`: `click` the visible Selling -> My Offers -> Singles controls, then
-  apply visible stock filters only when present.
-- `verify`: scoped observation reading back the heading, table, and each filter.
-- `expected`: authenticated own-offers heading and table; `complete:false` when the
-  terminal page or filter continuity cannot be verified.
-- `drift stop`: unauthenticated state, a missing surface, or an unreadable filter.
+  blocker handed to the user. My Offers is a category overview (tiles), not the
+  stock table; the stock table is reached only by clicking the `Singles (N)` tile.
+- `resolve`: scoped observation of the Selling navigation, then the My Offers
+  overview tiles.
+- `action`: `click` Selling -> My Offers, then `click` the `Singles (N)` tile;
+  apply visible stock filters only when present. Read the stock table with a
+  plan-bounded `max_elements` read (200 for the `Name`/`Info.`/`Offer` region; raise
+  in steps to at most 500 only when the page is provably truncated, never the full
+  800-element tree). To reach further pages, `click` the visible Next control and
+  read back the new page position — at most 50 rows per page and 20 pages per
+  request.
+- `verify`: scoped observation reading back the stock table (`Name`/`Info.`/`Offer`,
+  `N Hits` — no market column), the current page position, and each filter.
+- `expected`: authenticated stock table with `N Hits`; `complete:true` only when the
+  terminal page was reached, else `complete:false` with the pages inspected
+  reported.
+- `drift stop`: unauthenticated state, a missing overview/table, an unreadable
+  filter, or a Next control that does not advance the page.
 
 ## Plan `own-offer-market` — from `own-offers` to a market detail
 
@@ -129,8 +141,36 @@ Each plan below lists the same fields:
   none applied; read bounded seller prices.
 - `verify`: scoped observation of the matched seller rows.
 - `expected`: the own price, product-wide "from" data, and matching seller prices
-  distinguished, with coverage reported.
+  distinguished, with coverage reported; the offer is **underpriced** when the own
+  price is below the lowest visible matching-seller price, or (when no matching
+  seller row is visible) below the product-wide "from" value — report the reference
+  value, the distance, and matching-row coverage, and never label a partial scan as
+  a global minimum.
 - `drift stop`: any required compatibility field is missing or unknown.
+
+## Plan `underpriced-scan` — bounded scan for underpriced own offers
+
+- `control`: the own-offers stock table rows (with pagination), each row's card
+  `Link`, and each reached detail's seller region.
+- `disambiguation`: match rows by visible article/card identity, condition, and
+  language; never by ordinal position. Group multiple offers of the same card by
+  card identity before forming the per-card conclusion.
+- `resolve`: scoped observation of the stock table rows in the bound window.
+- `action`: for each row, `click` the row link to its detail, run plan `compare`
+  for the verdict, then `click` `Go back` and re-observe the stock table (confirming
+  the restored page position) before the next row; when a page is exhausted, `click`
+  the Next control and read back the new page — at most 50 rows per page and 20 pages
+  per request.
+- `verify`: scoped observation confirming the `compare` verdict per row, that
+  `Go back` restored the stock table/page context, and the page position after each
+  Next step.
+- `expected`: a bounded per-card result — card identity, version, own price, the
+  reference value and its type (lowest matching-seller price or product "from"), the
+  distance, the verdict (underpriced or not), matching-row coverage, and `complete`;
+  `complete` only when the terminal page was reached.
+- `drift stop`: a detail mismatch, a `Go back` that does not restore context, a Next
+  that does not advance, or an ambiguous row; stop and report the partial coverage
+  and which rows remain.
 
 ## Plan `price-change` — guarded own-offer price write
 
@@ -140,11 +180,17 @@ explicitly asks to change the price of a specific own offer while logged in.
 - `control`: that own offer's edit form, price field only.
 - `disambiguation`: confirm the exact article/card, condition, language, and
   location plus the original price; do not proceed on an ambiguous match.
-- `resolve`: scoped observation of the offer's edit control.
-- `action`: after action-time confirmation, `set_value`/`type_text` **only the
-  price field**, then `click` the visible submit control (never Enter).
+- `resolve`: scoped observation of the offer's edit control, open the edit form,
+  then scoped observation of the Price field.
+- `action`: after action-time confirmation, `click` the Price field, then `set_value`
+  **only that price field**, re-observe and confirm the field reads back the exact
+  new value, then `click` the visible submit control (never Enter). A standalone
+  `set_value` can report success without changing the field, so the click-prime and
+  the read-back are required; `press_key`/Backspace may not reach the field, so do
+  not rely on it.
 - `verify`: scoped observation reading back the new price (and the restored value
   when the change was explicitly a test).
-- `expected`: the new price is read back; no other field changed.
+- `expected`: the new price is read back both in the field before submit and on the
+  page after submit; no other field changed.
 - `drift stop`: any step is ambiguous, blocked, or cannot be read back; bulk price
   updates and every other durable write stay disabled.

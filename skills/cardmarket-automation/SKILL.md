@@ -177,8 +177,9 @@ before the next action. Never use fixed sleeps.
 - Open one exact result and read visible card facts and seller offers (plan `read-sellers`).
 - Open versions/artworks through visible UI and inspect one exact variant (plans `versions`, `open-variant`).
 - Read visible seller offers. For comparisons, prefer rows whose visible condition, language, location, and variant flags are compatible; by default use Excellent-or-better, English, Germany, any seller type, and no forced foil/signed/altered value unless the user specifies. Apply seller filters only through visible controls and read them back; otherwise report that no filters were applied.
-- Navigate through visible Selling -> My Offers -> Singles controls when the user is logged in; read/filter bounded own-offer rows (plans `own-offers`, `own-offer-market`).
-- Compare an own offer with visible matching sellers only when condition, language, location, variant flags, identity, filter status, and coverage are all verified and reported (plan `compare`).
+- Navigate through visible Selling -> My Offers (category overview) -> the `Singles (N)` tile to the own stock table when the user is logged in; read/filter bounded own-offer rows (plans `own-offers`, `own-offer-market`).
+- Compare an own offer with visible matching sellers and report a deterministic underpriced verdict (own price versus the lowest matching-seller price, or the product-wide "from" value when none is visible) only when condition, language, location, variant flags, identity, filter status, and coverage are all verified and reported (plan `compare`).
+- Run a bounded scan across own offers to report which are underpriced, stopping with explicit partial coverage (plan `underpriced-scan`).
 
 If a task needs a missing material choice, report the distinct candidates and ask only for that choice. Do not use ordinal position as durable identity; after any rerender, re-resolve the exact visible card/article identity.
 

@@ -46,8 +46,9 @@ the full tree.
 | `read-sellers` | visible seller sort/filter controls + offers table | offers region | each effective filter reads back, or a no-filter report |
 | `versions` | `Link "Show Versions (N)"` on detail | versions control | versions heading names the same parent card |
 | `open-variant` | variant `Link` (set + optional `Version N` + `From`) | variant rows | detail identity matches the variant |
-| `own-offers` | Selling -> My Offers -> Singles controls | Selling nav | own-offers heading + table + filters read back |
+| `own-offers` | Selling -> My Offers overview, then the `Singles (N)` category tile | Selling nav / My Offers overview | stock table `Name`/`Info.`/`Offer` + `N Hits` (no market column) |
 | `own-offer-market` | stock row's card `Link` (article/card identity) | stock row | detail matches; `Go back` restores stock context |
+| `price-change` | own-offer edit form Price `TextField` + submit `Button "EDIT ARTICLE"` | edit form Price field | new price read back (dot input); no other field changed |
 
 `reanchor` is the only direct navigation and targets only `https://www.cardmarket.com/en`;
 all other movement uses visible forward controls. The start-shell search `Button` may need
@@ -83,12 +84,22 @@ a bounded `max_elements:120` start-region read when it is not found by `query`.
   The detail page's `Show Versions (N)` count may differ from the versions page's
   total version count; verify the parent-card identity rather than assuming the
   counts are identical.
-- **Own offers:** authenticated Selling -> My Offers -> Singles heading and offer
-  table. A stock filter region may be absent; if absent, report that no stock
-  filters were applied.
+- **Own offers:** authenticated Selling -> My Offers is a **category overview** of
+  tiles (`Singles (N)`, ...); it is not itself the stock table. `click` the
+  `Singles (N)` tile to reach the stock table. The stock table columns are
+  `Name` / `Info.` / `Offer` with a `N Hits` header and **no market/reference-price
+  column**; the tile count can differ from `N Hits`. A stock filter region may be
+  absent; if absent, report that no stock filters were applied.
+- **Own-offer edit form:** opened from the detail page's `Edit` control for the own
+  offer row. Heading `Edit <Card>`; `PopUpButton` Condition and Language; `CheckBox`
+  Foil?/Signed?/Altered?; an image `Button`; a Comments `TextField`; a Price
+  `TextField`; a `PopUpButton` Quantity; and submit `Button "EDIT ARTICLE"`. The
+  Price field uses dot-decimal input (e.g. `0.28`) even though the page displays
+  comma-decimal.
 
 Price values use the German/European format (`0,10 €` — comma decimal separator,
-space before the currency symbol).
+space before the currency symbol). Display uses a comma; the own-offer edit form's
+Price input uses a dot decimal separator.
 
 Cardmarket can change labels and layout. These descriptions are recognition
 requirements, not permission to guess a selector. If the current state does not

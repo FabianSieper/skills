@@ -33,7 +33,8 @@ gate has passed.
   one-tab rules.
 - `munim-computer-use_browser_*` (`browser_list_tabs`, `browser_open_tab`, ...)
   target **Chrome only** and depend on the Chrome extension. They are **not** a
-  Cardmarket transport and must not be used.
+  Cardmarket transport and must not be used. Observed: calling them returns that the
+  Chrome extension is not connected.
 
 ## Initialization
 
@@ -160,3 +161,9 @@ create, delete, or submit offers, and do not fill offer-editing forms, unless a
 single own-offer price change is explicitly requested, confirmed at action time,
 submitted through a visible control, and read back. Restore the original price
 only when the change was explicitly a test. (See [flows](flows.md).)
+
+Web form fields need a click-prime and a read-back. A standalone `set_value` can
+report success without changing the field's value (the accessibility value and the
+DOM value can diverge), and `press_key`/Backspace may not reach the field. So for a
+form write: `click` the field, `set_value`, re-observe and confirm the field reads
+back the exact value, then click the visible submit control.
