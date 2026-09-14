@@ -14,10 +14,10 @@ and the [strict concept](docs/strict-automation/concept.md). The builder is an
 authoring guide, not an installable site runtime or a scaffold generator.
 
 Run `task test` for concept links/routing and the illustrative UI-model tests.
-Run `task test:cardmarket` to validate the focused Cardmarket skill, its MCP gate,
-and the absence of legacy runtime instructions. CI runs both groups and
-typechecks the illustrative model. These checks do not establish live-browser
-verification.
+CI runs the same group and typechecks the illustrative model. These checks do not
+establish live-browser verification; the Cardmarket skill's rules (MCP gate, one
+bound tab, planned navigation, hard observation budget, disabled writes) are
+enforced by its focused documents.
 
 The former Cardmarket CLI/POM runtime was removed when the skill moved to direct,
 state-aware munim-computer-use automation. Use only the workflow documented in

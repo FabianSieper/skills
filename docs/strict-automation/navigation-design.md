@@ -1,6 +1,6 @@
 # Navigation ergonomics with munim-computer-use
 
-Status: normative supplement, revision 3, 2026-09-13. This resolves navigation,
+Status: normative supplement, revision 4, 2026-09-14. This resolves navigation,
 observation, recovery and authoring ergonomics for the default focused MCP
 skill. It does not claim every website failure is knowable in advance.
 Unrecognized situations remain observable, bounded and unable to trigger guessed
@@ -55,36 +55,52 @@ press_key { key: "Enter" }
 
 If no bound tab exists, open one home-entry tab instead of guessing among tabs.
 
-## Bounding the observation payload
+## Planned navigation (deterministic step plans)
 
-A full `get_app_state` observation returns the whole accessibility tree of the
-observed windows (default budget 800 elements; on real pages this is about 20–37 KB
-per call). Repeated at every interaction step, it dominates the agent's context and
-thinking time. Bound the payload without weakening the fresh-state rule:
+The operator never searches the page for its next control. Each flow step is a
+plan entry that names the expected control exactly:
 
-- **Scope to the bound window.** Once the bound tab/window is identified, observe
-  with `window:<index>` (0-based window index, or `"agent"` for the agent's own
-  window). The unscoped call walks every app window and is used only for the
-  initial tab inventory and binding.
-- **Prefer query-filtered observations per step.** Before resolving a target and
-  after verifying a navigation, use
-  `get_app_state { app, window, query }` — a case-insensitive substring match over
-  roles, labels and values. Matched elements keep valid fresh IDs, and a zero-match
-  query is a minimal payload that still proves the tree is current.
-- **Bound bounded data reads.** When a read actually needs the page region (for
-  example, reading up to 50 rows), pass `max_elements` (typically 100–200) and raise
-  it only when the required region is provably truncated.
-- **Verify navigation with a small observation.** After navigation, confirm the
-  origin/title with a small `query` observation before resolving the next control;
-  browser chrome (the address bar) follows the WebArea content, so a small
-  root-anchored tree can be missing it.
-- **Full trees only when justified.** A full unscoped observation is justified only
-  for initial binding, when a query returns zero matches and page identity itself is
-  unknown, or when the required region is provably absent from a bounded read.
+- `control`: the expected accessible role and name.
+- `disambiguation`: how to tell it apart from lookalikes in the same context.
+- `resolve`: the plan observation (scoped `query`, or bounded region read with an
+  explicit element budget) that locates the control.
+- `action`: the single interaction.
+- `verify`: the plan observation that proves the expected effect.
+- `expected`: the destination or read-back identity.
+- `drift stop`: a zero match or duplicate on the documented `resolve` query is UI
+  drift — stop and report; never probe, guess or widen into an unscoped dump.
+
+The decision table maps (state, goal) to the plan entry and must be total over
+every supported combination, including re-anchoring from any in-site state. A
+cell without a named plan is a builder gap, not operator discretion.
+
+## Observation budget (hard)
+
+A full unscoped `get_app_state` returns the whole accessibility tree (default
+800 elements; on real pages about 20–37 KB per call). Repeated at every
+interaction step it dominates the agent's context and thinking time. The budget
+below is hard; it bounds the payload without weakening the fresh-state rule:
+
+- **Full unscoped tree only for initial binding.** It walks every app window and
+  is used for the tab inventory and binding. At most one full inventory per task,
+  plus one re-inventory after a `windows=0` recovery.
+- **Mid-task: plan observations only.** Each step uses its plan entry's `resolve`
+  (before the action) and `verify` (after) observations — scoped `query` or
+  plan-bounded `max_elements` region read. At most two observations per step plus
+  one re-observation after a zero-match verify.
+- **Scope to the bound window.** After binding, observe with `window:<index>`
+  (0-based window index, or `"agent"`). The unscoped call walks every app window
+  and is not a mid-task option.
+- **Bound data reads.** When a read needs the page region (for example up to 50
+  rows), pass the plan's explicit `max_elements` budget (typically 100–200) and
+  raise it only when the required region is provably truncated.
+- **No app re-activation after binding.** `activate_app` is used for initial
+  binding and the `windows=0` recovery only, not between steps.
 
 A `window`-, `query`- or `max_elements`-scoped observation is still a fresh
 observation with valid element IDs. It does not relax the requirement to re-observe
-after every interaction.
+after every interaction. A zero match on a documented plan query is UI drift
+(stop and report), never an invitation to dump the full tree.
 
 ## What the operating agent should do
 
@@ -94,10 +110,11 @@ The operator loop is:
 2. Run the mandatory MCP gate.
 3. Bind exactly one site tab.
 4. Observe fresh state and recognize page/blockers.
-5. Select the navigation row matching the requested goal.
-6. Resolve exactly one visible control.
+5. Select the navigation row and its plan entry for the requested goal.
+6. Resolve the plan's documented control with its `resolve` observation.
 7. Interact once.
-8. Observe fresh state and verify destination/identity.
+8. Observe fresh state with the plan's `verify` observation and verify
+   destination/identity.
 9. Continue only within the user’s task and report bounded result.
 
 The agent should not repeatedly read help, invent selectors, quote shell
@@ -132,6 +149,8 @@ All rows are skill acceptance cases, not executed live tests.
 | user changes task mid-workflow | stop at next safe boundary; cancellation cannot undo an in-flight write |
 | partial read needs continuation | bind cursor to context and progress; changed context returns stale cursor |
 | same task causes repeated observation/help calls | return compact state, result and next safe step together |
+| operator dumps the full tree mid-task or re-activates the app | stay within the observation budget: full inventory only for binding, plan observations only mid-task |
+| operator invents ad-hoc query probes to find a control | resolve only the plan's documented control; a zero match is UI drift, not a search |
 | optional region drifts but another operation is safe | block only actions depending on that region; core identity ambiguity blocks all domain actions |
 
 Global blockers and locally unavailable regions are different. A consent or

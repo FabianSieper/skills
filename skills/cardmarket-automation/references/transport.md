@@ -84,15 +84,16 @@ multiple Cardmarket tabs exist, stop and ask the user which one to use.
   - `max_elements:<N>` (default 800) bounds the returned tree; a truncated tree
     ends with `... element budget reached; raise max_elements for more`.
   - `max_depth:<N>` (default 18) bounds tree depth.
-- **Bound the payload per step.** Once the tab is bound, observe with
-  `window:<index>`. Before resolving a target and after verifying a navigation,
-  prefer a `query` observation over the whole tree. When a read actually needs the
-  page region (for example up to 50 rows), pass `max_elements` (typically 100–200)
-  and raise it only when the required region is provably truncated. Use a full
-  unscoped observation only for initial binding or when a scoped read cannot
-  establish the identity or region. A `window`/`query`/`max_elements`-scoped
-  observation is still a fresh observation with valid IDs and does not relax the
-  re-observe rule.
+- **The observation budget is hard.** The full unscoped tree is only for initial
+  tab inventory and binding (one per task, plus one after a `windows=0` recovery).
+  After binding, observe with `window:<index>`, and mid-task use only a plan's
+  `resolve` and `verify` observations — a `query` or a plan-bounded `max_elements`
+  read (typically 100–200, raised only when the required region is provably
+  truncated) — at most two per step plus one re-observation after a zero-match
+  verify. No `activate_app` after binding unless `windows=0` or binding is lost. A
+  scoped observation is still a fresh observation with valid IDs and does not relax
+  the re-observe rule; a zero match on a documented plan query is UI drift, so stop
+  and report instead of probing or dumping the full tree.
 - Element IDs (`eN`) are **observation-local**. Re-fetch state before every
   interaction; never reuse an ID after navigation or a rerender.
 - `munim-computer-use_screenshot { app:"Safari" }` is unreliable (it may lack Screen

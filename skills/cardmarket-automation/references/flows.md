@@ -1,95 +1,149 @@
-# Supported munim-computer-use flows
+# Supported munim-computer-use plans
 
-All flows use the single bound Safari tab through `munim-computer-use_*` tools.
-Observe fresh `get_app_state` before and after every interaction and verify exact
-business identity. Bound the observation payload (window-scoped, `query`-filtered
-or `max_elements`-bounded, per the transport) so each step stays small. Stop on
-ambiguity, blockers, or UI drift.
+Every supported task is a named plan. All plans use the single bound Safari tab
+through `munim-computer-use_*` tools. A plan is the deterministic contract: it
+names the exact control to act on, the observation that finds it, the action, the
+observation that verifies it, the expected result, and when to stop. You never
+search the page for your next control. The observation budget is hard (window-
+scoped, `query`- or `max_elements`-bounded, per [transport](transport.md)); a zero
+match on a documented `resolve` or `verify` observation is UI drift, so stop and
+report instead of probing or dumping the full tree.
 
-## Find and read a card
+Each plan below lists the same fields:
 
-1. From the Cardmarket home/game surface, locate one visible Magic search field
-   (`TextField "Search"` plus its search control).
-2. Set the query with `type_text`/`set_value`; do not submit with Enter and do not
-   click a search-suggestion Link.
-3. Click the unique visible Search control and re-observe.
-4. Verify a results surface (H1 `Search Results`, `N Hits`) or an explicit empty
-   state.
-5. Read at most 50 visible results. Preserve card name, set/printing, displayed
-   image/variant evidence, URL, and "from" price classification.
-6. Open only the result whose visible identity matches the requested target.
-7. Verify the detail title and printing context before reporting detail data.
+- `control` — the exact accessibility element to act on.
+- `disambiguation` — how to tell it from nearby lookalikes.
+- `resolve` — the scoped observation that finds the control.
+- `action` — the single interaction to perform.
+- `verify` — the scoped observation that confirms the move.
+- `expected` — the state/identity that proves success.
+- `drift stop` — the condition that halts the plan.
 
-## Read sellers
+## Plan `reanchor` — enter or return to the `/en` start shell
 
-1. Verify the exact detail identity.
-2. Inspect the offers table and surrounding region for visible sort/filter
-   controls. Do not assume a seller-filter form exists.
-3. Apply requested values only through visible controls; submit each through its
-   unique visible control and read the effective value back. If no filter controls
-   exist, read the unfiltered offers and explicitly report that no filters were
-   applied.
-4. For comparisons, prefer rows whose visible condition, language, location, and
-   variant flags are compatible. By default use Excellent-or-better, English,
-   Germany, any seller type, and no forced foil/signed/altered value unless the
-   user specifies otherwise.
-5. Read at most 50 seller rows (columns `Seller`, `Product Information`, `Offer`).
-   Report filter/no-filter status, timestamp, visible sorting, and coverage. A
-   partial list is never a global minimum.
+- `control`: the bound tab's address bar (`TextField "smart search field"`); when no
+  tab is bound, one new tab at the fixed `/en` home entry.
+- `disambiguation`: re-anchoring is the only direct navigation allowed, and it
+  targets only `https://www.cardmarket.com/en`; never a product, seller, or stock URL.
+- `resolve`: initial or `window:<index>` observation of the bound tab bar.
+- `action`: `set_value` the fixed home-entry URL, then `press_key Enter` (the only
+  allowed Enter target), or open one fixed home-entry tab.
+- `verify`: scoped observation of the start shell.
+- `expected`: exact `https://www.cardmarket.com/en` origin plus the recognizable
+  start shell.
+- `drift stop`: no bound tab and repeated tab creation, or the returned page is not
+  the start shell.
 
-## Read versions or artworks
+## Plan `search` — from `start` to `results`
 
-1. From verified detail, click the visible versions/reprints control
-   (`Link "Show Versions (N)"`).
-2. Verify the versions surface still names the same parent card.
-3. Read at most 50 visible variants with set, artwork/image evidence,
-   availability, and "from" price classification.
-4. If one exact variant is requested, click it by full visible identity and verify
-   the resulting detail page before reading seller prices.
+- `control`: the visible Magic search field (`TextField "Search"`) and the plan's
+  adjacent Search control.
+- `disambiguation`: the field sits beside `PopUpButton "Category"`; never click a
+  search-suggestion Link and never submit with Enter.
+- `resolve`: scoped observation `query:"Search"` in the bound window.
+- `action`: `set_value`/`type_text` the query, then `click` the Search control.
+- `verify`: scoped observation of the results heading.
+- `expected`: H1 `Search Results` plus `N Hits`, or an explicit empty state.
+- `drift stop`: zero match on `resolve`/`verify`.
 
-## Read own offers
+## Plan `open-result` — from `results` to `detail`
 
-1. Require a visibly authenticated account state. If login or MFA is needed, hand
-   control to the user and wait for confirmation before re-observing.
-2. Navigate through visible Selling -> My Offers -> Singles controls.
-3. Verify the own-offers heading, filter region, and table.
-4. Apply requested stock filters only if visible controls exist, submit each
-   through its visible control, and read all effective values back; otherwise
-   report that no stock filters were applied.
-5. Read at most 50 rows per page and 20 pages. Deduplicate using visible article
-   identity. Report `complete:false` if the terminal page or filter continuity
-   cannot be proven.
+- `control`: the single result `Link` whose visible card name plus set/printing
+  identity matches the requested target.
+- `disambiguation`: require both the card name and the set/printing context to match;
+  never choose the first plausible result or an ordinal position.
+- `resolve`: scoped observation of the result rows in the bound window.
+- `action`: `click` the matching result link in the same tab.
+- `verify`: scoped observation of the detail title and printing context.
+- `expected`: detail title and printing identity both match the clicked result.
+- `drift stop`: no single matching result, a duplicate identity, or a new tab.
 
-## Compare own and market offers
+## Plan `read-sellers` — read offers on `detail`
 
-For each bounded own-offer target, bind the exact article/card identity and its
-condition, language, variant flags, quantity, and price. Open the matching card
-through its visible link in the same bound tab. If the click creates a new tab,
-stop and report the violation. Apply compatible seller filters only if visible
-controls exist, read them back or report no filters applied, and collect bounded
-seller prices. Return to the immediately preceding stock page with the Safari
-`Go back` control and verify the stock filter/page context before continuing.
+- `control`: the visible seller sort/filter controls and the offers table.
+- `disambiguation`: do not assume a seller-filter form exists; act only on controls
+  actually visible in the offers region.
+- `resolve`: scoped observation of the offers region in the bound window.
+- `action`: apply requested values through each visible control, then `click` that
+  control's submit; otherwise read the unfiltered offers.
+- `verify`: scoped observation reading back each effective filter value.
+- `expected`: up to 50 seller rows (`Seller`, `Product Information`, `Offer`) with
+  filter/no-filter status, visible sorting, and coverage.
+- `drift stop`: a requested filter cannot be applied or read back.
 
-Stop rather than compare incompatible or unknown variants. Distinguish the own
-price, product-wide "from" data, and matching seller prices.
+## Plan `versions` — from `detail` to `versions`
 
-## Guarded own-offer price change
+- `control`: the visible `Link "Show Versions (N)"`.
+- `disambiguation`: the link's card title must match the verified detail identity.
+- `resolve`: scoped observation of the versions control on detail.
+- `action`: `click` the versions link in the same tab.
+- `verify`: scoped observation of the versions heading.
+- `expected`: the versions surface names the same parent card.
+- `drift stop`: the versions surface names a different parent card.
 
-This is the only write path and is **off by default**. Run it only when the user
-explicitly asks to change the price of a specific own offer, and only in a
-logged-in state.
+## Plan `open-variant` — from `versions` to `detail`
 
-1. Confirm the exact own-offer identity (article/card, condition, language,
-   location) and the original price. Do not proceed on an ambiguous match.
-2. Ask for explicit confirmation at action time, naming the offer and the exact
-   change.
-3. Open the offer's edit control and set **only the price field**
-   (`type_text`/`set_value`). Never touch any other field.
-4. Submit through the visible submit control, never Enter; re-observe and read
-   back the new price.
-5. If the change was explicitly a test, restore the original price through the
-   same guarded path and read back the restored value.
+- `control`: the single variant `Link` whose visible set/artwork identity matches
+  the requested variant.
+- `disambiguation`: require the full set/artwork identity, not ordinal position.
+- `resolve`: scoped observation of the variant rows in the bound window.
+- `action`: `click` the matching variant link.
+- `verify`: scoped observation of the resulting detail identity.
+- `expected`: detail identity matches the clicked variant.
+- `drift stop`: no single matching variant, a duplicate, or a new tab.
 
-If any step is ambiguous, blocked, or cannot be read back, stop and report. Do not
-create, delete, or batch-update offers; bulk price updates and any other durable
-write remain disabled.
+## Plan `own-offers` — to the authenticated own-offers surface
+
+- `control`: the visible Selling -> My Offers -> Singles navigation controls.
+- `disambiguation`: requires a visibly authenticated account; login/MFA is a
+  blocker handed to the user.
+- `resolve`: scoped observation of the Selling navigation in the bound window.
+- `action`: `click` the visible Selling -> My Offers -> Singles controls, then
+  apply visible stock filters only when present.
+- `verify`: scoped observation reading back the heading, table, and each filter.
+- `expected`: authenticated own-offers heading and table; `complete:false` when the
+  terminal page or filter continuity cannot be verified.
+- `drift stop`: unauthenticated state, a missing surface, or an unreadable filter.
+
+## Plan `own-offer-market` — from `own-offers` to a market detail
+
+- `control`: that stock row's card `Link`, bound by article/card identity.
+- `disambiguation`: match the row by visible article/card identity, condition, and
+  language; never by ordinal position.
+- `resolve`: scoped observation of the stock row in the bound window.
+- `action`: `click` the row's card link in the same tab.
+- `verify`: scoped observation of the detail identity.
+- `expected`: detail matches the clicked row; `Go back` later restores the stock
+  filter/page context.
+- `drift stop`: the click creates a new tab or the detail identity does not match.
+
+## Plan `compare` — own price versus matching sellers
+
+- `control`: the matched market detail's seller controls and table (reuse plan
+  `read-sellers` on that detail).
+- `disambiguation`: compare only when condition, language, location, and variant
+  flags are all compatible; never compare incompatible or unknown variants.
+- `resolve`: scoped observation of the detail identity, then the offers region.
+- `action`: apply compatible seller filters through visible controls, or report
+  none applied; read bounded seller prices.
+- `verify`: scoped observation of the matched seller rows.
+- `expected`: the own price, product-wide "from" data, and matching seller prices
+  distinguished, with coverage reported.
+- `drift stop`: any required compatibility field is missing or unknown.
+
+## Plan `price-change` — guarded own-offer price write
+
+This is the only write path and is **off by default**; run it only when the user
+explicitly asks to change the price of a specific own offer while logged in.
+
+- `control`: that own offer's edit form, price field only.
+- `disambiguation`: confirm the exact article/card, condition, language, and
+  location plus the original price; do not proceed on an ambiguous match.
+- `resolve`: scoped observation of the offer's edit control.
+- `action`: after action-time confirmation, `set_value`/`type_text` **only the
+  price field**, then `click` the visible submit control (never Enter).
+- `verify`: scoped observation reading back the new price (and the restored value
+  when the change was explicitly a test).
+- `expected`: the new price is read back; no other field changed.
+- `drift stop`: any step is ambiguous, blocked, or cannot be read back; bulk price
+  updates and every other durable write stay disabled.

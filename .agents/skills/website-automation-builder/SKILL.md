@@ -1,6 +1,6 @@
 ---
 name: website-automation-builder
-description: Required project workflow for creating, editing, extending, refactoring, repairing or reviewing website-automation skills in this repository, including Cardmarket, their state evidence, flows, browser transport, tests and operating instructions. Use for website-automation development, not for merely running an existing skill or changing unrelated skills.
+description: Required project workflow for creating, editing, extending, refactoring, repairing or reviewing website-automation skills in this repository, including Cardmarket, their state evidence, flows, browser transport and operating instructions. Use for website-automation development, not for merely running an existing skill or changing unrelated skills.
 ---
 
 # Website Automation Builder
@@ -14,8 +14,9 @@ Do not install this authoring skill as a standalone runtime skill.
 The Cardmarket skill is the reference implementation. A new website skill should
 look like the same kind of focused MCP skill: `SKILL.md`,
 `references/transport.md`, `references/flows.md`, `references/selectors.md`,
-`agents/openai.yaml` and `.gitignore`. It should not add a CLI, package,
-compiled runtime, scaffold, alternate browser path or alternate transport.
+`.gitignore` and, optionally, `agents/openai.yaml` (display metadata, may be
+omitted). It should not add a CLI, package, compiled runtime, scaffold,
+alternate browser path or alternate transport.
 
 ## Required reading
 
@@ -38,7 +39,7 @@ generated skill.
 
 ## Development sequence
 
-1. Inspect git state and the affected skill's documents, tests and evidence.
+1. Inspect git state and the affected skill's documents and evidence.
    Define requested inputs, supported starting states, destination/identity
    checks, UI effects and any business writes. Preserve unrelated work.
 2. Map the operation to state evidence, a supported flow and a navigation
@@ -48,13 +49,13 @@ generated skill.
    filters and commit boundaries. Use the affected skill's declared transport:
    `munim-computer-use_*` for the bound browser. Do not invent unseen selectors,
    access hidden state or silently substitute another driver.
-4. Implement the change in the skill's focused documents and validator
-   expectations. Keep the operating surface as a hard MCP availability gate,
+4. Implement the change in the skill's focused documents. Keep the operating
+    surface as a hard MCP availability gate,
    one bound tab, fresh accessibility state, explicit scenarios, verified
    postconditions and no transport fallback.
-5. Verify affected behavior and relevant rejection/race cases. Run the affected
-   skill's documented checks; for Cardmarket use `task test:cardmarket`. Do not
-   claim live behavior from document-only verification.
+5. Verify affected behavior and relevant rejection/race cases against the
+    skill's focused documents. Its rules live in the `.md`, not a validator.
+    Do not claim live behavior from document-only verification.
 6. Run `node scripts/verify-website-concept.mjs` from repository root for this
     authoring skill's wiring and document checks. Record what was actually tested
     and exact remaining live risks.
@@ -63,10 +64,18 @@ generated skill.
 
 - Observe first; unknown, ambiguous or blocking UI never becomes a ready page.
   Readiness and pure observation cannot navigate, fill, accept cookies or log in.
-- Keep observations small: generated skills scope `get_app_state` to the bound
-  window and prefer `query`/`max_elements`-bounded observations per step. A scoped
-  observation is still a fresh observation with valid element IDs; the unscoped
-  whole-app tree is the default only for initial binding.
+- Navigation is planned: every flow step is a plan entry with the exact expected
+  control (role + name), disambiguation, `resolve` and `verify` observations, the
+  single action, the expected destination/read-back, and a drift stop. The
+  decision table is total over every supported (state, goal). The operator never
+  scans the tree, invents probe queries or picks the first plausible match; a zero
+  match on a documented plan query is UI drift — stop and report.
+- The observation budget is hard: the full unscoped tree is only for initial tab
+  inventory/binding (one per task, plus one after a `windows=0` recovery).
+  Mid-task, each step uses only its plan's `resolve`/`verify` observations (scoped
+  `query` or plan-bounded `max_elements` read), at most two per step plus one
+  re-observation after a zero-match verify, and no `activate_app` after binding.
+  A scoped observation is still a fresh observation with valid element IDs.
 - Discovery and execution use the same recognition predicates. Verify source,
   target identity and fresh destination. Stable visible business identity
   replaces indexes.

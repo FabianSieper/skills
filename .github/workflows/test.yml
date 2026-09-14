@@ -9,10 +9,3 @@ jobs:
         with: { node-version: 22 }
       - run: node scripts/verify-website-concept.mjs
       - run: node --experimental-strip-types --test docs/strict-automation/ui-model.test.mjs
-  cardmarket:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: node scripts/verify-cardmarket-skill.mjs

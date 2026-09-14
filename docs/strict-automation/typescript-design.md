@@ -106,7 +106,7 @@ For a new filter or control:
 For a new site:
 
 Keep the same focused skill shape. Replace only the site-specific state names,
-flows, selector evidence, result requirements and validator expectations. Do not
+flows, selector evidence, result requirements and documented rules. Do not
 add a runtime, CLI, package or alternate transport.
 
 The goal is that a reviewer can open `SKILL.md`, understand what is legal,

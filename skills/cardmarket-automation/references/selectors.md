@@ -32,6 +32,27 @@ fresh IDs without returning the whole tree:
 - A **zero-match** query is a minimal payload and still proves the tree is current;
   it does not by itself prove the control is absent.
 
+## Planned control map
+
+The plans in [flows](flows.md) resolve these documented controls. A zero match on a
+row's `resolve` or `verify` query is UI drift: stop and report; do not probe or dump
+the full tree.
+
+| plan | documented control (accessibility) | `resolve` query | `verify` query / expected |
+|---|---|---|---|
+| `reanchor` | address bar `TextField "smart search field"`; one tab at the fixed `/en` home entry | tab-bar / `window:<index>` | `query:"cardmarket"` → exact `/en` origin + start shell |
+| `search` | `TextField "Search"` beside `PopUpButton "Category"` + adjacent search `Button` | `query:"Search"` | `query:"Search Results"` → `N Hits` or empty state |
+| `open-result` | result `Link` (image + `Heading "<Set> <Card>"` + `From`) | result rows in bound window | detail title + printing identity both match |
+| `read-sellers` | visible seller sort/filter controls + offers table | offers region | each effective filter reads back, or a no-filter report |
+| `versions` | `Link "Show Versions (N)"` on detail | versions control | versions heading names the same parent card |
+| `open-variant` | variant `Link` (set + optional `Version N` + `From`) | variant rows | detail identity matches the variant |
+| `own-offers` | Selling -> My Offers -> Singles controls | Selling nav | own-offers heading + table + filters read back |
+| `own-offer-market` | stock row's card `Link` (article/card identity) | stock row | detail matches; `Go back` restores stock context |
+
+`reanchor` is the only direct navigation and targets only `https://www.cardmarket.com/en`;
+all other movement uses visible forward controls. The start-shell search `Button` may need
+a bounded `max_elements:120` start-region read when it is not found by `query`.
+
 ## Known semantic surfaces
 
 - **Start:** Magic game shell (`WebArea` "Cardmarket: Buy & Sell MTG Cards ..."),

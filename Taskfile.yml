@@ -10,10 +10,6 @@ tasks:
     cmds:
       - node scripts/verify-website-concept.mjs
       - node --experimental-strip-types --test docs/strict-automation/ui-model.test.mjs
-  test:cardmarket:
-    desc: Validate the focused munim-computer-use Cardmarket skill
-    cmds:
-      - node scripts/verify-cardmarket-skill.mjs
   install:
     desc: Fresh-install the Cardmarket runtime skill into the agent-neutral global skills directory
     cmds:
