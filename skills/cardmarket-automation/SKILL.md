@@ -119,6 +119,11 @@ Use `munim-computer-use_get_app_state { app:"Safari" }` for normal observation a
 `munim-computer-use_screenshot` only as optional visual context (it is unreliable).
 A URL is only a candidate; require matching visible UI evidence.
 
+Bound the observation payload. After binding, observe with `get_app_state { app:"Safari", window:<index> }`.
+Prefer a `query:"<domain, title or control fragment>"` observation before resolving a target and after verifying navigation; use `max_elements` 100–200 for bounded reads.
+Use a full unscoped observation only for initial binding or when a scoped read cannot establish identity/region.
+A scoped observation is still fresh with valid element IDs and satisfies the fresh-state requirement.
+
 | state | required meaning |
 |---|---|
 | `start` | Cardmarket `/en` or `/en/Magic` plus the expected site/game shell |

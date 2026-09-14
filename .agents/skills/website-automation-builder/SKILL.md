@@ -29,8 +29,7 @@ instructions.
 - For navigation, recovery, observation or authoring ergonomics, also read
   [navigation design](../../../docs/strict-automation/navigation-design.md).
 - For Cardmarket or shared concept migration, read
-  [migration](../../../docs/strict-automation/migration.md) and
-  [task status](../../../docs/strict-automation/todo.md).
+   [migration](../../../docs/strict-automation/migration.md).
 
 These are repository-relative links from this skill directory. Locate the
 checkout via its root `AGENTS.md` and `Taskfile.yml`; never assume a global path.
@@ -57,14 +56,17 @@ generated skill.
    skill's documented checks; for Cardmarket use `task test:cardmarket`. Do not
    claim live behavior from document-only verification.
 6. Run `node scripts/verify-website-concept.mjs` from repository root for this
-   authoring skill's wiring and document checks. Record what was actually tested,
-   exact remaining live risks and changed evidence. Update the task tracker for
-   concept/migration work.
+    authoring skill's wiring and document checks. Record what was actually tested
+    and exact remaining live risks.
 
 ## Non-negotiable implementation boundaries
 
 - Observe first; unknown, ambiguous or blocking UI never becomes a ready page.
   Readiness and pure observation cannot navigate, fill, accept cookies or log in.
+- Keep observations small: generated skills scope `get_app_state` to the bound
+  window and prefer `query`/`max_elements`-bounded observations per step. A scoped
+  observation is still a fresh observation with valid element IDs; the unscoped
+  whole-app tree is the default only for initial binding.
 - Discovery and execution use the same recognition predicates. Verify source,
   target identity and fresh destination. Stable visible business identity
   replaces indexes.

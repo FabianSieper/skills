@@ -2,7 +2,9 @@
 
 All flows use the single bound Safari tab through `munim-computer-use_*` tools.
 Observe fresh `get_app_state` before and after every interaction and verify exact
-business identity. Stop on ambiguity, blockers, or UI drift.
+business identity. Bound the observation payload (window-scoped, `query`-filtered
+or `max_elements`-bounded, per the transport) so each step stays small. Stop on
+ambiguity, blockers, or UI drift.
 
 ## Find and read a card
 

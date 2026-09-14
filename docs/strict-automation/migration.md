@@ -6,7 +6,7 @@ concept was moved to focused munim-computer-use skills in the Cardmarket shape.
 The CLI/POM/Playwright content below is historical evidence, not the active
 normative architecture. Durable Cardmarket writes remain disabled.
 Normative proposal: [concept.md](concept.md). Type design:
-[typescript-design.md](typescript-design.md). Progress: [todo.md](todo.md).
+[typescript-design.md](typescript-design.md).
 
 ## Removed implementation slice (historical evidence)
 

@@ -11,7 +11,7 @@ const errors = [];
 let checkedLinks = 0;
 const required = [skill, 'AGENTS.md', 'docs/strict-automation/concept.md',
   'docs/strict-automation/typescript-design.md', 'docs/strict-automation/navigation-design.md',
-  'docs/strict-automation/migration.md', 'docs/strict-automation/todo.md'];
+  'docs/strict-automation/migration.md'];
 for (const path of required) {
   if (!existsSync(join(root, path))) errors.push(`Missing required file: ${path}`);
 }
@@ -52,7 +52,6 @@ const cardmarketTransportDocs = [
   skill,
   '.agents/skills/setup/SKILL.md',
   '.agents/skills/setup/references/requirements.md',
-  'docs/strict-automation/todo.md',
   'docs/strict-automation/migration.md'
 ];
 for (const path of cardmarketTransportDocs) {

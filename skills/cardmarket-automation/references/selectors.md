@@ -18,6 +18,20 @@ this file is the only operating evidence.
 - Never fall back to guessed coordinates, hidden DOM data, raw HTML, or a URL
   constructed from observed slugs.
 
+## Targeted observations
+
+Reconfirm a surface or origin cheaply with `query` observations, which keep valid
+fresh IDs without returning the whole tree:
+
+- **Post-navigation origin/title:** `query:"cardmarket"` or `query:"<page title
+  fragment>"` confirms the origin and the loaded page. The address bar follows the
+  WebArea content, so a small root-anchored tree can miss it.
+- **Pre-action control:** `query:"Search"` confirms the search field and its control
+  before the results flow; `query:"shopping cart"` resolves the buy controls on a
+  detail page.
+- A **zero-match** query is a minimal payload and still proves the tree is current;
+  it does not by itself prove the control is absent.
+
 ## Known semantic surfaces
 
 - **Start:** Magic game shell (`WebArea` "Cardmarket: Buy & Sell MTG Cards ..."),

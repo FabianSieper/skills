@@ -55,6 +55,37 @@ press_key { key: "Enter" }
 
 If no bound tab exists, open one home-entry tab instead of guessing among tabs.
 
+## Bounding the observation payload
+
+A full `get_app_state` observation returns the whole accessibility tree of the
+observed windows (default budget 800 elements; on real pages this is about 20–37 KB
+per call). Repeated at every interaction step, it dominates the agent's context and
+thinking time. Bound the payload without weakening the fresh-state rule:
+
+- **Scope to the bound window.** Once the bound tab/window is identified, observe
+  with `window:<index>` (0-based window index, or `"agent"` for the agent's own
+  window). The unscoped call walks every app window and is used only for the
+  initial tab inventory and binding.
+- **Prefer query-filtered observations per step.** Before resolving a target and
+  after verifying a navigation, use
+  `get_app_state { app, window, query }` — a case-insensitive substring match over
+  roles, labels and values. Matched elements keep valid fresh IDs, and a zero-match
+  query is a minimal payload that still proves the tree is current.
+- **Bound bounded data reads.** When a read actually needs the page region (for
+  example, reading up to 50 rows), pass `max_elements` (typically 100–200) and raise
+  it only when the required region is provably truncated.
+- **Verify navigation with a small observation.** After navigation, confirm the
+  origin/title with a small `query` observation before resolving the next control;
+  browser chrome (the address bar) follows the WebArea content, so a small
+  root-anchored tree can be missing it.
+- **Full trees only when justified.** A full unscoped observation is justified only
+  for initial binding, when a query returns zero matches and page identity itself is
+  unknown, or when the required region is provably absent from a bounded read.
+
+A `window`-, `query`- or `max_elements`-scoped observation is still a fresh
+observation with valid element IDs. It does not relax the requirement to re-observe
+after every interaction.
+
 ## What the operating agent should do
 
 The operator loop is:

@@ -72,10 +72,27 @@ multiple Cardmarket tabs exist, stop and ask the user which one to use.
 
 ## Observation
 
-- `munim-computer-use_get_app_state { app:"Safari", max_elements:N }` is the primary
-  observation. It returns elements as `[eN] Role "label"` with optional
-  `value="..."`. Use `max_elements` to bound size; a truncated tree ends with
-  `... element budget reached; raise max_elements for more`.
+- `munim-computer-use_get_app_state { app:"Safari" }` is the primary observation. It
+  returns elements as `[eN] Role "label"` with optional `value="..."`.
+- Key optional parameters:
+  - `window:<index>` (0-based window index, or `"agent"`) observes one window only;
+    the unscoped call walks every app window.
+  - `query:<text>` filters to elements whose role, label or value matches a
+    case-insensitive substring. Matched elements keep valid fresh IDs, and a
+    zero-match query returns a minimal payload that still proves the tree is
+    current.
+  - `max_elements:<N>` (default 800) bounds the returned tree; a truncated tree
+    ends with `... element budget reached; raise max_elements for more`.
+  - `max_depth:<N>` (default 18) bounds tree depth.
+- **Bound the payload per step.** Once the tab is bound, observe with
+  `window:<index>`. Before resolving a target and after verifying a navigation,
+  prefer a `query` observation over the whole tree. When a read actually needs the
+  page region (for example up to 50 rows), pass `max_elements` (typically 100–200)
+  and raise it only when the required region is provably truncated. Use a full
+  unscoped observation only for initial binding or when a scoped read cannot
+  establish the identity or region. A `window`/`query`/`max_elements`-scoped
+  observation is still a fresh observation with valid IDs and does not relax the
+  re-observe rule.
 - Element IDs (`eN`) are **observation-local**. Re-fetch state before every
   interaction; never reuse an ID after navigation or a rerender.
 - `munim-computer-use_screenshot { app:"Safari" }` is unreliable (it may lack Screen

@@ -4,7 +4,7 @@ Status: normative architecture, revision 3, 2026-09-13. The default website
 automation skill uses the **munim-computer-use MCP** (`munim-computer-use_*`)
 against a visible browser and mirrors the structure of
 [`skills/cardmarket-automation`](../../skills/cardmarket-automation/SKILL.md).
-Task and decisions: [todo.md](todo.md). Historical migration evidence:
+Historical migration evidence:
 [migration.md](migration.md). State-model rationale:
 [typescript-design.md](typescript-design.md). Navigation ergonomics:
 [navigation-design.md](navigation-design.md).
@@ -175,6 +175,11 @@ selectors or a URL constructed from observed slugs. If the current state does no
 prove the surface or target, stop and report the missing or ambiguous evidence.
 
 `unknown` and blocked states never become ready by assumption.
+
+A fresh observation can be scoped to the bound window, a `query` substring, or an
+element budget to keep the payload small. A scoped observation is still a fresh
+observation with valid element IDs. The unscoped whole-app tree is the default only
+for the initial tab inventory and binding.
 
 ## 6. Navigation decision table
 
