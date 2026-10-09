@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-09",
+  "canonical_source": "https://github.com/FabianSieper/skills",
+  "original_main": "e9d8cbfdd6b43174126ac15adfe1783ad486532b",
+  "skill_entries_unchanged": true,
+  "governance_and_cases_unchanged": true,
+  "original_bundle_verified": true,
+  "local_integrity": "pass",
+  "local_tests": {
+    "passed": 13,
+    "failed": 0
+  },
+  "installer_report": "verification/installer-smoke.json",
+  "models": "not-run",
+  "remote_protection": "not-verified",
+  "autonomous_publishing": "not-authorized"
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "generated": true,
+  "repository_id": "urn:uuid:d7b2a612-a42e-4dbe-a64b-c40b5333a6f8",
+  "canonical_source": "https://github.com/FabianSieper/skills",
+  "skill_id": "improve-skill",
+  "source_path": "skills/meta/improve-skill",
+  "foundation_version": "0.1.0"
+}

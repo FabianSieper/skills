@@ -1,25 +1,11 @@
-# Repository instructions
+# Arbeiten an dieser Foundation
 
-## Website-automation changes
+Dieses Repository enthält die ausgearbeitete Skill-Ausgangsbasis, nicht bereits das komplette selbstverbessernde Tooling. Lies `INTEGRATION.md`, bevor du den bestehenden Gesamtauftrag umsetzt.
 
-Before creating, changing, extending, refactoring, repairing or reviewing any
-website-automation skill in this repository, **read and use**
-[website-automation-builder](.agents/skills/website-automation-builder/SKILL.md).
-This includes its POMs, components, actions, workflows, runtime/transport,
-tests, generated artifacts and operating instructions. It also applies when
-changing the builder or the website-automation concept itself.
+Behandle die drei vorhandenen Skills als bewusst entworfenen Startpunkt. Keine pauschale Neufassung und kein stilles Abschwächen ihrer Grenzen. Behebe konkrete Mängel mit kleinem Diff, Test und dokumentierter Begründung. Ob ein Skill tatsächlich besser funktioniert, muss noch mit den Zielmodellen geprüft werden.
 
-Follow the skill's reading routes to the canonical concept in
-`docs/strict-automation/`. Use playwright-cli as the browser transport. Keep the
-operating agent's interface simple and enforce the state/effect/error contracts
-in tooling. Do not invent an alternative architecture or treat legacy Cardmarket
-behavior as permission to bypass the concept.
+Kanonische Quellen liegen in `governance/` und `templates/`. Generierte Ressourcen in `skills/*/*/references/` beziehungsweise `assets/` nicht separat bearbeiten. Nutze `npm run generate:preview`, gegebenenfalls `npm run generate`, dann `npm run check` und `npm test`.
 
-This requirement applies whether the host implicitly discovers the skill or
-not. If the file cannot be read, report that specific missing prerequisite;
-do not silently use another builder. User instructions retain precedence.
+`foundation.json`, Governance, Meta-Skills, Bootstrap, Prüfcode und bestehende Testkriterien gehören zum Foundation-Reviewumfang. Eine Datei unter `protected-paths.json` ist nicht allein dadurch technisch geschützt. Rechte-Trennung und Release-Gates müssen erst implementiert und getestet werden.
 
-Merely running an existing website skill, or working on unrelated skills, does
-not invoke the builder. Preserve unrelated work and keep migrations scoped to
-the user's request. Instructions guide compliant agents; they do not sandbox
-arbitrary shell access or prove runtime safety.
+Kein Test ohne Ausführung als bestanden melden. Keine Modell-ID aus einer Nutzerbezeichnung erfinden. Keine Zugangsdaten, Rohtranskripte oder Kundeninformationen einchecken. Fehlende Registry, Modellzugänge oder Berechtigungen offen dokumentieren; nicht durch fiktive Ergebnisse ersetzen.

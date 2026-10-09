@@ -1,3 +1,0 @@
-interface:
-  display_name: "cardmarket-automation"
-  short_description: "Strict Cardmarket navigation, bounded reads and approval-guarded offer updates in the already-open browser"

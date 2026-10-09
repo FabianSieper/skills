@@ -1,49 +1,68 @@
-# Skills
+# Persönliche Skill-Library
 
-Personal collection of reusable agent skills.
+Quelle: **[FabianSieper/skills](https://github.com/FabianSieper/skills)**.
+Version 0.1.0 ist die bewusst erstellte Foundation für eine kontrolliert lernende,
+projektübergreifende Library. Die bisherigen Repository-Dateien wurden auf
+Nutzerauftrag ersetzt; ihre Git-Historie bleibt erhalten.
 
-Website automation uses **playwright-cli** in the user's already-open browser.
-For website-automation development, [AGENTS.md](AGENTS.md) requires the
-[project-local builder skill](.agents/skills/website-automation-builder/SKILL.md)
-and the [strict concept](docs/strict-automation/concept.md). The builder is an
-authoring guide, not an installable site runtime or a scaffold generator.
+| Skill | Aufgabe |
+| --- | --- |
+| `create-skill` | Neue wiederverwendbare Abläufe eingrenzen, kompakt entwerfen und testbar machen. |
+| `improve-skill` | Lernbedarf diagnostizieren, richtig zuordnen, knapp bestätigen lassen und gezielt verbessern. |
+| `coding-conventions` | Selbstdokumentierenden Code durch Namen, Struktur und notwendige Begründungen schreiben. |
 
-Run `task test` for concept links/routing and the illustrative UI-model tests.
-Run `task test:cardmarket` for the current Cardmarket typecheck and unit tests
-after installing its locked dependencies. CI runs both groups and typechecks
-the model. These checks do not establish live-browser verification.
-
-The former builder/scaffold has been removed. The concept's precompiled runtime
-and Cardmarket migration are still planned; see the
-[progress tracker](docs/strict-automation/todo.md). Use the current Cardmarket
-skill's documented commands until its migration is implemented.
-
-Run the `/setup` skill to audit and install the repository prerequisites,
-including Node/npm, Task, the pinned Playwright CLI, and maintained local
-package dependencies. The read-only audit is also available directly:
-
-```bash
-node .agents/skills/setup/scripts/check.mjs
-```
+**Vorhanden:** drei Skills, gemeinsame Standards, portable Ressourcen,
+Herkunftsmanifeste, Bootstrap-Fragment, 38 Testdefinitionen und lokale Prüfhelfer.
+**Noch offen:** `skillctl`, vertrauenswürdige Registry/Resolver, technische
+Zustandsübergänge, installierte Adapter, Modellrunner, Rechte-Trennung und
+Freigabeautomatisierung. Die Foundation arbeitet im Vorschlagsmodus.
 
 ## Installation
 
-Install the Cardmarket runtime skill globally for OpenCode:
+Nach Veröffentlichung dieses Standes zuerst die Auswahl prüfen:
 
 ```bash
-task install:opencode
+npx skills@1.7.1 add FabianSieper/skills --list
 ```
 
-Alternatively, use the CLI directly:
+Vor globaler Installation gleichnamige vorhandene Skills und lokale Änderungen
+prüfen. Danach die gewünschten Skills gezielt installieren:
 
 ```bash
-npx skills add FabianSieper/skills --skill cardmarket-automation --agent opencode --global --yes
+npx skills@1.7.1 add FabianSieper/skills -g \
+  -a codex -a github-copilot -a opencode \
+  --skill create-skill --skill improve-skill --skill coding-conventions
 ```
 
-The builder stays in this checkout under `.agents/skills`; its concept links are
-repository-relative. Do not install that authoring skill globally in isolation.
+Die lokale Paketinstallation mit CLI 1.7.1 wurde isoliert geprüft. Echte
+GitHub-Updates und Skill-Erkennung in Agentensitzungen sind noch nicht verifiziert.
+`npx skills` installiert kein Verwaltungstool und richtet den Bootstrap nicht ein.
 
-## Available skills
+## Lokale Pflege
 
-- `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/POM/navigation concept using playwright-cli.
-- `cardmarket-automation` – Existing MTG search, detail, sellers, artworks, stock comparison and planned offer updates. Uses playwright-cli; current limitations and historical verification are recorded in its references. Strict-concept migration remains open.
+Node.js ab 22.20.0; für den späteren Produktivbetrieb Node 24 LTS verwenden.
+Keine Laufzeitabhängigkeiten für die vorhandenen Foundation-Prüfungen:
+
+```bash
+npm run check
+npm test
+npm run generate:preview
+```
+
+Kanonische Regeln liegen in `governance/` und `templates/`. Nur dort ändern;
+anschließend mit `npm run generate` die betroffenen Paketkopien synchronisieren.
+Installierte Kopien und Installer-Caches niemals als Quelle bearbeiten.
+
+## Weiterarbeiten
+
+[PLAN.md](PLAN.md) enthält Reihenfolge, Abnahmen und aktuellen Status.
+Nächster Schritt ist der vollständige lokale Lernvorgang mit sicherem Quellresolver,
+Vorschlagszuständen und isoliertem Kandidaten. Die vorhandenen Skill-Einstiege
+werden dafür nicht pauschal neu geschrieben.
+
+[INTEGRATION.md](INTEGRATION.md) beschreibt die ursprüngliche Übergabe;
+[Gesamtauftrag](docs/IMPLEMENTATION-PROMPT.md),
+[Betrieb](docs/operations.md), [Schutzgrenzen](docs/security.md) und
+[Kompatibilität](docs/compatibility.md) halten Anforderungen und Nachweise fest.
+[VALIDATION.md](VALIDATION.md) trennt lokale Prüfungen von noch ausstehenden
+Verhaltens-/Integrationsnachweisen. Keine autonome Veröffentlichung freigegeben.

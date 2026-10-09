@@ -1,0 +1,92 @@
+
+> personal-skill-foundation@0.1.0 test
+> node --test tooling/foundation.test.mjs
+
+TAP version 13
+# Subtest: seed integrity and specified case count
+ok 1 - seed integrity and specified case count
+  ---
+  duration_ms: 6.788089
+  type: 'test'
+  ...
+# Subtest: synchronization is idempotent
+ok 2 - synchronization is idempotent
+  ---
+  duration_ms: 12.416313
+  type: 'test'
+  ...
+# Subtest: dry run does not replace a changed generated reference
+ok 3 - dry run does not replace a changed generated reference
+  ---
+  duration_ms: 12.756017
+  type: 'test'
+  ...
+# Subtest: explicit regeneration updates both meta copies
+ok 4 - explicit regeneration updates both meta copies
+  ---
+  duration_ms: 13.173726
+  type: 'test'
+  ...
+# Subtest: missing local reference is rejected
+ok 5 - missing local reference is rejected
+  ---
+  duration_ms: 11.708733
+  type: 'test'
+  ...
+# Subtest: path traversal and absolute paths are rejected
+ok 6 - path traversal and absolute paths are rejected
+  ---
+  duration_ms: 0.382292
+  type: 'test'
+  ...
+# Subtest: symlink target is rejected without writing outside root
+ok 7 - symlink target is rejected without writing outside root
+  ---
+  duration_ms: 9.464172
+  type: 'test'
+  ...
+# Subtest: duplicate skill identities are rejected
+ok 8 - duplicate skill identities are rejected
+  ---
+  duration_ms: 8.904
+  type: 'test'
+  ...
+# Subtest: generated mapping cannot write outside a skill resource directory
+ok 9 - generated mapping cannot write outside a skill resource directory
+  ---
+  duration_ms: 12.031658
+  type: 'test'
+  ...
+# Subtest: changing an origin is detected and regeneration is explicit
+ok 10 - changing an origin is detected and regeneration is explicit
+  ---
+  duration_ms: 8.13573
+  type: 'test'
+  ...
+# Subtest: duplicate case ids are rejected
+ok 11 - duplicate case ids are rejected
+  ---
+  duration_ms: 9.316365
+  type: 'test'
+  ...
+# Subtest: declaring a test passed inside its definition is rejected
+ok 12 - declaring a test passed inside its definition is rejected
+  ---
+  duration_ms: 9.119877
+  type: 'test'
+  ...
+# Subtest: line budget is enforced
+ok 13 - line budget is enforced
+  ---
+  duration_ms: 8.668488
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182.418209

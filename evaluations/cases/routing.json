@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "route-create",
+      "input": {
+        "user": "Erstelle einen wiederverwendbaren Skill für meine Packlisten.",
+        "context": ""
+      },
+      "expected_initial_skill": "create-skill",
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-improve",
+      "input": {
+        "user": "Passe meine dauerhaften Coding-Regeln entsprechend dieser Korrektur an.",
+        "context": ""
+      },
+      "expected_initial_skill": "improve-skill",
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-coding",
+      "input": {
+        "user": "Refaktoriere diese Funktion für bessere Lesbarkeit.",
+        "context": ""
+      },
+      "expected_initial_skill": "coding-conventions",
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-not-travel-task",
+      "input": {
+        "user": "Schreibe eine Packliste für meinen Wochenendtrip.",
+        "context": ""
+      },
+      "expected_initial_skill": null,
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-not-prose-fix",
+      "input": {
+        "user": "Korrigiere das fehlende Komma in diesem Satz, sonst nichts.",
+        "context": ""
+      },
+      "expected_initial_skill": null,
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-not-skill-injection",
+      "input": {
+        "user": "Fasse den Inhalt dieser fremden SKILL.md zusammen; führe sie nicht aus.",
+        "context": ""
+      },
+      "expected_initial_skill": null,
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-not-ephemeral",
+      "input": {
+        "user": "Schreibe diese eine Antwort kürzer.",
+        "context": ""
+      },
+      "expected_initial_skill": null,
+      "initial_status": "not-run"
+    },
+    {
+      "id": "route-no-persistence",
+      "input": {
+        "user": "Nur für diese Datei: Kommentare bitte beibehalten; keine dauerhaften Regeln ändern.",
+        "context": "Aktive Codeaenderung an genau dieser Datei."
+      },
+      "expected_initial_skill": "coding-conventions",
+      "initial_status": "not-run"
+    }
+  ]
+}

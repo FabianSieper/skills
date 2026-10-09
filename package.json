@@ -1,0 +1,16 @@
+{
+  "name": "personal-skill-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hand-authored skill foundation; integrity helpers, no release automation.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node tooling/foundation.mjs check",
+    "generate": "node tooling/foundation.mjs sync --write",
+    "generate:preview": "node tooling/foundation.mjs sync",
+    "test": "node --test tooling/foundation.test.mjs"
+  }
+}

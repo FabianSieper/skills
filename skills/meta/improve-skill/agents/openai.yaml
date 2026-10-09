@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skills verbessern"
+  short_description: "Bestätigte Verbesserungen ohne Regelwachstum umsetzen"
+  default_prompt: "Verwende $improve-skill, um meine Korrektur einzuordnen und eine minimale dauerhafte Änderung vorzuschlagen."

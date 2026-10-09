@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "note": "Nutzerbezeichnungen; keine erfundenen API-IDs oder Kompatibilitaetszusagen. Pflichtstatus bei Einrichtung explizit bestimmen.",
+  "profiles": [
+    {
+      "label": "GPT Sol 6.1",
+      "family": "cloud",
+      "provider_model_id": null,
+      "agent_cli": null,
+      "agent_version": null,
+      "quantization": null,
+      "endpoint_env": null,
+      "sampling": null,
+      "context_window": null,
+      "status": "not-configured"
+    },
+    {
+      "label": "GPT Luna",
+      "family": "cloud",
+      "provider_model_id": null,
+      "agent_cli": null,
+      "agent_version": null,
+      "quantization": null,
+      "endpoint_env": null,
+      "sampling": null,
+      "context_window": null,
+      "status": "not-configured"
+    },
+    {
+      "label": "Qwen 3.8 27B",
+      "family": "local",
+      "provider_model_id": null,
+      "agent_cli": null,
+      "agent_version": null,
+      "quantization": null,
+      "endpoint_env": null,
+      "sampling": null,
+      "context_window": null,
+      "status": "not-configured"
+    },
+    {
+      "label": "Ornith 1.5",
+      "family": "local",
+      "provider_model_id": null,
+      "agent_cli": null,
+      "agent_version": null,
+      "quantization": null,
+      "endpoint_env": null,
+      "sampling": null,
+      "context_window": null,
+      "status": "not-configured"
+    }
+  ]
+}

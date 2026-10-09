@@ -1,0 +1,29 @@
+
+> personal-skill-foundation@0.1.0 check
+> node tooling/foundation.mjs check
+
+{
+  "status": "pass",
+  "scope": "local-reference-integrity-only",
+  "skills": [
+    {
+      "skill_id": "create-skill",
+      "words": 520,
+      "lines": 32,
+      "sha256": "484a79e8b6fd129eb694ad82cf14769e6c364ce97508c8d5c8c3eb185086dc5c"
+    },
+    {
+      "skill_id": "improve-skill",
+      "words": 552,
+      "lines": 33,
+      "sha256": "f370c2e1701935e4b8983cd3c4f23558a673412d87844f2fb6164e08d03081d1"
+    },
+    {
+      "skill_id": "coding-conventions",
+      "words": 325,
+      "lines": 23,
+      "sha256": "21f5d5a5949111bf5f0e5deb38f8e87cd6c10b8d76f66a5014906e7b07ec5d03"
+    }
+  ],
+  "specified_cases": 38
+}

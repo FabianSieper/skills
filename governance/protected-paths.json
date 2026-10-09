@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "note": "Deklaration fuer spaetere technische Durchsetzung; keine aktive Zugriffssperre.",
+  "protected": [
+    "governance/",
+    "skills/meta/",
+    "tooling/",
+    "bootstrap/",
+    "evaluations/",
+    "templates/",
+    "foundation.json",
+    "AGENTS.md",
+    "package.json",
+    "package-lock.json"
+  ],
+  "new_regression_cases": "Additive neue Faelle in Kandidaten erlauben; bestehende Kriterien und Pflichtprofile nicht still aendern."
+}

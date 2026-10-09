@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-09",
+  "format_and_ui": [
+    {
+      "skill": "coding-conventions",
+      "format": "pass",
+      "ui_metadata": "pass",
+      "entry_words": 325,
+      "entry_lines": 23,
+      "entry_characters": 3023,
+      "model_evaluation": "not-run"
+    },
+    {
+      "skill": "create-skill",
+      "format": "pass",
+      "ui_metadata": "pass",
+      "entry_words": 520,
+      "entry_lines": 32,
+      "entry_characters": 4552,
+      "model_evaluation": "not-run"
+    },
+    {
+      "skill": "improve-skill",
+      "format": "pass",
+      "ui_metadata": "pass",
+      "entry_words": 552,
+      "entry_lines": 33,
+      "entry_characters": 4909,
+      "model_evaluation": "not-run"
+    }
+  ],
+  "local_tests": {
+    "passed": 13,
+    "failed": 0,
+    "scope": "Only local integrity helper behavior; no agent performance tested."
+  },
+  "behavior_cases_defined": 30,
+  "routing_cases_defined": 8,
+  "model_tests": "not-run; user model environments unavailable",
+  "npx_skills_install": "not-run; npm registry DNS resolution EAI_AGAIN",
+  "token_count": "not-measured; tokenizer unavailable",
+  "standalone_archives": [
+    {
+      "skill": "coding-conventions",
+      "zip_bytes": 3648,
+      "file_count": 4,
+      "crc": "pass"
+    },
+    {
+      "skill": "create-skill",
+      "zip_bytes": 11535,
+      "file_count": 9,
+      "crc": "pass"
+    },
+    {
+      "skill": "improve-skill",
+      "zip_bytes": 11408,
+      "file_count": 8,
+      "crc": "pass"
+    }
+  ]
+}

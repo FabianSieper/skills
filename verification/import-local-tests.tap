@@ -1,0 +1,25 @@
+
+> personal-skill-foundation@0.1.0 test
+> node --test tooling/foundation.test.mjs
+
+✔ seed integrity and specified case count (3.673292ms)
+✔ synchronization is idempotent (20.331334ms)
+✔ dry run does not replace a changed generated reference (17.622125ms)
+✔ explicit regeneration updates both meta copies (18.362375ms)
+✔ missing local reference is rejected (16.326833ms)
+✔ path traversal and absolute paths are rejected (0.112166ms)
+✔ symlink target is rejected without writing outside root (15.192875ms)
+✔ duplicate skill identities are rejected (14.277416ms)
+✔ generated mapping cannot write outside a skill resource directory (15.6065ms)
+✔ changing an origin is detected and regeneration is explicit (16.628458ms)
+✔ duplicate case ids are rejected (17.488333ms)
+✔ declaring a test passed inside its definition is rejected (17.169459ms)
+✔ line budget is enforced (17.168625ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 247.109875

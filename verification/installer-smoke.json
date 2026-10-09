@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-09",
+  "node_version": "v26.7.0",
+  "installer_version": "1.7.1",
+  "source_kind": "local-checkout",
+  "discovery": "pass",
+  "cases": [
+    {
+      "case": "default",
+      "status": "pass",
+      "selected_skills": [
+        "create-skill",
+        "improve-skill",
+        "coding-conventions"
+      ],
+      "installation": "shared-copy",
+      "resources": "byte-identical"
+    },
+    {
+      "case": "copy",
+      "status": "pass",
+      "selected_skills": [
+        "create-skill",
+        "improve-skill",
+        "coding-conventions"
+      ],
+      "installation": "shared-copy",
+      "resources": "byte-identical"
+    },
+    {
+      "case": "selected",
+      "status": "pass",
+      "selected_skills": [
+        "create-skill"
+      ],
+      "installation": "shared-copy",
+      "resources": "byte-identical"
+    }
+  ],
+  "source_unchanged": true,
+  "agent_session_recognition": "not-run",
+  "github_updates": "not-run",
+  "scope": "Lokale Installer-Paketprüfung; keine Agenten-/Modell- oder Rechteprüfung"
+}

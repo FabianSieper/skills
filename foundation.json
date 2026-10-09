@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "repository_id": "urn:uuid:d7b2a612-a42e-4dbe-a64b-c40b5333a6f8",
+  "canonical_source": "https://github.com/FabianSieper/skills",
+  "foundation_version": "0.1.0",
+  "operating_mode": "proposal-first",
+  "skills": [
+    {
+      "id": "create-skill",
+      "category": "meta",
+      "path": "skills/meta/create-skill",
+      "review_class": "foundation"
+    },
+    {
+      "id": "improve-skill",
+      "category": "meta",
+      "path": "skills/meta/improve-skill",
+      "review_class": "foundation"
+    },
+    {
+      "id": "coding-conventions",
+      "category": "coding",
+      "path": "skills/coding/coding-conventions",
+      "review_class": "normal"
+    }
+  ],
+  "shared_resources": [
+    {
+      "source": "governance/quality-standard.md",
+      "target": "references/quality-standard.md"
+    },
+    {
+      "source": "governance/change-contract.md",
+      "target": "references/change-contract.md"
+    },
+    {
+      "source": "governance/evaluation-contract.md",
+      "target": "references/evaluation-contract.md"
+    },
+    {
+      "source": "templates/change-proposal.md",
+      "target": "assets/change-proposal.md"
+    }
+  ],
+  "create_resources": [
+    {
+      "source": "templates/skill-template.md",
+      "target": "assets/skill-template.md"
+    }
+  ]
+}

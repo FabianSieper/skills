@@ -1,0 +1,4 @@
+interface:
+  display_name: "Selbstdokumentierender Code"
+  short_description: "Verständlichen Code durch Namen und Struktur schreiben"
+  default_prompt: "Verwende $coding-conventions für die beauftragte Codeänderung; bewahre Verhalten und Projektkonventionen."

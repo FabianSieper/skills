@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skills erstellen"
+  short_description: "Kompakte, wiederverwendbare Skills gezielt erstellen"
+  default_prompt: "Verwende $create-skill, um den beschriebenen Ablauf als getesteten Skill-Kandidaten zu entwerfen."
