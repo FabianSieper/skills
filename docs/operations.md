@@ -35,7 +35,8 @@ npx skills@1.7.1 add FabianSieper/skills -g \
 
 Dies installiert Skill-Pakete. Es richtet weder Registry noch Bootstrap, Hooks
 oder `skillctl` ein. Vor Verwendung eine neue Agentensitzung starten und die
-tatsächliche Skill-Erkennung prüfen. GitHub-Installation ist separat nachzuweisen.
+tatsächliche Skill-Erkennung prüfen. Die GitHub-Paketinstallation wurde in einem
+isolierten Testbereich nachgewiesen; echte Agentensitzungen bleiben offen.
 
 ## Updates und neue Skills
 

@@ -6,8 +6,8 @@ die Foundation beauftragt. Die Git-Historie bleibt erhalten; kein Force-Push.
 
 | Phase | Abnahme | Status |
 | --- | --- | --- |
-| 1. Bestand und Foundation | Original sichern, drei Skills übernehmen, Herkunft binden, lokale Checks ausführen | Lokal erledigt; Veröffentlichung separat prüfen |
-| 2. Installationsbasis | Gepinnte skills-CLI, verschachtelte Auswahl, vollständige Einzelpakete, isolierte Installation | Lokaler Smoke-Test; GitHub-Installation, Updates und feste Revisionen offen |
+| 1. Bestand und Foundation | Original sichern, drei Skills übernehmen, Herkunft binden, lokale Checks ausführen | Erledigt und auf main veröffentlicht; Commit 0b2b6a9 |
+| 2. Installationsbasis | Gepinnte skills-CLI, verschachtelte Auswahl, vollständige Einzelpakete, isolierte Installation | Lokale und direkte GitHub-Installation bestanden; Updates und feste Revisionen offen |
 | 3. Vollständiger vertikaler Lernvorgang | Striktes TypeScript, YAML-/Schema-Validierung, Registry/Resolver, Vorschlag und isolierter Kandidat; Zustimmung/Tests/Release getrennt; Verweigerung testen | Offen; nächster Implementierungsschritt |
 | 4. Agentenanbindungen | Markierte Bootstrap-Abschnitte, Backup, Dry-Run, zweimaliges Setup und Deinstallation für Codex/Copilot/OpenCode | Offen; vorhandene globale Konfiguration nicht geändert |
 | 5. Fehlerfälle und Evaluation | Bestehende 38 Fälle ausführen, Profilkonfiguration und Budget, drei gepaarte Wiederholungen; Konflikte, Drift und Manipulation prüfen | Offen; Modellfälle not-run |

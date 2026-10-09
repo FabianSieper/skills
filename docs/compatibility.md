@@ -8,7 +8,7 @@ Nachweis, dass es die Skills in einer echten Session verwendet.
 | Node.js 24.19.0 / npm 11.17.0 | Bei erster Bestandsaufnahme verfügbar; Foundation-Checks und 13 Node-Tests bestanden | Node 24 ist LTS; `.nvmrc` empfiehlt diese Linie |
 | Node.js 26.7.0 / npm 11.19.0 | Bei Abschlussprüfung tatsächlich aktiv; Foundation-Checks, 13 Tests und Installer-Smoke bestanden | Systeminstallation nicht von diesem Import geändert; Node 26 ist zum Prüfdatum Current, keine LTS-Empfehlung |
 | Git 2.55.0 | Checkout, vollständiges Bundle, isolierter Worktree | Remote-Schutz nicht geprüft |
-| skills 1.7.1 (MIT; Node >=22.20.0) | npm-Paket geladen; lokale Erkennung, Standard-/Copy-/Einzelinstallation bestanden; Ressourcen bytegleich | GitHub-Updates und Wiederherstellung noch offen |
+| skills 1.7.1 (MIT; Node >=22.20.0) | npm-Paket geladen; lokale und GitHub-Erkennung/-Installation sowie lokale Standard-/Copy-/Einzelinstallation bestanden; Ressourcen bytegleich | GitHub-Updates und Wiederherstellung noch offen; keine Session-Integration |
 | Codex CLI 0.162.0 | Version abgefragt | Bootstrap, Hooks und Session-Erkennung nicht getestet |
 | GitHub Copilot CLI 1.0.94 | Version abgefragt | Bootstrap, Hooks und Session-Erkennung nicht getestet |
 | OpenCode 2.0.26 | Version außerhalb der Sandbox abgefragt, da CLI ihre Logdatei öffnet | Bootstrap, Plugin-Ereignisse und Session-Erkennung nicht getestet |

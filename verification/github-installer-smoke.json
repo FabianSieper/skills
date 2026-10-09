@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-09",
+  "installer_version": "1.7.1",
+  "source": "FabianSieper/skills",
+  "source_revision": "0b2b6a9163fca6dc2e06a9ab06a242b2b0897c54",
+  "discovery": "pass",
+  "selected_installation": "pass",
+  "resources": "byte-identical",
+  "source_build_required": false,
+  "agent_session_recognition": "not-run",
+  "updates": "not-run",
+  "scope": "Isolierte npx-Installation direkt aus GitHub; kein Agenten-Verhaltenstest"
+}

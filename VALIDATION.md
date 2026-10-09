@@ -66,5 +66,17 @@ ursprüngliche Paket; ihre damalige Registry-Blockade ist kein aktueller Fehler.
 Reproduktion des Installer-Smoke-Tests: `node tooling/installer-smoke.mjs` mit
 einem Pfad zur zuvor isoliert geladenen `skills@1.7.1/bin/cli.mjs` als Argument.
 Der Test verwendet eigene Umgebungsverzeichnisse, keine Tokens und Timeouts.
-GitHub-Installation, echte Agenten-Erkennung, Updates, Modellverhalten,
+Echte Agenten-Erkennung, Updates, Modellverhalten,
 Rechte-Trennung und Installations-Rollback bleiben offen.
+
+### Installation direkt aus GitHub
+
+Der Foundation-Import wurde mit normalem `git push` über den bestehenden
+SSH-Zugang auf `main` veröffentlicht (0b2b6a9). Anschließend wurden
+`npx --yes skills@1.7.1 add FabianSieper/skills --list` und die gezielte globale
+Installation für Codex/Copilot/OpenCode in einem getrennten Testbereich ausgeführt.
+Alle drei installierten Pakete waren bytegleich mit dem geprüften Quellstand;
+kein Build des Repositorys wurde ausgeführt. Nachweis:
+`verification/github-installer-smoke.json`. Die ersten npx-Testaufrufe mit
+`--prefix` beziehungsweise unvollständigem Offline-Cache scheiterten; der normale
+gepinnte npx-Aufruf mit Registry-Zugriff bestand.

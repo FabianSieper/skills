@@ -34,7 +34,7 @@ npx skills@1.7.1 add FabianSieper/skills -g \
   --skill create-skill --skill improve-skill --skill coding-conventions
 ```
 
-Die lokale Paketinstallation mit CLI 1.7.1 wurde isoliert geprüft. Echte
+Lokale und direkte GitHub-Paketinstallation mit CLI 1.7.1 wurden isoliert geprüft.
 GitHub-Updates und Skill-Erkennung in Agentensitzungen sind noch nicht verifiziert.
 `npx skills` installiert kein Verwaltungstool und richtet den Bootstrap nicht ein.
 
