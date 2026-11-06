@@ -1,0 +1,117 @@
+{
+  "kind": "existing",
+  "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6",
+  "cards": [
+    {
+      "name": "Bright Scholar",
+      "oracle_id": "Bright Scholar",
+      "oracle_text": "{T}: Draw a card.\nWhen Bright Scholar enters the battlefield, draw a card.",
+      "mana_cost": "{1}{U}",
+      "cmc": 2,
+      "type_line": "Creature — Wizard",
+      "color_identity": [
+        "U"
+      ],
+      "power": "1",
+      "toughness": "1",
+      "clauses": {
+        "0:0": "{T}: Draw a card.",
+        "0:1": "When Bright Scholar enters the battlefield, draw a card."
+      },
+      "oracle_hash": "544fe184242728e2c6000c33c3a6df34fb8e5763c4fd9d9c79c536c474fcea16"
+    },
+    {
+      "name": "Core",
+      "oracle_id": "Core",
+      "oracle_text": "Core has all activated abilities of creature cards in your graveyard.",
+      "mana_cost": "{1}{U}",
+      "cmc": 2,
+      "type_line": "Legendary Creature — Shapeshifter",
+      "color_identity": [
+        "U"
+      ],
+      "power": "3",
+      "toughness": "3",
+      "clauses": {
+        "0:0": "Core has all activated abilities of creature cards in your graveyard."
+      },
+      "oracle_hash": "b473ef1f3b30816dbd047560446420740bec11a7b0d57e86fa62be0929d36443"
+    },
+    {
+      "name": "Island",
+      "oracle_id": "Island",
+      "oracle_text": "{T}: Add {U}.",
+      "mana_cost": "",
+      "cmc": 0,
+      "type_line": "Basic Land — Island",
+      "color_identity": [
+        "U"
+      ],
+      "clauses": {
+        "0:0": "{T}: Add {U}."
+      },
+      "oracle_hash": "12dbd3282f95351003cd710f93c5c4d141742dbc803e017426e63e184590290e"
+    },
+    {
+      "name": "Library Robe",
+      "oracle_id": "Library Robe",
+      "oracle_text": "Equipped creature gets +2/+2.\nEquipped creature has hexproof.\nEquip {2}",
+      "mana_cost": "{1}{U}",
+      "cmc": 2,
+      "type_line": "Artifact — Equipment",
+      "color_identity": [
+        "U"
+      ],
+      "clauses": {
+        "0:0": "Equipped creature gets +2/+2.",
+        "0:1": "Equipped creature has hexproof.",
+        "0:2": "Equip {2}"
+      },
+      "oracle_hash": "81f823b9cd49805840004a99a4095f3d9ba2f7d2a45df3ecc95d145a5957af6b"
+    },
+    {
+      "name": "Silent Sentinel",
+      "oracle_id": "Silent Sentinel",
+      "oracle_text": "{1}: Target creature you control gains hexproof until end of turn.\nWhenever another creature enters the battlefield under your control, scry 1.",
+      "mana_cost": "{1}{U}",
+      "cmc": 2,
+      "type_line": "Creature — Wizard",
+      "color_identity": [
+        "U"
+      ],
+      "power": "0",
+      "toughness": "4",
+      "clauses": {
+        "0:0": "{1}: Target creature you control gains hexproof until end of turn.",
+        "0:1": "Whenever another creature enters the battlefield under your control, scry 1."
+      },
+      "oracle_hash": "4c8e19285ebd4fa232c3cff68bb73d0a720a7ec2b356eebad77b67bdf0e9fb5b"
+    }
+  ],
+  "commander_model": {
+    "primary_plan": "Supply useful activated creature abilities in the graveyard for Core, then sustain and protect that engine.",
+    "secondary_plan": "Use creatures on the battlefield when the graveyard or commander is unavailable.",
+    "win_conditions": "No adequate finisher is established in this deliberately small synthetic fixture; diagnose rather than invent.",
+    "setup_sequence": "Load the graveyard and deploy Core; this fixture lacks proven delivery and must be evaluated accordingly.",
+    "recovery_plan": "Native creatures can use their own abilities; preserve protection and draw after removal.",
+    "bottlenecks": "Graveyard delivery, commander removal, and an unestablished winning payoff.",
+    "realistic_resources": "Evaluate activation mana and tapping constraints explicitly; do not assume summoning-sick creatures can tap.",
+    "user_alignment": "User seeks repeatable ability-engine resilience.",
+    "commander_legality_evidence": "Synthetic Legendary Creature; fixture legality is given. Real pairings would require rules evidence.",
+    "commander_clauses": {
+      "Core": {
+        "0:0": "Activated abilities of creature cards in the graveyard are available on Core; triggered/static abilities are not granted by this text."
+      }
+    },
+    "interactions": [],
+    "rules_questions": [],
+    "predictions": {
+      "without_commander": "Creature permanents retain their native abilities; graveyard-only tools have no active host.",
+      "after_removal": "Need protection or redeploy the host; draw from actual creatures may remain available.",
+      "behind": "Protection without a meaningful permanent can have low immediate floor; repeatable draw may recover resources."
+    }
+  },
+  "remaining": 5,
+  "instructions": "Read references/existing-card-evaluation.md; return one complete record per card.",
+  "packet_id": "3e65c4fd554d8f6b2fa3f897cab74f175700176a9e37b18251fe2c257c570a64"
+}

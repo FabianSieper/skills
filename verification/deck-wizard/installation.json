@@ -1,0 +1,16 @@
+{
+  "installed_at": "2026-11-06T16:24:59.192027+00:00",
+  "source": "skills/games/deck-wizard (this repository)",
+  "installed": "~/.agents/skills/deck-wizard",
+  "replaced": [
+    "deck-wizard",
+    "archidekt-deck-optimizer"
+  ],
+  "backup": "local-only backup outside repository; see local validation record",
+  "navigation_unchanged_sha256": "f0a5697b0b5c81ae3ff2c607f2404c1cf32bd01fc888fbbbaacb957a63d4a173",
+  "skill_sha256": "6278a852991727deca9034ff19acb84f728f61ff1f4f01c2e27345fe12bda2aa",
+  "runtime_validation": "pass",
+  "installed_regression_tests": 44,
+  "verified_source_files": 769,
+  "verified_at": "2026-11-06T16:27:36.560110+00:00"
+}

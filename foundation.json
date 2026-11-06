@@ -22,6 +22,12 @@
       "category": "coding",
       "path": "skills/coding/coding-conventions",
       "review_class": "normal"
+    },
+    {
+      "id": "deck-wizard",
+      "category": "games",
+      "path": "skills/games/deck-wizard",
+      "review_class": "normal"
     }
   ],
   "shared_resources": [

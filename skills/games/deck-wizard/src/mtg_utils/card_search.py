@@ -1,0 +1,998 @@
+"""Search Scryfall bulk data with filters for deck building."""
+
+from __future__ import annotations
+
+import json
+import re
+import threading
+from array import array
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, NamedTuple, Protocol
+
+import click
+
+from mtg_utils._name_index import keep_cheaper
+from mtg_utils.bulk_loader import bulk_mtime, load_bulk_cards
+from mtg_utils.card_classify import (
+    SKIP_LAYOUTS,
+    can_partner,
+    color_identity_subset,
+    extract_price,
+    get_oracle_text,
+    type_line_has,
+)
+from mtg_utils.formats import FORMATS, LEGAL_STATUSES, Format, get_format
+from mtg_utils.theme_presets import PRESETS, CardView, Preset, get_preset
+
+_extract_price = extract_price
+_get_oracle_text = get_oracle_text
+
+# A card-name query matches slash- and whitespace-insensitively, so a player who types
+# "odds ends" finds the split card "Odds // Ends": both the query and the candidate name
+# collapse runs of slashes/whitespace to a single space before the substring test.
+_NAME_NORM_RE = re.compile(r"[\s/]+")
+
+
+def _norm_name(text: str) -> str:
+    return _NAME_NORM_RE.sub(" ", text).strip()
+
+
+# MTGJSON set types whose cards are illegal by design rather than by timing, so a
+# future release date never makes them playable. "funny" is the Un-set / Mystery
+# Booster playtest family (22 sets: Unfinity, Unstable, Unhinged, Unglued, …).
+_NEVER_LEGAL_SET_TYPES = frozenset({"funny"})
+
+
+def unreleased_oracle_ids(
+    cards: list[dict], *, today: str | None = None
+) -> frozenset[str]:
+    """oracle_ids whose "illegal in every format" status is purely a release-date
+    artifact — a card that isn't out yet, not one that will never be legal.
+
+    MTGJSON publishes a set's cards as soon as it's fully spoiled (its sets carry
+    ``isPartialPreview``), but leaves each new card's ``legalities`` EMPTY until
+    release day; ``_mtgjson.adapter.aggregate_legalities`` then fills every omitted
+    format with ``not_legal``. That makes a pre-release card indistinguishable, by
+    legality alone, from an Un-card or a 30th-Anniversary proxy — all three read
+    ``not_legal`` everywhere, and all three have an empty raw ``legalities``.
+
+    The release date is what separates them, and it has to be read at the ORACLE
+    level: legality is aggregated across printings, so a card counts as unreleased
+    only when EVERY printing of it is still in the future. One already-released
+    printing means the card is genuinely illegal (an Un-card reprinted into a
+    future set stays illegal), hence ``min(dates)`` rather than ``max``.
+
+    Cards that are legal, banned, or restricted anywhere are never candidates —
+    those carry a real status, so they never reach the date test.
+
+    ``funny`` sets (Un-sets, Mystery Booster playtest cards) are excluded outright.
+    The date test alone would misread a not-yet-released Un-set as merely pending:
+    its cards are illegal by DESIGN and stay illegal after release, so "unreleased"
+    would promise a legality that never arrives. Today no spoiled set is ``funny``,
+    so this changes nothing now — it is a guard against the next Un-set preview.
+    Checked per PRINTING, not per set: a card with both a funny and a normal
+    printing is legal somewhere and has already failed the legality test above.
+
+    Not a legality oracle for the future: we cannot know WHICH formats a card will
+    be legal in once it releases, only that its current blanket ``not_legal`` is
+    provisional. Callers surface these as pre-release, never as format-legal.
+    """
+    # UTC, matching the codebase's clock convention. MTGJSON release dates are bare
+    # calendar dates, so the worst a timezone skew costs is admitting a set a few
+    # hours early — harmless for an explicitly opt-in pre-release view.
+    today = today or datetime.now(tz=UTC).date().isoformat()
+    earliest: dict[str, str] = {}
+    legalities: dict[str, dict] = {}
+    never_legal: set[str] = set()
+    for card in cards:
+        oid = card.get("oracle_id")
+        if not oid:
+            continue
+        if card.get("set_type") in _NEVER_LEGAL_SET_TYPES:
+            never_legal.add(oid)
+        legalities.setdefault(oid, card.get("legalities") or {})
+        released = card.get("released_at")
+        if released and (oid not in earliest or released < earliest[oid]):
+            earliest[oid] = released
+    return frozenset(
+        oid
+        for oid, legal in legalities.items()
+        # An empty dict would vacuously satisfy the all() below, so require a
+        # populated map: a record with no legality data at all is not evidence
+        # of anything, and aggregate_legalities always emits the full format set.
+        if legal
+        and all(status == "not_legal" for status in legal.values())
+        and oid not in never_legal
+        and oid in earliest
+        and earliest[oid] > today
+    )
+
+
+# Cached unreleased-oracle_id sets, keyed by (path, sidecar mtime) — same
+# invalidation contract as _POOL_CACHE. Computing this walks the whole bulk, so a
+# tune's many searches share one pass.
+_UNRELEASED_CACHE: dict[tuple[str, float], frozenset[str]] = {}
+
+
+def unreleased_ids_for(bulk_path: Path, cards: list[dict]) -> frozenset[str]:
+    """:func:`unreleased_oracle_ids` for *bulk_path*, memoized on (path, mtime)."""
+    key = (str(bulk_path), bulk_mtime(bulk_path))
+    ids = _UNRELEASED_CACHE.get(key)
+    if ids is None:
+        ids = unreleased_oracle_ids(cards)
+        _UNRELEASED_CACHE[key] = ids
+    return ids
+
+
+class ThemeServe(Protocol):
+    """A theme's serving predicate (``signal_specs.Serve``), named structurally so
+    this module stays out of the signals index's source closure."""
+
+    def matches(self, card: dict, view: CardView | None = None) -> bool: ...
+
+
+def _matches_filters(
+    card: dict,
+    *,
+    allowed_colors: set[str] | None,
+    oracle_re: re.Pattern | None,
+    type_lower: str | tuple[str, ...] | None,
+    name_substr: str | None = None,
+    cmc_min: float | None,
+    cmc_max: float | None,
+    price_min: float | None,
+    price_max: float | None,
+    exact_colors: bool = False,
+    fmt: Format = FORMATS["commander"],
+    arena_only: bool = False,
+    paper_only: bool = False,
+    unreleased_ok: frozenset[str] | None = None,
+    is_commander_filter: bool = False,
+    presets: tuple[Preset, ...] = (),
+    any_presets: tuple[Preset, ...] = (),
+    set_lower: str | None = None,
+    partner_of: Sequence[Sequence[str]] | None = None,
+    serve: ThemeServe | None = None,
+) -> bool:
+    """Whether one card passes a search's gate and page filters: the same
+    :func:`_scan` :func:`filter_records` runs, over just this card."""
+    unreleased = unreleased_ok or frozenset()
+    gated = _passes_gate(
+        card,
+        allowed_colors=allowed_colors,
+        exact_colors=exact_colors,
+        fmt=fmt,
+        arena_only=arena_only,
+        paper_only=paper_only,
+        unreleased=unreleased,
+        set_lower=set_lower,
+    )
+    query = _PageQuery(
+        oracle_re=oracle_re,
+        type_lower=type_lower,
+        name_norm=_norm_name(name_substr) if name_substr is not None else None,
+        cmc_min=cmc_min,
+        cmc_max=cmc_max,
+        presets=presets,
+        any_presets=any_presets,
+        partner_of=partner_of,
+        serve=serve,
+        price_min=price_min,
+        price_max=price_max,
+        unreleased=unreleased,
+        is_commander_filter=is_commander_filter,
+    )
+    return bool(_scan(_slice([card] if gated else []), query, fmt=fmt))
+
+
+def _passes_gate(
+    card: dict,
+    *,
+    allowed_colors: set[str] | None,
+    exact_colors: bool,
+    fmt: Format,
+    arena_only: bool,
+    paper_only: bool,
+    unreleased: frozenset[str],
+    set_lower: str | None,
+) -> bool:
+    """The filters every page of one search context shares: game card, set,
+    legality, game (paper / Arena) and color identity. :func:`filter_records`
+    memoizes the records that pass (:func:`_gated`)."""
+    # Skip tokens and non-game cards
+    if card.get("layout") in SKIP_LAYOUTS:
+        return False
+    if card.get("set_type") in ("token", "memorabilia"):
+        return False
+    if set_lower is not None and (card.get("set") or "").lower() != set_lower:
+        return False
+    # A pre-release card is legal nowhere yet, so the format gate would reject it on
+    # data that is provisional rather than final. ``unreleased_ok`` is the opt-in
+    # escape hatch (--include-unreleased) that admits exactly those, and nothing else.
+    status = fmt.legality(card, unreleased=unreleased)
+    if status not in LEGAL_STATUSES and status != "unreleased":
+        return False
+    games = card.get("games") or []
+    if arena_only and "arena" not in games:
+        return False
+    if paper_only and "paper" not in games:
+        return False
+
+    if allowed_colors is not None:
+        # "C" is the colorless pseudo-symbol. exact: card identity equals the chosen
+        # colors (or empty when only C is chosen). subset: card identity ⊆ chosen
+        # colors (colorless always passes, except when ONLY C is chosen → colorless
+        # only). color_identity_subset stays untouched (its own contract).
+        colors = allowed_colors - {"C"}
+        card_ci = set(card.get("color_identity", []))
+        if exact_colors:
+            colorless_only = "C" in allowed_colors and not colors
+            ok = (not card_ci) if colorless_only else (card_ci == colors)
+            if not ok:
+                return False
+        elif not color_identity_subset(card.get("color_identity", []), colors):
+            return False
+    return True
+
+
+@dataclass(frozen=True, eq=False)
+class _PageQuery:
+    """A page's own filters, past its search context's gate: what the card must be
+    (:func:`_matches_card`) and what the printing must be (:func:`_matches_printing`).
+    ``name_norm`` is normalized (:func:`_norm_name`)."""
+
+    oracle_re: re.Pattern | None
+    type_lower: str | tuple[str, ...] | None
+    name_norm: str | None
+    cmc_min: float | None
+    cmc_max: float | None
+    presets: tuple[Preset, ...]
+    any_presets: tuple[Preset, ...]
+    partner_of: Sequence[Sequence[str]] | None
+    serve: ThemeServe | None
+    price_min: float | None
+    price_max: float | None
+    unreleased: frozenset[str]
+    is_commander_filter: bool
+
+
+def _matches_card(card: dict, q: _PageQuery, view: CardView) -> bool:
+    """The page's filters that read the card: its text, type, name, mana value
+    and what it does. Every printing of a card answers alike (:func:`_scan` asks
+    once per card). ``view`` is the card's :class:`CardView`, which every page
+    over one gated slice shares (:func:`_gated`)."""
+    if q.oracle_re is not None and not q.oracle_re.search(view.oracle):
+        return False
+
+    if q.type_lower is not None:
+        _tl = (card.get("type_line") or "").lower()
+        _wanted = (q.type_lower,) if isinstance(q.type_lower, str) else q.type_lower
+        if not any(type_line_has(_tl, w) for w in _wanted):
+            return False
+
+    if q.name_norm is not None and q.name_norm not in _norm_name(
+        (card.get("name") or "").lower()
+    ):
+        return False
+
+    cmc = card.get("cmc", 0)
+    if q.cmc_min is not None and cmc < q.cmc_min:
+        return False
+    if q.cmc_max is not None and cmc > q.cmc_max:
+        return False
+
+    if q.presets and not all(p.matches(card, view) for p in q.presets):
+        return False
+    if q.any_presets and not any(p.matches(card, view) for p in q.any_presets):
+        return False
+
+    # A theme's serving predicate (``signal_specs.Serve.matches``): the cards the
+    # theme counts as serving it, read off their idents where the serve is IR.
+    if q.serve is not None and not q.serve.matches(card, view):
+        return False
+
+    # A second-commander search (``card_classify.valid_partner_search``): the card
+    # must pair with one of these partner abilities (CR 702.124). Last: it reads the
+    # card's trees, which the cheaper checks above spare most of the pool.
+    return q.partner_of is None or can_partner(q.partner_of, card)
+
+
+def _reads_printings(q: _PageQuery) -> bool:
+    """Whether :func:`_matches_printing` can turn a printing away for ``q``."""
+    return q.price_min is not None or q.price_max is not None or q.is_commander_filter
+
+
+def _matches_printing(card: dict, q: _PageQuery, *, fmt: Format) -> bool:
+    """The page's filters that read the printing: its price, and the commander
+    gate (legality, which a record carries per printing). Read only where
+    :func:`_reads_printings` says it can fail."""
+    price = _extract_price(card)
+    if q.price_min is not None and (price is None or price < q.price_min):
+        return False
+
+    if q.price_max is not None and (price is None or price > q.price_max):
+        return False
+
+    # A pre-release legend counts (``commander_eligibility`` admits the
+    # ``unreleased`` status) — otherwise "commanders only" AND "include unreleased"
+    # together would return nothing, which is exactly the combination someone
+    # brewing around a spoiled commander reaches for.
+    return (
+        not q.is_commander_filter
+        or fmt.commander_eligibility(card, unreleased=q.unreleased)["eligible"]
+    )
+
+
+def _card_index(cards: Sequence[dict]) -> array[int]:
+    """For each printing in ``cards``, the index of its card's first printing
+    there: one card is one oracle_id and name, and a printing with no oracle_id
+    is a card of its own."""
+    first: dict[tuple[str, str], int] = {}
+    out = array("I")
+    for i, card in enumerate(cards):
+        oid = card.get("oracle_id") or ""
+        out.append(first.setdefault((oid, card.get("name") or ""), i) if oid else i)
+    return out
+
+
+class _Slice(NamedTuple):
+    """A search context's gated records; the index of each one's card
+    (:func:`_card_index`); each card's first printing, in slice order; and each
+    card's :class:`CardView` — made when a page first reads the card, then shared
+    by every later page over the slice."""
+
+    records: Sequence[dict]
+    card_index: array[int]
+    firsts: array[int]
+    views: list[CardView | None]
+
+
+def _slice(records: Sequence[dict]) -> _Slice:
+    index = _card_index(records)
+    firsts = array("I", (i for i, first in enumerate(index) if i == first))
+    return _Slice(records, index, firsts, [None] * len(records))
+
+
+def _view(sl: _Slice, first: int) -> CardView:
+    """The slice's view of the card whose first printing is ``first``."""
+    view = sl.views[first]
+    if view is None:
+        view = sl.views[first] = CardView(sl.records[first])
+    return view
+
+
+def _scan(sl: _Slice, q: _PageQuery, *, fmt: Format) -> list[dict]:
+    """The slice's records that pass the page's filters, in order. The card's
+    filters run once per card, not per printing (the slice's ``card_index``): a
+    slice holds a few printings of each card, and every field those filters
+    read — text, type line, faces, keywords, mana cost and value, stats, what
+    the card does (its idents and trees, per oracle_id) — is the card's
+    (2026-10-25: no such field differs between two printings of one oracle_id
+    and name in the bulk). The verdicts live for this call only; the card's
+    view, for the slice's life."""
+    records = sl.records
+    if not _reads_printings(q):
+        # Every printing of a card answers alike: read each card once (a third
+        # of the slice's records), then keep the printings of those that pass.
+        passes = bytearray(len(records))
+        for first in sl.firsts:
+            if _matches_card(records[first], q, _view(sl, first)):
+                passes[first] = 1
+        index = sl.card_index
+        return [r for r, first in zip(records, index, strict=True) if passes[first]]
+    # Per printing, its card's verdict: 0 not read yet, 1 fails, 2 passes. A
+    # card is read on its first printing that passes the printing filters.
+    verdicts = bytearray(len(records))
+    matched = []
+    for i, card in enumerate(records):
+        first = sl.card_index[i]
+        ok = verdicts[first]
+        if ok == 1 or not _matches_printing(card, q, fmt=fmt):
+            continue
+        if ok == 0:
+            ok = verdicts[first] = 2 if _matches_card(card, q, _view(sl, first)) else 1
+        if ok == 2:
+            matched.append(card)
+    return matched
+
+
+# Cached format-invariant "playable" subsets of bulk, keyed by
+# (path, sidecar mtime, format, arena_only, paper_only, include_unreleased). The
+# legality / layout / game (paper|arena) filters don't depend on the per-query filters
+# (colors, oracle, type, cmc, price, presets), so we compute that subset ONCE per format
+# and rescan only it. For an Arena format that's ~7k cards vs all ~114k bulk records —
+# so a tune's many searches stop re-scanning the whole database each time. mtime keys
+# invalidate on a download-mtgjson refresh, matching load_bulk_cards's own in-memory
+# cache. include_unreleased is part of the key because it widens the legality gate: the
+# two pools differ, so sharing one entry would leak pre-release cards into a default
+# search (or hide them from an opted-in one, depending on which ran first).
+_POOL_CACHE: dict[tuple[str, float, str, bool, bool, bool], list[dict]] = {}
+
+
+def _playable_pool(
+    bulk_path: Path,
+    cards: list[dict],
+    *,
+    fmt: Format,
+    arena_only: bool,
+    paper_only: bool,
+    unreleased_ok: frozenset[str] | None = None,
+) -> list[dict]:
+    key = (
+        str(bulk_path),
+        bulk_mtime(bulk_path),
+        fmt.name,
+        arena_only,
+        paper_only,
+        unreleased_ok is not None,
+    )
+    pool = _POOL_CACHE.get(key)
+    if pool is None:
+        # The format-invariant part of the gate (no color identity, no set): the
+        # layout / set_type / legality / games checks, in ONE place.
+        unreleased = unreleased_ok or frozenset()
+        pool = [
+            c
+            for c in cards
+            if _passes_gate(
+                c,
+                allowed_colors=None,
+                exact_colors=False,
+                fmt=fmt,
+                arena_only=arena_only,
+                paper_only=paper_only,
+                unreleased=unreleased,
+                set_lower=None,
+            )
+        ]
+        _POOL_CACHE[key] = pool
+    return pool
+
+
+_SORT_DEFAULTS = {
+    "price": True,  # descending
+    "cmc": False,  # ascending
+    "name": False,  # ascending
+    "edhrec": False,  # ascending: most played first
+}
+
+
+UNPLAYED_RANK = 10**9
+
+
+def edhrec_popularity(card: dict) -> int:
+    """A card's EDHREC rank as a sortable play-rate key (lower = more played);
+    an unranked card sorts as unplayed. The one popularity key the sort and the
+    tuner's quality tiebreak share."""
+    rank = card.get("edhrec_rank")
+    return rank if rank is not None else UNPLAYED_RANK
+
+
+# Sort-key factory: each branch returns a homogeneous comparable key (price/cmc/edhrec
+# -> number, name -> str); the union across branches is dynamic, so the key
+# return is Any (the standard sort-key shape, à la _typeshed.SupportsRichComparison).
+def _parse_sort(sort: str) -> tuple[Callable[[dict], Any], bool]:
+    field, _, direction = sort.partition("-")
+
+    reverse = direction != "asc" if direction else _SORT_DEFAULTS.get(field, True)
+
+    if field == "price":
+        return lambda c: _extract_price(c) or 0.0, reverse
+    if field == "cmc":
+        return lambda c: c.get("cmc", 0), reverse
+    if field == "name":
+        return lambda c: c.get("name", ""), reverse
+    if field == "edhrec":
+        # Play-rate: EDHREC rank; ascending is most played first, unranked last.
+        return edhrec_popularity, reverse
+    return lambda c: _extract_price(c) or 0.0, reverse
+
+
+def resolve_presets(preset_names: tuple[str, ...]) -> tuple[Preset, ...]:
+    """The ``Preset`` values for a tuple of names, failing loud (a click parameter
+    error) on an unknown one."""
+    resolved: list[Preset] = []
+    for preset_name in preset_names:
+        try:
+            resolved.append(get_preset(preset_name))
+        except KeyError:
+            known = ", ".join(sorted(PRESETS.keys()))
+            msg = f"unknown preset {preset_name!r}. Known presets: {known}"
+            raise click.BadParameter(msg, param_hint="--preset") from None
+    return tuple(resolved)
+
+
+@dataclass(frozen=True)
+class _GateKey:
+    """One search context's gate (:func:`_passes_gate`): what every page of a
+    tune, or of a Find session, shares."""
+
+    fmt: str
+    colors: frozenset[str] | None
+    exact_colors: bool
+    arena_only: bool
+    paper_only: bool
+    unreleased: frozenset[str]
+    set_lower: str | None
+
+
+# The records a search context's gate passes, per records list (held by
+# reference, so its id can't be reused while the entry lives). A tune pages ~17
+# themes and roles over one pool in one identity, and each page used to re-run
+# the gate — layout, legality, game, color identity — over the whole pool (~100k
+# printings). The gate is a pure predicate of the card, so a page over the
+# memoized slice keeps the same cards in the same order. A records list must not
+# be mutated while it is searched (no caller does: the bulk path pages the cached
+# playable pool, a pool-bounded build a fresh list per request). Bounded, the
+# oldest entry first, and locked: the hub's Find and Tune run in a thread pool.
+_GATE_CACHE: dict[tuple[int, int, _GateKey], tuple[Sequence[dict], _Slice]] = {}
+_GATE_CACHE_MAX = 16
+_GATE_LOCK = threading.Lock()
+
+
+def _gated(records: Sequence[dict], gate: _GateKey, *, fmt: Format) -> _Slice:
+    """The records that pass ``gate``, as a :class:`_Slice`, memoized per
+    records list."""
+    key = (id(records), len(records), gate)
+    hit = _GATE_CACHE.get(key)
+    if hit is not None and hit[0] is records:
+        return hit[1]
+    colors = set(gate.colors) if gate.colors is not None else None
+    passed = [
+        card
+        for card in records
+        if _passes_gate(
+            card,
+            allowed_colors=colors,
+            exact_colors=gate.exact_colors,
+            fmt=fmt,
+            arena_only=gate.arena_only,
+            paper_only=gate.paper_only,
+            unreleased=gate.unreleased,
+            set_lower=gate.set_lower,
+        )
+    ]
+    sl = _slice(passed)
+    with _GATE_LOCK:
+        while len(_GATE_CACHE) >= _GATE_CACHE_MAX:
+            del _GATE_CACHE[next(iter(_GATE_CACHE))]
+        _GATE_CACHE[key] = (records, sl)
+    return sl
+
+
+def filter_records(
+    records: Sequence[dict],
+    *,
+    fmt: Format,
+    color_identity: str | None = None,
+    oracle: str | None = None,
+    card_type: str | tuple[str, ...] | None = None,
+    name: str | None = None,
+    cmc_min: float | None = None,
+    cmc_max: float | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
+    sort: str = "price-desc",
+    limit: int = 25,
+    offset: int = 0,
+    arena_only: bool = False,
+    paper_only: bool = False,
+    unreleased_ok: frozenset[str] | None = None,
+    exact_colors: bool = False,
+    is_commander_filter: bool = False,
+    preset_names: tuple[str, ...] = (),
+    any_preset_names: tuple[str, ...] = (),
+    set_code: str | None = None,
+    partner_of: Sequence[Sequence[str]] | None = None,
+    serve: ThemeServe | None = None,
+) -> list[dict]:
+    """The one filter implementation over an explicit record list: every per-query
+    filter ``search_cards`` takes, then the cheapest-printing dedup by name, the sort
+    and the page. ``search_cards`` runs it over the bulk's playable pool; a
+    pool-bounded build (sealed / draft) runs it over its opened pool's records
+    (``pool_search_fn``), so Find and the tuner search the pool with the SAME
+    semantics. ``preset_names`` combine with AND (each must match);
+    ``any_preset_names`` with OR (one must match) — a template role counted by
+    any of several presets (interaction) is searched by the same union.
+    ``serve`` keeps the cards a theme's serving predicate admits (the tuner's
+    theme pages: ``signal_specs.Serve.matches``)."""
+    allowed_colors = set(color_identity.upper()) if color_identity else None
+    try:
+        oracle_re = re.compile(oracle, re.IGNORECASE) if oracle else None
+    except re.error as e:
+        msg = f"Invalid oracle regex: {e}"
+        raise click.BadParameter(msg, param_hint="--oracle") from e
+    if not card_type:
+        type_lower: str | tuple[str, ...] | None = None
+    elif isinstance(card_type, str):
+        type_lower = card_type.lower()
+    else:  # an OR of type-line tokens — a card matches if ANY is present
+        type_lower = tuple(t.lower() for t in card_type)
+    name_norm = _norm_name(name.lower()) if name else None
+    presets = resolve_presets(preset_names) if preset_names else ()
+    any_presets = resolve_presets(any_preset_names) if any_preset_names else ()
+
+    unreleased = unreleased_ok or frozenset()
+    gate = _GateKey(
+        fmt=fmt.name,
+        colors=frozenset(allowed_colors) if allowed_colors is not None else None,
+        exact_colors=exact_colors,
+        arena_only=arena_only,
+        paper_only=paper_only,
+        unreleased=unreleased,
+        set_lower=set_code.lower() if set_code else None,
+    )
+    query = _PageQuery(
+        oracle_re=oracle_re,
+        type_lower=type_lower,
+        name_norm=name_norm,
+        cmc_min=cmc_min,
+        cmc_max=cmc_max,
+        presets=presets,
+        any_presets=any_presets,
+        partner_of=partner_of,
+        serve=serve,
+        price_min=price_min,
+        price_max=price_max,
+        unreleased=unreleased,
+        is_commander_filter=is_commander_filter,
+    )
+    matched = _scan(_gated(records, gate, fmt=fmt), query, fmt=fmt)
+
+    # Deduplicate by name, keeping the cheapest printing (shared acquisition-cost rule:
+    # a priced printing beats a price-less one, cheapest among priced).
+    best: dict[str, dict] = {}
+    for card in matched:
+        card_name = card.get("name", "")
+        best[card_name] = (
+            keep_cheaper(best[card_name], card) if card_name in best else card
+        )
+    deduped = list(best.values())
+
+    sort_key, sort_reverse = _parse_sort(sort)
+    deduped.sort(key=sort_key, reverse=sort_reverse)
+    return deduped[offset : offset + limit]
+
+
+def pool_search_fn(records: Sequence[dict], fmt: Format) -> Callable[..., list[dict]]:
+    """A ``search_cards``-shaped callable over an explicit record list — what a
+    pool-bounded build (sealed / draft) searches instead of the bulk: the same filter
+    implementation, with the game gate off (the records ARE the pool, whatever game
+    they were opened in). Used by deck-forge's Find / Tune and by ``deck-tune``."""
+
+    #: The bulk-level keywords of ``search_cards``' contract a caller may forward
+    #: that mean nothing over a pool: the records are already the pool, and ``fmt``
+    #: is the legality they are read under.
+    bulk_only = ("format", "include_unreleased")
+
+    def pool_search(**filters: object) -> list[dict]:
+        kwargs: dict[str, Any] = {
+            k: v for k, v in filters.items() if k not in bulk_only
+        }
+        kwargs.update(paper_only=False, arena_only=False)
+        return filter_records(records, fmt=fmt, **kwargs)
+
+    return pool_search
+
+
+def search_cards(
+    bulk_path: Path,
+    *,
+    color_identity: str | None = None,
+    oracle: str | None = None,
+    card_type: str | tuple[str, ...] | None = None,
+    name: str | None = None,
+    cmc_min: float | None = None,
+    cmc_max: float | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
+    sort: str = "price-desc",
+    limit: int = 25,
+    offset: int = 0,
+    format: str | None = None,  # noqa: A002
+    arena_only: bool = False,
+    paper_only: bool = False,
+    include_unreleased: bool = False,
+    exact_colors: bool = False,
+    is_commander_filter: bool = False,
+    preset_names: tuple[str, ...] = (),
+    any_preset_names: tuple[str, ...] = (),
+    set_code: str | None = None,
+    partner_of: Sequence[Sequence[str]] | None = None,
+    serve: ThemeServe | None = None,
+) -> list[dict]:
+    """Search bulk data for cards matching all specified filters.
+
+    ``include_unreleased`` admits cards from spoiled-but-unreleased sets, which read
+    ``not_legal`` in every format until release day and are therefore invisible to the
+    default gate (see :func:`unreleased_oracle_ids`). It widens legality ONLY for those
+    — banned, restricted, and never-legal cards are unaffected — and it does not assert
+    the requested format's legality, which is unknowable before release.
+
+    ``set_code`` narrows to one set's printings (``--set HOB``) — what a set holds, for
+    a limited scan; it runs on every printing before the cheapest-printing dedup, so a
+    reprint's other sets never leak in.
+
+    ``partner_of`` keeps only the cards that can pair, as a second commander, with
+    a card holding those partner abilities (``card_classify.valid_partner_search``
+    builds it; CR 702.124) — a predicate over each card's trees, not an oracle
+    regex. ``serve`` keeps the cards a theme's serving predicate admits
+    (``signal_specs.Serve``: its idents, types and stats), the tuner's theme page.
+    """
+    fmt = get_format(format) if format is not None else FORMATS["commander"]
+
+    # Arena-native formats: without implying arena_only, the subsequent
+    # cheapest-printing dedup would happily pick a paper-only printing,
+    # reporting (e.g.) Ephemerate as a common even though the only
+    # Arena-legal printing is a Historic Anthology rare.
+    # --paper-only remains an explicit escape hatch for the rare paper case.
+    # A pool-bounded format (sealed / draft) is never gated by game: its cards are
+    # whatever was opened, on Arena or at a paper table.
+    if format is not None and fmt.is_arena and not paper_only and not fmt.pool_bounded:
+        arena_only = True
+
+    presets = resolve_presets(preset_names + any_preset_names)
+    # A structural-view preset (task #83) reads signal_keys_for, which is
+    # itself a per-oracle_id memo (theme_presets._SIGNAL_KEY_INDEX), and a
+    # concept arm, served per oracle_id the same way (_CONCEPT_INDEX). Seeding
+    # both from the persisted whole-pool signals-index sidecar (task #90) before
+    # the scan below turns THIS full-bulk pass from "recompute every card's
+    # crosswalk signals and trees live" into "one dict lookup per card" —
+    # building that sidecar on first touch (~2 min, logged) if it isn't
+    # already on disk. A no-op for keyword/pattern-only presets and for a
+    # no-bulk/no-sidecar-buildable deployment (theme_presets falls back to its
+    # existing live compute either way).
+    if serve is not None or any(
+        p.signal_keys or p.concept is not None for p in presets
+    ):
+        from mtg_utils.theme_presets import seed_signal_key_index
+
+        seed_signal_key_index(bulk_path)
+
+    cards = load_bulk_cards(bulk_path)
+    unreleased_ok = unreleased_ids_for(bulk_path, cards) if include_unreleased else None
+    # Scan only the format-invariant playable subset (cached) rather than all ~114k bulk
+    # records; the per-query filters run on every pool member.
+    pool = _playable_pool(
+        bulk_path,
+        cards,
+        fmt=fmt,
+        arena_only=arena_only,
+        paper_only=paper_only,
+        unreleased_ok=unreleased_ok,
+    )
+    return filter_records(
+        pool,
+        fmt=fmt,
+        color_identity=color_identity,
+        oracle=oracle,
+        card_type=card_type,
+        name=name,
+        cmc_min=cmc_min,
+        cmc_max=cmc_max,
+        price_min=price_min,
+        price_max=price_max,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+        arena_only=arena_only,
+        paper_only=paper_only,
+        unreleased_ok=unreleased_ok,
+        exact_colors=exact_colors,
+        is_commander_filter=is_commander_filter,
+        preset_names=preset_names,
+        any_preset_names=any_preset_names,
+        set_code=set_code,
+        partner_of=partner_of,
+        serve=serve,
+    )
+
+
+def format_results(cards: list[dict]) -> str:
+    """Format search results as a compact table."""
+    if not cards:
+        return "No results found."
+
+    headers = ["Name", "Price", "Rarity", "CMC", "Type", "Oracle Text"]
+    rows: list[list[str]] = []
+    for card in cards:
+        price = _extract_price(card)
+        oracle = _get_oracle_text(card).replace("\n", " ")
+        if len(oracle) > 80:
+            oracle = oracle[:77] + "..."
+        rarity = card.get("rarity", "")
+        rarity_short = rarity[0].upper() if rarity else "?"
+        rows.append(
+            [
+                card.get("name", ""),
+                f"${price:.2f}" if price is not None else "N/A",
+                rarity_short,
+                str(card.get("cmc", 0)),
+                card.get("type_line", ""),
+                oracle,
+            ]
+        )
+
+    col_widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(cell))
+
+    def fmt(cells: list[str]) -> str:
+        return " | ".join(cell.ljust(col_widths[i]) for i, cell in enumerate(cells))
+
+    lines = [fmt(headers)]
+    lines.append("-+-".join("-" * w for w in col_widths))
+    lines.extend(fmt(row) for row in rows)
+    return "\n".join(lines)
+
+
+@click.command()
+@click.option(
+    "--bulk-data",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to Scryfall bulk data JSON.",
+)
+@click.option(
+    "--color-identity",
+    "-ci",
+    default=None,
+    help="Color identity (e.g., BR, WUG; include C for colorless).",
+)
+@click.option(
+    "--exact",
+    is_flag=True,
+    help="Match color identity exactly rather than as a subset.",
+)
+@click.option(
+    "--oracle",
+    "-o",
+    default=None,
+    help="Case-insensitive regex for oracle text.",
+)
+@click.option(
+    "--type",
+    "card_type",
+    "-t",
+    default=None,
+    help="Substring to match type line.",
+)
+@click.option(
+    "--name",
+    "-n",
+    default=None,
+    help="Case-insensitive substring to match the card name.",
+)
+@click.option("--cmc-min", type=float, default=None)
+@click.option("--cmc-max", type=float, default=None)
+@click.option("--price-min", type=float, default=None)
+@click.option("--price-max", type=float, default=None)
+@click.option(
+    "--sort",
+    default="price-desc",
+    show_default=True,
+    help="Sort field: price, cmc, name, edhrec (play-rate). Suffix: -desc, -asc.",
+)
+@click.option("--limit", default=25, show_default=True)
+@click.option(
+    "--format",
+    "card_format",
+    type=click.Choice(sorted(FORMATS)),
+    default=None,
+    help="Filter by format legality.",
+)
+@click.option(
+    "--preset",
+    "preset_names",
+    multiple=True,
+    help=(
+        "Filter to cards matching a theme_presets entry (keyword abilities, "
+        "removal by type, edicts, turn manipulation, blink, functional). "
+        "Repeatable; multiple presets combine with AND, so --preset tokens "
+        "--preset sacrifice-outlet returns cards that do both. Run "
+        "`archetype-audit --list-presets` to browse the catalog."
+    ),
+)
+@click.option(
+    "--is-commander",
+    is_flag=True,
+    help="Only include cards eligible to be a commander.",
+)
+@click.option("--json", "as_json", is_flag=True)
+@click.option(
+    "--fields",
+    "fields_spec",
+    default=None,
+    help=(
+        "Comma-separated list of fields to project when --json is set "
+        "(e.g. 'name,type_line,cmc,color_identity'). Omit to get the full "
+        "DISPLAY_FIELDS set. Ignored without --json."
+    ),
+)
+@click.option(
+    "--arena-only",
+    is_flag=True,
+    help="Only include cards available on MTG Arena.",
+)
+@click.option(
+    "--paper-only",
+    is_flag=True,
+    help="Exclude Arena-only digital cards (use for paper decks).",
+)
+@click.option(
+    "--include-unreleased",
+    is_flag=True,
+    help=(
+        "Also return cards from spoiled-but-unreleased sets. They read not_legal in "
+        "every format until release day, so the default gate hides them; use this for "
+        "pre-release brewing. Does not affect banned/restricted or never-legal cards."
+    ),
+)
+@click.option(
+    "--set",
+    "set_code",
+    default=None,
+    help="Only this set's printings (a set code, e.g. HOB) — what a set holds.",
+)
+def main(
+    bulk_data: Path,
+    color_identity: str | None,
+    oracle: str | None,
+    card_type: str | None,
+    name: str | None,
+    cmc_min: float | None,
+    cmc_max: float | None,
+    price_min: float | None,
+    price_max: float | None,
+    sort: str,
+    limit: int,
+    preset_names: tuple[str, ...],
+    *,
+    exact: bool,
+    is_commander: bool,
+    as_json: bool,
+    fields_spec: str | None,
+    card_format: str | None,
+    arena_only: bool,
+    paper_only: bool,
+    include_unreleased: bool,
+    set_code: str | None,
+) -> None:
+    """Search Scryfall bulk data for cards matching filters."""
+    if arena_only and paper_only:
+        raise click.UsageError("--arena-only and --paper-only are mutually exclusive.")
+    results = search_cards(
+        bulk_data,
+        color_identity=color_identity,
+        oracle=oracle,
+        card_type=card_type,
+        name=name,
+        cmc_min=cmc_min,
+        cmc_max=cmc_max,
+        price_min=price_min,
+        price_max=price_max,
+        exact_colors=exact,
+        sort=sort,
+        limit=limit,
+        format=card_format,
+        arena_only=arena_only,
+        paper_only=paper_only,
+        include_unreleased=include_unreleased,
+        set_code=set_code,
+        is_commander_filter=is_commander,
+        preset_names=preset_names,
+    )
+    if as_json:
+        from mtg_utils.scryfall_lookup import display_fields
+
+        extracted = [display_fields(c) for c in results]
+        if fields_spec:
+            requested = [f.strip() for f in fields_spec.split(",") if f.strip()]
+            extracted = [{f: card.get(f) for f in requested} for card in extracted]
+        click.echo(json.dumps(extracted, indent=2))
+    else:
+        click.echo(format_results(results))

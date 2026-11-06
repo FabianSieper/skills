@@ -23,7 +23,7 @@ function modifyJson(root, relativePath, mutate) {
 test('seed integrity and specified case count', () => {
   const result = checkFoundation(root);
   assert.equal(result.status, 'pass');
-  assert.equal(result.skills.length, 3);
+  assert.equal(result.skills.length, 4);
   assert.equal(result.specified_cases, 38);
 });
 test('synchronization is idempotent', t => {

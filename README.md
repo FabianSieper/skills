@@ -10,8 +10,9 @@ Nutzerauftrag ersetzt; ihre Git-Historie bleibt erhalten.
 | `create-skill` | Neue wiederverwendbare Abläufe eingrenzen, kompakt entwerfen und testbar machen. |
 | `improve-skill` | Lernbedarf diagnostizieren, richtig zuordnen, knapp bestätigen lassen und gezielt verbessern. |
 | `coding-conventions` | Selbstdokumentierenden Code durch Namen, Struktur und notwendige Begründungen schreiben. |
+| `deck-wizard` | Magic-Decks bauen und analysieren, einschließlich Archidekt-Import, persistenter Commander-Analyse und geprüfter ADD/CUT-Paare. |
 
-**Vorhanden:** drei Skills, gemeinsame Standards, portable Ressourcen,
+**Vorhanden:** vier Skills, gemeinsame Standards, portable Ressourcen,
 Herkunftsmanifeste, Bootstrap-Fragment, 38 Testdefinitionen und lokale Prüfhelfer.
 **Noch offen:** `skillctl`, vertrauenswürdige Registry/Resolver, technische
 Zustandsübergänge, installierte Adapter, Modellrunner, Rechte-Trennung und
@@ -31,7 +32,7 @@ prüfen. Danach die gewünschten Skills gezielt installieren:
 ```bash
 npx skills@1.7.1 add FabianSieper/skills -g \
   -a codex -a github-copilot -a opencode \
-  --skill create-skill --skill improve-skill --skill coding-conventions
+  --skill create-skill --skill improve-skill --skill coding-conventions --skill deck-wizard
 ```
 
 Lokale und direkte GitHub-Paketinstallation mit CLI 1.7.1 wurden isoliert geprüft.
@@ -66,3 +67,7 @@ werden dafür nicht pauschal neu geschrieben.
 [Kompatibilität](docs/compatibility.md) halten Anforderungen und Nachweise fest.
 [VALIDATION.md](VALIDATION.md) trennt lokale Prüfungen von noch ausstehenden
 Verhaltens-/Integrationsnachweisen. Keine autonome Veröffentlichung freigegeben.
+
+Die lokale Zusammenführung von Deck-Wizard und Archidekt-Optimizer ist unter
+[Deck-Wizard-Prüfstand](verification/deck-wizard/VALIDATION.md) dokumentiert;
+der [Skill-Einstieg](skills/games/deck-wizard/SKILL.md) beschreibt den Ablauf.

@@ -1,0 +1,831 @@
+"""Signal specs — SPECS assembly, subject-spec builder, and the public API.
+
+Merges the ``SPECS_1``..``SPECS_4`` chunks (in original order — load-bearing for
+``spec_for``'s fallback search) into ``SPECS``, then carries everything the
+original flat ``signal_specs.py`` defined after the SPECS dict literal: the
+subject-bearing dynamic spec builder, the payoff/source avenue split (ADR-0026),
+the public ``spec_for`` / ``serves`` / ``search_filters`` API, and the
+import-time key-agreement gate (ADR-0014).
+"""
+
+from __future__ import annotations
+
+import functools
+from dataclasses import replace
+from typing import TYPE_CHECKING
+
+from mtg_utils._analysis import signal_keys
+from mtg_utils._analysis._sweep_detectors import (
+    SWEEP_DETECTORS,
+    SWEEP_LABELS,
+)
+
+from ._shared import (
+    _CHOSEN_TYPE_IDENTS,
+    _ETB_PAYOFF_EXTRA,
+    _GOWIDE_ANTHEM_EXTRA,
+    _TOKEN_ARISTOCRAT_EXTRA,
+    _TOKEN_DOUBLER_EXTRA,
+    Serve,
+    SignalSpec,
+    SubAvenue,
+    _chosen_type_named_idents,
+    _spec,
+)
+from .data_1 import SPECS_1
+from .data_2 import SPECS_2
+from .data_3 import SPECS_3
+from .data_4 import SPECS_4
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from mtg_utils._analysis.signals import Signal
+
+SPECS: dict[tuple[str, str], SignalSpec] = {
+    **SPECS_1,
+    **SPECS_2,
+    **SPECS_3,
+    **SPECS_4,
+}
+
+
+# Subject-bearing signal keys: their spec is built dynamically from the captured
+# subject (a Goblin lord and a Sliver lord must not share one static spec).
+_SUBJECT_KEYS = signal_keys.SUBJECT_KEYS
+# Two distinct sub-avenues are always offered for a subject: the *cards* (the tribe
+# members, or the token-makers) and the *payoffs* (lords/anthems that reward a board of
+# them). Keeping them clearly separate — and never folding "payoffs" into the cards
+# avenue's blurb — is what stops "X tribal" / "X payoffs" reading as the same thing.
+_SUBJECT_TEMPLATES = {
+    signal_keys.TYPE_MATTERS: (
+        "{s} tribal",
+        "{s} creatures (and changelings) — the bodies that make up the tribe",
+    ),
+    signal_keys.TYPED_SPELLCAST: (
+        "{s} spells",
+        "{s} spells to cast and chain",
+    ),
+    # task B-2: a tribe-count damage finisher (Scourge of Valkas) wants the
+    # tribe's BODIES — the count is the burn spell's size (CR 608.2h).
+    signal_keys.DAMAGE_FOR_EACH: (
+        "{s} count damage",
+        "more {s} bodies to raise the count — the tribe is the burn spell",
+    ),
+}
+
+
+def _payoff_extra(subj: str) -> SubAvenue:
+    # Lords/anthems that REWARD a board of {subj}s, read off the lanes:
+    #   - the tribe's own lords and payoffs — a filter of {subj}s that isn't an
+    #     opponent's (subtype_ref's ``you`` scope: "{subj}s you control get +1/+1",
+    #     "for each {subj} you control", "Sacrifice a {subj}", "behold a
+    #     {subj}", a sweeper that spares them) and the static anthems over the
+    #     tribe;
+    #   - "shares a creature type" pumps (Shared Animosity, Coat of Arms) — any
+    #     tribe (subtype_ref's ``shared``);
+    #   - OPEN type-of-choice payoffs (chosen_type_matters: Vanquisher's Banner, Door
+    #     of Destinies, Distant Melody, Cavern of Souls, Caller of the Hunt) — work
+    #     for ANY tribe;
+    #   - RESTRICTED type-of-choice payoffs that name an explicit list — credited
+    #     ONLY when THIS subject is named (Dawn-Blessed Pennant counts for
+    #     Goblin/Elf, never an unlisted tribe like Scarecrow).
+    # A type-GRANTER ("are the chosen type" — Xenograft) is an enabler, the
+    # _enabler_extra's; a chosen-type punisher (Engineered Plague) and a token
+    # maker of the tribe (the main page's) are no payoff.
+    return SubAvenue(
+        f"{subj} payoffs",
+        f"lords and anthems that reward a board of {subj}s, plus type-agnostic tribal "
+        "payoffs (Coat of Arms, Door of Destinies) that work for any chosen tribe",
+        serve=Serve(
+            signal_idents=_CHOSEN_TYPE_IDENTS
+            | _chosen_type_named_idents((subj,))
+            | {
+                f"subtype_ref|you|{subj}",
+                "subtype_ref|you|shared",
+                f"anthem_static|you|{subj}",
+            },
+        ),
+    )
+
+
+_TYPE_CHANGER_KEYS = frozenset(
+    {
+        signal_keys.TYPE_CHANGERS,
+        signal_keys.TYPE_CHANGERS_ALL_ZONES,
+        signal_keys.TYPE_CHANGERS_GRAVEYARD,
+    }
+)
+
+
+def _type_changer_idents(tribe_subjects: tuple[str, ...]) -> frozenset[str]:
+    """The type_changers idents that grow a tribe (task #96): the open subjects
+    ("" chosen / "all" every type) always count; a fixed-subtype changer counts
+    only for ITS tribe(s). Scopes you+each (Kudo's "other creatures" grows your
+    side too); all three zone-reach keys (a graveyard-only changer still feeds
+    graveyard-facing tribal payoffs)."""
+    subjects = {"", "all"} | {s.capitalize() for s in tribe_subjects}
+    return frozenset(
+        f"{key}|{scope}|{subj}"
+        for key in _TYPE_CHANGER_KEYS
+        for scope in ("you", "each")
+        for subj in subjects
+    )
+
+
+def _enabler_extra(subj: str) -> SubAvenue:
+    # Type-changers (Xenograft, Arcane Adaptation) turn OTHER creatures into {subj}s, so
+    # the tribe grows and your {subj} payoffs hit more bodies. A distinct lane: an
+    # enabler is NOT a payoff or a tribe member (B1). The serve is the structural
+    # type_changers idents (task #96): the open grants ("the chosen type", every
+    # type) credit every {subj} lane, a fixed-subtype changer (Hivestone, "are
+    # Slivers in addition to their other creature types") only its own.
+    return SubAvenue(
+        f"{subj} enablers",
+        f"cards that make your other creatures {subj}s (type-changers like Xenograft), "
+        f"growing the tribe so your {subj} lords and payoffs reach more of the board",
+        serve=Serve(signal_idents=_type_changer_idents((subj,))),
+    )
+
+
+# Tribal SYNONYM-GROUPS: creature types that share one tribal identity because no card
+# rewards any member ALONE — they are always named together. The "sea monster" group is
+# the canonical case (Quest for Ula's Temple, Slinn Voda, Whelming Wave, Kenessos all
+# enumerate "Kraken, Leviathan, Octopus, and Serpent"), so a commander of any one type
+# (Lorthos = Octopus, Tromokratis = Kraken, Koma = Serpent) wants the whole group. ONLY
+# groups whose members have NO standalone tribe belong here: Angel/Demon/Dragon and
+# Vampire/Werewolf/Zombie are deliberately EXCLUDED — each is a real solo tribe (Lyra
+# Angels, Edgar vampires), so grouping them would over-fire a mono-tribe commander.
+_TRIBAL_GROUPS: tuple[frozenset[str], ...] = (
+    frozenset({"kraken", "leviathan", "octopus", "serpent"}),
+)
+
+
+def _tribal_group(subj: str) -> frozenset[str] | None:
+    sl = subj.lower()
+    for grp in _TRIBAL_GROUPS:
+        if sl in grp:
+            return grp
+    return None
+
+
+# The cheat lane's per-type payoff (``_cheat_subject_spec``): the card a cheat of
+# that type wants to find. A creature cheat wants the fat bodies it skips the
+# cost of (Craterhoof, Worldspine Wurm) — the power-5 floor the static spec
+# carried; every other type wants cards of that type.
+_CHEAT_PAYOFF_POWER_MIN = 5
+
+
+@functools.cache
+def _cheat_subject_spec(subj: str) -> SignalSpec:
+    """The ``cheat_into_play|you|<subj>`` spec, ``subj`` the cheated card type
+    (signal_keys.CHEAT_INTO_PLAY). Every subject shares the one "Cheat into
+    play" label, so the per-type specs read as one avenue downstream (focus
+    dedupes by label). The enabler arm is the lane's own idents — this type's
+    cheats plus the untyped ones (subject "", which put whatever they find);
+    the payoff arm is what such a cheat wants to find: a big creature, or a
+    card of the type. Cached: a pure function of the subject, and ``spec_for``
+    is hot (commander_fit asks per candidate x signal)."""
+    plural = "big creatures" if subj == "Creature" else _pluralize(subj.lower()).lower()
+    payoff = (
+        Serve(power_min=_CHEAT_PAYOFF_POWER_MIN)
+        if subj == "Creature"
+        else Serve(types=frozenset({subj.lower()}))
+    )
+    return SignalSpec(
+        label="Cheat into play",
+        avenue=(
+            f"ways to put {plural} onto the battlefield from hand or library, "
+            f"plus the {plural} worth cheating in"
+        ),
+        serve=replace(
+            payoff,
+            signal_idents=frozenset(
+                {
+                    f"{signal_keys.CHEAT_INTO_PLAY}|you|{subj}",
+                    f"{signal_keys.CHEAT_INTO_PLAY}|you|",
+                }
+            ),
+        ),
+    )
+
+
+# The animation lane's per-type feeders (``_animate_subject_spec``): the animated
+# card types (``signal_keys.ANIMATE_SUBJECT_TYPES``, the tuple the lane emits),
+# all of them for an animation that names only "a permanent" (subject "").
+_ANIMATED_TYPES = tuple(t.lower() for t in signal_keys.ANIMATE_SUBJECT_TYPES)
+# The highest mana-value floor an animation subject's doer idents spell out: a
+# spec serves every animator of its type, whatever floor it carries (Bello's
+# ``Artifact>=4`` is a doer on a floor-3 animator's avenue). Sixteen is the
+# highest printed mana value (Draco).
+_MAX_ANIMATE_FLOOR = 16
+
+
+@functools.cache
+def _animate_subject_spec(subj: str) -> SignalSpec:
+    """The ``animate_makers|you|<subj>`` spec, ``subj`` the animated card type
+    with its mana-value floor when it has one (``signal_keys.animate_subject``:
+    ``Artifact``, ``Artifact>=4``), "" for "a permanent" (Luxior, Giada's Gift).
+    Every subject shares the one "Animation" label, so the per-type specs read as
+    one avenue downstream (focus dedupes by label: a floored and an unfloored
+    animator of one type serve the union, the wider set). Its feeders are what
+    the animation turns into creatures — noncreature permanents of that type, by
+    type line (an artifact creature already is one), at or above the floor
+    (``types_cmc_min``: Bello's mana value 4 or greater) — and its doers are the
+    lane's own idents: every animator of the type, whatever its floor, and the
+    untyped ones. An Aura never feeds: an Aura that's also a creature
+    can't enchant anything and goes to the graveyard (CR 303.4d), and every
+    enchantment animator says "non-Aura" (Opalescence, Starfield of Nyx, Bello).
+    An Equipment does feed — March of the Machines and Ensoul Artifact animate
+    one; only Bello excludes it. Cached: a pure function of the subject
+    (``spec_for`` is hot)."""
+    card_type, floor = signal_keys.split_animate_subject(subj)
+    types = (card_type.lower(),) if card_type else _ANIMATED_TYPES
+    plural = _pluralize(types[0]).lower() if card_type else "permanents"
+    if floor:
+        plural += f" of mana value {floor} or greater"
+    search: dict = {"card_type": types[0] if card_type else types[:2]}
+    if floor:
+        search["cmc_min"] = floor
+    ident = f"{signal_keys.ANIMATE_MAKERS}|you|"
+    return SignalSpec(
+        label="Animation",
+        avenue=(
+            f"noncreature {plural} for your animation effects to turn into "
+            f"creatures, plus more ways to animate them"
+        ),
+        search=search,
+        serve=Serve(
+            types=frozenset(types),
+            not_types=frozenset({"creature", "aura"}),
+            types_cmc_min=floor,
+            signal_idents=frozenset(
+                {
+                    ident,
+                    f"{ident}{card_type}",
+                    *(
+                        f"{ident}{signal_keys.animate_subject(card_type, f)}"
+                        for f in range(1, _MAX_ANIMATE_FLOOR + 1)
+                    ),
+                }
+                if card_type
+                else {f"{ident}*"}
+            ),
+        ),
+    )
+
+
+@functools.cache
+def _land_type_subject_spec(subj: str) -> SignalSpec:
+    """The ``land_type_matters|you|<subj>`` spec, ``subj`` a nonbasic land type
+    (signal_keys.LAND_TYPE_MATTERS, CR 205.3i). The feeders are the lands of that
+    type, by type line — the Deserts a Desert payoff counts — and the payoffs are
+    the lane's own ident (Yuma, Hazezon, Hour of Promise). ``lands_feed``: those
+    lands count toward the lane's depth, where every other avenue's lands are
+    mana base. Cached: a pure function of the subject."""
+    land_type = subj.lower()
+    label = f"{subj} lands" if land_type.endswith("s") else _pluralize(land_type)
+    return SignalSpec(
+        label=label,
+        avenue=(
+            f"{subj} lands for your {subj} payoffs to count, plus the cards that "
+            f"reward controlling them"
+        ),
+        search={"card_type": land_type},
+        serve=Serve(
+            types=frozenset({land_type}),
+            lands_feed=True,
+            signal_idents=frozenset({f"{signal_keys.LAND_TYPE_MATTERS}|you|{subj}"}),
+        ),
+    )
+
+
+# Subject keys whose subject is a CARD or LAND TYPE, each built by its own
+# per-subject spec (cached): key -> builder(subject).
+_TYPED_SUBJECT_SPECS = {
+    signal_keys.CHEAT_INTO_PLAY: _cheat_subject_spec,
+    signal_keys.ANIMATE_MAKERS: _animate_subject_spec,
+    signal_keys.LAND_TYPE_MATTERS: _land_type_subject_spec,
+}
+# The cards a keyword lane counts beyond its bodies, grants and payoffs, keyed by
+# the keyword: what the keyword turns into something else. A creature dealt
+# damage by a source with deathtouch is destroyed (CR 702.2b, 704.5h), so a
+# bite — your creature deals damage equal to its power to another
+# (``damage_equal_power|you|bite``) — and a fight, where each creature deals
+# damage equal to its power to the other (CR 701.14a), are the deathtouch
+# lane's removal (Fynn, the Fangbearer's ten bites, 2026-10-29).
+_KEYWORD_LANE_IDENTS: dict[str, frozenset[str]] = {
+    "deathtouch": frozenset({"damage_equal_power|you|bite", "fight_makers|you|"}),
+}
+# Subject keys whose "" subject is a VALUE, not subject-absence, so they dispatch
+# dynamic even when empty: type_changers' "the chosen type" (Xenograft), an
+# animation of "a permanent".
+_EMPTY_SUBJECT_IS_VALUE = _TYPE_CHANGER_KEYS | {signal_keys.ANIMATE_MAKERS}
+
+
+def _subject_spec(signal: Signal) -> SignalSpec:
+    """Build a spec for a subject-bearing signal by interpolating the subject."""
+    subj = signal.subject
+    # keyword-tribe: the subject is an ability keyword (Flying), not a creature type —
+    # find creatures that HAVE the keyword, not a type-line match.
+    # The bodies by their keyword (CR 702) and the cards that put it on bodies
+    # (keyword_bodies), the payoffs that count or pump them (keyword_tribe
+    # itself), and the grants that hand the keyword out — off the IR alone, no
+    # oracle pattern (backlog (o), 2026-10-26): every real body or payoff the
+    # pattern alone paged carries an IR ident — the keywords phase drops
+    # restored (``_card_ir.dropped_keywords``, the residues' ``body_keywords``),
+    # the keywords a keyword ability confers
+    # (``crosswalk.reads.KEYWORD_ABILITY_KEYWORDS``), a defender payoff
+    # (``crosswalk.lets_defenders_attack``) — or a ledger row; what's left names
+    # the keyword to fight it ("destroy target creature with flying", flying's
+    # reminder on a reach page, "You have hexproof").
+    if signal.key == signal_keys.KEYWORD_TRIBE:
+        kw = subj.lower()
+        return SignalSpec(
+            label=f"{subj} matters",
+            avenue=f"creatures with {subj} plus anthems and payoffs that reward them",
+            serve=Serve(
+                keywords=frozenset({kw}),
+                signal_idents=frozenset(
+                    {
+                        f"{signal_keys.KEYWORD_TRIBE}|you|{subj}",
+                        f"{signal_keys.KEYWORD_TRIBE}|any|{subj}",
+                        f"keyword_bodies|you|{kw}",
+                        f"team_buff|you|{kw}",
+                        f"team_evasion_grant|you|{kw}",
+                        f"aura_equip_kw_grant|you|{kw}",
+                        f"keyword_grant_target|you|{kw}",
+                        f"all_creatures_kw_grant|any|{kw}",
+                        *_KEYWORD_LANE_IDENTS.get(kw, ()),
+                    }
+                ),
+            ),
+        )
+    # meld: the subject is a card of the pair. The meld lane names each half
+    # itself and the half whose trigger melds also names its partner (the Meld
+    # node's partner, CR 701.42a), so the cards carrying this subject are the pair
+    # — not every meld half.
+    if signal.key == signal_keys.MELD_PAIR:
+        return SignalSpec(
+            label=f"Meld partner of {subj}",
+            avenue=(
+                f"the specific card that melds with {subj} (plus tutors/recursion to "
+                "assemble the pair)"
+            ),
+            serve=Serve(signal_idents=frozenset({f"{signal.key}|you|{subj}"})),
+        )
+    # type_changers (task #96, ADR-0040): a mass creature-type changer's own
+    # spec. Subject "" (chosen) / "all" (every type) is subject-agnostic — one
+    # "Type changers" label, so the three zone-reach keys and both open
+    # subjects collapse to a single avenue downstream (focus dedupes by
+    # label). A fixed subtype ("Sliver") reuses the tribal extras' enabler
+    # label so Hivestone's own signal and the Sliver-tribal enabler
+    # sub-avenue read as one lane.
+    if signal.key in _TYPE_CHANGER_KEYS:
+        label = "Type changers" if subj in ("", "all") else f"{subj} enablers"
+        return SignalSpec(
+            label=label,
+            avenue=(
+                "cards that mass-change creature types (Xenograft, Maskwood "
+                "Nexus) so tribal payoffs reach more of the board"
+            ),
+            serve=Serve(
+                signal_idents=_type_changer_idents(
+                    () if subj in ("", "all") else (subj,)
+                ),
+            ),
+        )
+    # cheat into play / animation / land-type payoffs: the subject is a card or
+    # land TYPE.
+    if (typed := _TYPED_SUBJECT_SPECS.get(signal.key)) is not None:
+        return typed(subj)
+    # token-maker: the deck CREATES {s} tokens, so find cards that *make* them (not the
+    # tribe — searching the type line surfaced {s} creatures that don't make tokens).
+    if signal.key == signal_keys.TOKEN_MAKER:
+        # A token-maker commander (Krenko → token_maker:Goblin) is a flood deck: offer
+        # the creature-ETB payoffs and token doublers alongside the tribe-token payoffs.
+        return SignalSpec(
+            label=f"{subj} tokens",
+            avenue=f"cards that create {subj} tokens to go wide",
+            # The lane's own subject: a creature token of the tribe you (or a
+            # player you pick) create.
+            serve=Serve(
+                signal_idents=frozenset(
+                    {f"{signal.key}|you|{subj}", f"{signal.key}|any|{subj}"}
+                )
+            ),
+            extras=(
+                _payoff_extra(subj),
+                _TOKEN_DOUBLER_EXTRA,
+                _ETB_PAYOFF_EXTRA,
+                _GOWIDE_ANTHEM_EXTRA,
+                _TOKEN_ARISTOCRAT_EXTRA,
+            ),
+        )
+    # tribal (type_matters) / typed spellcast: the cards themselves (type-line match),
+    # plus a distinct "{s} payoffs" sub-avenue for the lords/anthems that reward them.
+    label_t, avenue_t = _SUBJECT_TEMPLATES.get(signal.key, ("{s}", "{s} synergies"))
+    # Changelings (CR 702.73a) are every creature type, so they count for EVERY tribe —
+    # but they type-line as "Shapeshifter", so the {card_type: subj} search misses every
+    # one. Fold them (the keyword bearers + the "is/are every creature type" granters)
+    # into the type-tribal serve so a Goblin/Elf/Zombie deck credits its changelings.
+    is_type_tribal = signal.key in (
+        signal_keys.TYPE_MATTERS,
+        # task B-2: a "{s} count damage" lane is tribal-bodies-semantics too —
+        # every body (and changeling, and type-changer) raises the count.
+        signal_keys.DAMAGE_FOR_EACH,
+    )
+    # Synonym-GROUP tribes (sea monsters): a member type's serve covers the WHOLE group,
+    # by type-line AND by every member type's idents (Whelming Wave). card_search's
+    # card_type is single-token-only (no OR), so each OTHER member gets its own search
+    # sub-avenue to pull its bodies; the widened serve credits them all.
+    group = _tribal_group(subj) if is_type_tribal else None
+    members = sorted(group) if group else [subj.lower()]
+    # Bodies serve: the tribe's own members (type-line) PLUS changelings ("is/are every
+    # creature type", CR 702.73a — a changeling IS a member of every tribe). NOT the
+    # type-GRANTERS ("is/are the chosen type"): Xenograft & co. don't BECOME a member,
+    # they turn your OTHER creatures into the tribe — surfaced by the separate enabler
+    # sub-avenue (_enabler_extra), never counted as a body or payoff (B1).
+    # Beside the bodies, the cards that name the tribe: any filter naming a member
+    # type (subtype_ref's ``any`` scope — a lord, a tutor, a sacrifice cost, an
+    # offering, a behold, a sweeper that spares them, a hoser), a type it hands an
+    # object, a token of the tribe, a static anthem over it, and — a true tribe's —
+    # the tribe's own key (``type_matters``: its bodies, a transformed face's
+    # included, the tokens it makes, and the payoffs phase leaves subject-less).
+    # What only the old pattern paged and no read names is no member: an
+    # opponent's tokens of the tribe, a protection from it, a targeted removal that
+    # can't hit it (Victim of Night), another card's name (backlog (o)).
+    # The members in an ident subject's spelling.
+    tribes = tuple(m.capitalize() for m in members)
+    mentions = frozenset(
+        ident
+        for t in tribes
+        for ident in (
+            f"subtype_ref|any|{t}",
+            f"subtype_ref|you|{t}",
+            f"{signal_keys.TOKEN_MAKER}|you|{t}",
+            f"{signal_keys.TOKEN_MAKER}|any|{t}",
+            f"anthem_static|you|{t}",
+            *((f"{signal_keys.TYPE_MATTERS}|you|{t}",) if is_type_tribal else ()),
+        )
+    ) | (
+        # Every creature type's: a changeling granter ("is every creature type" —
+        # Amorphous Axe, Mistform Ultimus) and a "shares a creature type" payoff
+        # (Coat of Arms).
+        frozenset({"has_changeling|you|", "subtype_ref|you|shared"})
+        if is_type_tribal
+        else frozenset()
+    )
+    group_extras: tuple[SubAvenue, ...] = ()
+    if group:
+        group_extras = tuple(
+            SubAvenue(
+                f"{m.capitalize()}s",
+                f"{m.capitalize()} bodies in the {subj} group",
+                serve=Serve(types=frozenset({m})),
+                search={"card_type": m},
+            )
+            for m in members
+            if m != subj.lower()
+        )
+    return SignalSpec(
+        label=label_t.format(s=subj),
+        avenue=avenue_t.format(s=subj),
+        search={"card_type": subj},
+        serve=Serve(
+            # A creature IS a member of its own tribe (CR 205.3) — match by TYPE-LINE,
+            # not only by the idents of the cards that name it. Without this,
+            # vanilla / oracle-silent members (Dread Shade, Llanowar Elves) were
+            # dropped — fatal for lord-less tribes (Shade/Kraken/Yeti read 0/10).
+            # A spell of the type is a "{s} spell" too (CR 205.3).
+            types=frozenset(members),
+            keywords=frozenset({"changeling"}) if is_type_tribal else frozenset(),
+            # Structural enabler arm (task #96, ADR-0040): a mass type-changer
+            # SERVES the tribe it grows (Leyline of Transformation under a
+            # Sliver commander — the benchmark's falsely-filler build-around),
+            # by its own emitted type_changers idents; the bodies are matched by
+            # type line above.
+            # Wildcard chosen-type payoffs serve EVERY tribe (task B-1):
+            # Herald's Horn credits a Sliver deck exactly as a Goblin deck —
+            # but ONLY on the type_matters lane (verified-review F4): a
+            # "{s} count damage" bodies lane must not credit cost reducers
+            # and anthems that add zero bodies to the ObjectCount it reads.
+            # Type-CHANGERS stay on both tribal-bodies lanes: Maskwood Nexus
+            # genuinely raises the count.
+            signal_idents=mentions
+            | (_type_changer_idents(tuple(members)) if is_type_tribal else frozenset())
+            | (
+                _CHOSEN_TYPE_IDENTS | _chosen_type_named_idents(tribes)
+                if signal.key == signal_keys.TYPE_MATTERS
+                else frozenset()
+            ),
+        ),
+        extras=(
+            _payoff_extra(subj),
+            # Type-changers (Xenograft) are enablers, not payoffs/members — a distinct
+            # lane, only for true tribes (type_matters), not typed-spellcast (B1).
+            *((_enabler_extra(subj),) if is_type_tribal else ()),
+            *group_extras,
+        ),
+    )
+
+
+# Auto-register an avenue for every exhaustively-mined sweep key that doesn't
+# already have a hand-written spec (the same-key widens reuse their existing spec).
+def _humanize(key: str) -> str:
+    base = key.replace("_matters", "").replace("_", " ").strip()
+    return (base[:1].upper() + base[1:]) if base else key
+
+
+_SPECCED_KEYS = {k for (k, _scope) in SPECS}
+for _d in SWEEP_DETECTORS:
+    if _d["key"] in _SPECCED_KEYS:
+        continue  # hand-written spec already covers this axis
+    _ident = (_d["key"], _d["scope"])
+    if _ident in SPECS:
+        continue
+    _polished = SWEEP_LABELS.get(_d["key"])
+    if _polished:
+        _label, _avenue = _polished
+    else:
+        _label = _humanize(_d["key"])
+        _avenue = f"support and payoffs for the {_label.lower()} axis"
+    SPECS[_ident] = _spec(_label, _avenue, _d["regex"])
+
+
+# ── ADR-0026: payoff/source avenue split ──────────────────────────────────────
+# A `<mechanic>_matters` serve fuses an oracle PAYOFF pattern with a type/keyword
+# SOURCE (the cards that ARE the thing). These are the source-role dimensions whose
+# cards form a browsable pool — CR-verified gear/membership, NOT property/payoff
+# keywords. Excluded by design: prowess (CR 702.108, a payoff), exalted (702.83,
+# payoff), proliferate (701.34, an enabler), and modifier keywords
+# (haste/indestructible/trample/the evasion set) that describe a property, not a pool.
+SOURCE_TYPES: frozenset[str] = frozenset(
+    {
+        "equipment",
+        "aura",  # voltron — CR 702.6 (equip) / 702.5 (enchant)
+        "artifact",
+        "enchantment",  # artifacts / enchantments matter
+        "planeswalker",  # superfriends
+        "legendary",
+        "snow",
+        "saga",
+        "arcane",
+        "lesson",
+        "eldrazi",
+        "instant",
+        "sorcery",  # spellslinger fuel (prowess stays on the payoff side)
+        "rogue",
+        "wizard",
+        "warrior",
+        "cleric",  # party members
+        "assassin",
+        "pirate",
+        "warlock",
+        "mercenary",  # outlaws
+    }
+)
+SOURCE_KEYWORDS: frozenset[str] = frozenset({"reconfigure"})  # CR 702.151 — it is gear
+
+_SOURCE_TYPE_LABELS = {
+    "aura": "Auras",
+    "equipment": "Equipment",
+    "artifact": "Artifacts",
+    "enchantment": "Enchantments",
+    "planeswalker": "Planeswalkers",
+    "saga": "Sagas",
+    "instant": "Instants",
+    "sorcery": "Sorceries",
+    "legendary": "Legendaries",
+    "snow": "Snow permanents",
+    "arcane": "Arcane spells",
+    "lesson": "Lessons",
+    "eldrazi": "Eldrazi",
+}
+
+
+def source_split(spec: SignalSpec) -> tuple[Serve, dict] | None:
+    """ADR-0026: if a payoff spec's serve carries a membership-source TYPE, return the
+    (source_serve, source_search) for a derived Source avenue — the cards that ARE the
+    thing the payoff wants. None when there's no source type or no payoff arm — an
+    oracle pattern or the lanes' idents (a pure-membership spec is already a single
+    source-ish lane; don't split it). The caller strips the same dims from the payoff
+    avenue (see ``payoff_serve``), which then pages by its serve
+    (:func:`payoff_search`)."""
+    srv = spec.serve
+    if srv.oracle is None and not srv.signal_idents:
+        return None
+    st = srv.types & SOURCE_TYPES
+    if not st:
+        return None
+    sk = srv.keywords & SOURCE_KEYWORDS  # rides along (reconfigure cards are Equipment)
+    source_serve = Serve(types=st, keywords=sk, not_oracle=srv.not_oracle)
+    return source_serve, {"card_type": tuple(sorted(st))}
+
+
+def payoff_serve(spec: SignalSpec) -> Serve:
+    """The payoff avenue's serve once source dims are split out (ADR-0026): the oracle
+    payoff + any non-source types/keywords (e.g. prowess stays), minus the source
+    type/keyword the Source avenue now owns."""
+    srv = spec.serve
+    return replace(
+        srv,
+        types=srv.types - SOURCE_TYPES,
+        keywords=srv.keywords - SOURCE_KEYWORDS,
+    )
+
+
+def _pluralize(t: str) -> str:
+    # -y → -ies (mercenary → mercenaries), else +s; explicit labels win first.
+    if t in _SOURCE_TYPE_LABELS:
+        return _SOURCE_TYPE_LABELS[t]
+    base = t.title()
+    return base[:-1] + "ies" if base.endswith("y") else base + "s"
+
+
+def source_label(source_types: frozenset[str]) -> str:
+    """A human label for a Source avenue from its types ("Auras & Equipment")."""
+    return " & ".join(_pluralize(t) for t in sorted(source_types))
+
+
+def payoff_search(search: dict) -> dict:
+    """The payoff avenue's search (ADR-0026): the theme's, without the type/preset
+    fetch that pulled the source pool, so the payoff avenue pages by its serve
+    (:func:`payoff_serve`, :func:`theme_page`) and surfaces payoffs (Sram,
+    equip-cost reducers, Sai beside the artifact-token makers), not vanilla
+    gear."""
+    drop = ("card_type", "preset_names", "presets")
+    return {k: v for k, v in search.items() if k not in drop}
+
+
+# The search keys that fetch a pool of their own: a search carrying one pages by
+# it, never by its theme's serve (the spec's page override, ``SignalSpec.search``).
+_POOL_SEARCH_KEYS = (
+    "card_type",
+    "name",
+    "preset_names",
+    "presets",
+    "any_preset_names",
+    "partner_of",
+    "staples",
+)
+
+
+def pages_by_serve(search: Mapping[str, object]) -> bool:
+    """Whether a theme's candidate page is the cards its ``Serve`` admits rather
+    than its search's own fetch — the ONE rule Find (deck-forge) and the tuner's
+    theme pages share. A theme pages by its serve unless its search overrides it
+    with a fetch of its own (``SignalSpec.search``): a tribe's or a source type's
+    card type, a preset — a tribe's serve also admits the generic tribal support
+    that would crowd out its members. An ident serve's payoff avenue, once
+    ADR-0026 split its source type off, pages by its serve too. The caller
+    passes the serve only when it has one."""
+    return not any(search.get(k) for k in _POOL_SEARCH_KEYS)
+
+
+def page_serve(search: Mapping[str, object], serve: Serve | None) -> Serve | None:
+    """The serve a theme's page filters by (:func:`theme_page`), or None: a theme
+    that pages by its serve (:func:`pages_by_serve`) and carries one. A serve that
+    admits nothing on any dimension is none, or its page would be empty."""
+    if serve is None or serve.admits_nothing() or not pages_by_serve(search):
+        return None
+    return serve
+
+
+def theme_page(
+    search: Mapping[str, object], serve: Serve | None
+) -> tuple[dict, Serve | None]:
+    """A theme's candidate page: the ``card_search`` keys it pages by, and the
+    serve that filters the page (:func:`page_serve`), or None. The ONE function
+    deck-forge's Find (``engine.find_candidates``), the tuner's theme pages
+    (``swaps._run_search``) and :func:`search_filters` page a theme through. A
+    theme's page derives from its serve; what its search holds beside (a
+    mana-value band) narrows it. A search that overrides the serve
+    (:func:`pages_by_serve`) pages by its own fetch, and so does a search with no
+    serve to page by: an agent's avenue."""
+    return dict(search), page_serve(search, serve)
+
+
+def serve_page_search(search: Mapping[str, object]) -> dict:
+    """``search`` without the keys that fetch a pool of their own, so it pages by
+    its theme's serve (:func:`pages_by_serve`): a type- or preset-searched
+    theme's broader page — the support its serve admits beyond the type (a
+    tribe's Herald's Horn and Urza's Incubator, Goad's attack payoffs). The
+    search's other keys (a mana-value band) still hold."""
+    return {k: v for k, v in search.items() if k not in _POOL_SEARCH_KEYS}
+
+
+def spec_scope_for(key: str, scope: str) -> str | None:
+    """The scope of the ``SPECS`` entry a subject-less ``(key, scope)`` signal
+    resolves to: exact (key, scope) → (key, any) → the key's first entry; None
+    when the key has no entry. ``spec_for``'s lookup order, owned once."""
+    if (key, scope) in SPECS:
+        return scope
+    if (key, "any") in SPECS:
+        return "any"
+    return next((s for (k, s) in SPECS if k == key), None)
+
+
+def spec_for(signal: Signal) -> SignalSpec | None:
+    """Resolve a spec. Subject-bearing signals build a per-subject spec; otherwise
+    the ``SPECS`` entry at ``spec_scope_for``'s scope."""
+    # A "" subject that is a VALUE (``_EMPTY_SUBJECT_IS_VALUE``) dispatches
+    # dynamic too.
+    if signal.key in _SUBJECT_KEYS and (
+        signal.subject or signal.key in _EMPTY_SUBJECT_IS_VALUE
+    ):
+        return _subject_spec(signal)
+    scope = spec_scope_for(signal.key, signal.scope)
+    return None if scope is None else SPECS[(signal.key, scope)]
+
+
+_STEP_TRIGGERS = frozenset(signal_keys.STEP_TRIGGER_KEYS.values())
+
+
+def avenue_spec_for(signal: Signal) -> SignalSpec | None:
+    """The avenue a DECK signal opens: ``spec_for``'s spec, unless the signal
+    carries a subject on a key that is not a subject key and the spec's serve
+    says that subject is not the theme's.
+
+    A non-subject key's subject is a refinement of one lane (the keyword a team
+    grant hands out, the kind of evasion a body has), and every subject of the
+    key resolves to the key's one ``SPECS`` entry. When that entry's serve
+    names the key's own idents (:meth:`Serve.reads_key`), it is the authority
+    on which subjects the theme counts, and a signal opens the avenue only if
+    the serve counts its ident (:meth:`Serve.counts_ident`, ``key|scope|*``
+    wildcards included): an impulse draw (``cast_from_exile|you|impulse``)
+    does not open "Cast from exile", whose serve leaves impulse out, and a
+    "can't be blocked except by …" body (``evasion_self|you|partial``) does
+    not open the evasion avenue. A membership-floor subject
+    (``signal_keys.MEMBERSHIP_SUBJECTS``: a carrier commander) always opens it,
+    and a step trigger (``signal_keys.STEP_TRIGGER_KEYS``) or a page-only key
+    or doer (:func:`signal_keys.is_page_only`) never does. A serve
+    that does not read the key at all serves something else the key's emitters
+    want (a recursion engine's loop fuel), and every subject opens it.
+    ``spec_for`` stays the per-signal lookup for every other caller."""
+    if signal.key in _STEP_TRIGGERS or signal_keys.is_page_only(
+        signal.key, signal.subject
+    ):
+        return None
+    spec = spec_for(signal)
+    if (
+        spec is None
+        or not signal.subject
+        or signal.key in _SUBJECT_KEYS
+        or (signal.key, signal.subject) in signal_keys.MEMBERSHIP_SUBJECTS
+        or not spec.serve.reads_key(signal.key)
+    ):
+        return spec
+    ident = f"{signal.key}|{signal.scope}|{signal.subject}"
+    return spec if spec.serve.counts_ident(ident) else None
+
+
+def serves(card: dict, signal: Signal) -> bool:
+    """True if ``card`` feeds ``signal`` (scope-aware), on any structured/oracle
+    dimension of the spec's precise ``Serve`` predicate — no longer oracle-only."""
+    spec = spec_for(signal)
+    if spec is None:
+        return False
+    return spec.serve.matches(card)
+
+
+def search_filters(signal: Signal, *, color_identity: str, fmt: str) -> dict:
+    """``card_search.search_cards`` kwargs for the cards that feed ``signal``
+    in-identity: its theme's page (:func:`theme_page`), with ``serve`` set when
+    the theme pages by its serve — the page Find and the tuner show."""
+    spec = spec_for(signal)
+    base: dict = {}
+    if spec is not None:
+        base, serve = theme_page(spec.search, spec.serve)
+        if serve is not None:
+            base["serve"] = serve
+    base["color_identity"] = color_identity
+    base["format"] = fmt
+    return base
+
+
+def _assert_every_producible_key_resolves() -> None:
+    """Key-agreement gate (ADR-0014). Every subject-less key a detector can produce
+    must resolve to a spec. A detector key with no spec used to be a silent no-avenue
+    (extraction worked, ``spec_for`` returned None, the avenue was dropped); now it
+    fails loudly at import — which ``app.py`` / ``ranking.py`` / every test trigger
+    transitively. ``signals`` is imported lazily to keep the module import order
+    one-way (signals never imports signal_specs). A page-only key
+    (``signal_keys.PAGE_ONLY_KEYS``) has no spec by design."""
+    from mtg_utils._analysis.signals import Signal, producible_static_keys
+
+    orphans = sorted(
+        key
+        for key in producible_static_keys() - signal_keys.PAGE_ONLY_KEYS
+        if spec_for(Signal(key=key, scope="any", subject="", text="", source=""))
+        is None
+    )
+    if orphans:
+        msg = (
+            f"signal keys produced by a detector but resolved by no spec: {orphans} — "
+            "add a SPECS entry (or sweep row), or exclude a subject key."
+        )
+        raise AssertionError(msg)
+
+
+_assert_every_producible_key_resolves()

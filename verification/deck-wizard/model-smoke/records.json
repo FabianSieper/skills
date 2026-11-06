@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Core",
+    "type_line": "Legendary Creature — Shapeshifter",
+    "oracle_text": "Core has all activated abilities of creature cards in your graveyard.",
+    "power": "3",
+    "toughness": "3",
+    "cmc": 2,
+    "mana_cost": "{1}{U}",
+    "oracle_id": "Core",
+    "color_identity": [
+      "U"
+    ],
+    "legalities": {
+      "commander": "legal"
+    },
+    "prices": {
+      "eur": "1.00"
+    },
+    "scryfall_uri": "https://example.org/synthetic-card"
+  },
+  {
+    "name": "Island",
+    "type_line": "Basic Land — Island",
+    "oracle_text": "{T}: Add {U}.",
+    "cmc": 0,
+    "mana_cost": "",
+    "oracle_id": "Island",
+    "color_identity": [
+      "U"
+    ],
+    "legalities": {
+      "commander": "legal"
+    },
+    "prices": {
+      "eur": "1.00"
+    },
+    "scryfall_uri": "https://example.org/synthetic-card"
+  },
+  {
+    "name": "Silent Sentinel",
+    "type_line": "Creature — Wizard",
+    "oracle_text": "{1}: Target creature you control gains hexproof until end of turn.\nWhenever another creature enters the battlefield under your control, scry 1.",
+    "power": "0",
+    "toughness": "4",
+    "cmc": 2,
+    "mana_cost": "{1}{U}",
+    "oracle_id": "Silent Sentinel",
+    "color_identity": [
+      "U"
+    ],
+    "legalities": {
+      "commander": "legal"
+    },
+    "prices": {
+      "eur": "1.00"
+    },
+    "scryfall_uri": "https://example.org/synthetic-card"
+  },
+  {
+    "name": "Bright Scholar",
+    "type_line": "Creature — Wizard",
+    "oracle_text": "{T}: Draw a card.\nWhen Bright Scholar enters the battlefield, draw a card.",
+    "power": "1",
+    "toughness": "1",
+    "cmc": 2,
+    "mana_cost": "{1}{U}",
+    "oracle_id": "Bright Scholar",
+    "color_identity": [
+      "U"
+    ],
+    "legalities": {
+      "commander": "legal"
+    },
+    "prices": {
+      "eur": "1.00"
+    },
+    "scryfall_uri": "https://example.org/synthetic-card"
+  },
+  {
+    "name": "Library Robe",
+    "type_line": "Artifact — Equipment",
+    "oracle_text": "Equipped creature gets +2/+2.\nEquipped creature has hexproof.\nEquip {2}",
+    "cmc": 2,
+    "mana_cost": "{1}{U}",
+    "oracle_id": "Library Robe",
+    "color_identity": [
+      "U"
+    ],
+    "legalities": {
+      "commander": "legal"
+    },
+    "prices": {
+      "eur": "1.00"
+    },
+    "scryfall_uri": "https://example.org/synthetic-card"
+  }
+]

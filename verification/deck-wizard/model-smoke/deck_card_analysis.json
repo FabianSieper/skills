@@ -1,0 +1,306 @@
+[
+  {
+    "name": "Bright Scholar",
+    "oracle_hash": "544fe184242728e2c6000c33c3a6df34fb8e5763c4fd9d9c79c536c474fcea16",
+    "job": "A native creature-based card-draw body; from the graveyard its tap-to-draw ability becomes a repeatable draw engine on Core.",
+    "roles": [
+      "card_draw",
+      "value_engine",
+      "commander_enabler"
+    ],
+    "characteristics": "A 1/1 for {1}{U}; fragile in combat and to removal. It can be cast for two mana, but its tap ability normally needs it to survive and be free to tap.",
+    "clause_review": {
+      "0:0": "{T}: Draw a card. On the battlefield this is repeatable card draw, gated by tapping and summoning-sickness rules. In the graveyard Core gains this activated ability; using its {T} cost taps Core, not the card in the graveyard, and Core must be able to tap.",
+      "0:1": "Its ETB trigger draws one card when Bright Scholar itself enters. It is not an activated ability and Core does not gain it from the graveyard; casting or otherwise returning the Scholar to the battlefield can trigger it once."
+    },
+    "states": {
+      "before_commander": {
+        "rating": "medium",
+        "reason": "Can be cast as a 1/1 that replaces itself on entry, then draw repeatedly if it survives and can tap; low body makes that engine vulnerable."
+      },
+      "with_commander": {
+        "rating": "high",
+        "reason": "If Scholar is in the graveyard, Core can tap for one card per activation opportunity after it can tap. This requires both cards and Core in play; Scholar's ETB draw still requires Scholar to enter."
+      },
+      "without_commander": {
+        "rating": "medium",
+        "reason": "As a battlefield creature it retains its own ETB and tap draw; in the graveyard it contributes no active ability without Core."
+      },
+      "behind": {
+        "rating": "medium",
+        "reason": "A cast Scholar immediately draws one card and can later draw again, but a 1/1 is a poor blocker and the repeatable draw is delayed by summoning sickness or tapping constraints. In a wiped or resource-starved position its floor is just the ETB card. "
+      }
+    },
+    "commander_dependency": "medium",
+    "setup_complexity": "medium",
+    "role_compression": "medium",
+    "dead_draw_risk": "low",
+    "plan_fit": "Supports sustaining the ability engine through repeatable card draw from the graveyard and gives a modest draw body as the secondary plan.",
+    "mana_efficiency": "Two mana yields an immediate card if it resolves and enters; repeatable draw costs no mana per activation but consumes Scholar's/Core's tap and requires the creature to be available.",
+    "alternative_costs": "None supplied.",
+    "resilience": "If Scholar is removed into the graveyard while Core remains, the tap ability can still be used through Core. If Core is removed, Scholar's abilities work only while Scholar is on the battlefield; exile or graveyard disruption can remove the engine piece.",
+    "preference_fit": "Good fit for repeatable value and engine resilience, with both a native mode and a graveyard-enabled mode.",
+    "interactions": [
+      {
+        "cards": [
+          "Core"
+        ],
+        "kind": "synergy",
+        "reason": "Core gains Scholar's activated tap-to-draw ability from the graveyard. This requires Core to be able to tap and does not grant the Scholar's ETB trigger."
+      },
+      {
+        "cards": [
+          "Island"
+        ],
+        "kind": "neutral",
+        "reason": "The fixture has 96 Islands, so {U} is readily represented in the source base, though Scholar's draw activation itself costs no mana."
+      }
+    ],
+    "rules_questions": [],
+    "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6"
+  },
+  {
+    "name": "Core",
+    "oracle_hash": "b473ef1f3b30816dbd047560446420740bec11a7b0d57e86fa62be0929d36443",
+    "job": "The central host that turns activated abilities of creature cards in the graveyard into a toolbox of abilities on a 3/3 creature.",
+    "roles": [
+      "commander_enabler",
+      "value_engine",
+      "payoff"
+    ],
+    "characteristics": "A 3/3 legendary creature for {1}{U}, so it is a cheap but exposed commander. Its text supplies only activated abilities of creature cards in the graveyard; it does not grant triggered or static abilities.",
+    "clause_review": {
+      "0:0": "Core has all activated abilities of creature cards in your graveyard. This enables the primary plan, but only after useful creatures reach the graveyard; activated abilities still require their costs and legal targets. The text excludes triggered and static abilities, as the supplied commander model also specifies."
+    },
+    "states": {
+      "before_commander": {
+        "rating": "low",
+        "reason": "Before it is cast, this is a commander in the zone and does not provide its ability; no other supplied card establishes the graveyard engine."
+      },
+      "with_commander": {
+        "rating": "high",
+        "reason": "It enables activated abilities on graveyard creatures, but only those actually loaded and only if their costs can be paid. The fixture has Scholar's tap-to-draw as a relevant ability; using that tap cost requires Core to be able to tap."
+      },
+      "without_commander": {
+        "rating": "low",
+        "reason": "When unavailable as a battlefield host, graveyard-only activated abilities have no host; creatures on the battlefield retain their native abilities."
+      },
+      "behind": {
+        "rating": "medium",
+        "reason": "A 3/3 body may block and can provide access to loaded utility/draw abilities, but it has no established finisher and the fixture has no demonstrated graveyard delivery. It is vulnerable to removal."
+      }
+    },
+    "commander_dependency": "very_high",
+    "setup_complexity": "high",
+    "role_compression": "high",
+    "dead_draw_risk": "medium",
+    "plan_fit": "Directly embodies the primary graveyard ability engine. Its usefulness depends on both deploying Core and placing useful creature cards in the graveyard, a known bottleneck.",
+    "mana_efficiency": "Two mana for a 3/3 host is efficient, but that rate alone does not solve graveyard setup or protect the engine.",
+    "alternative_costs": "None supplied; the commander may be recast from the command zone under the format's normal commander rules, with applicable tax.",
+    "resilience": "Removal shuts off abilities sourced from graveyard cards until Core returns. Recursion/redeployment can restore the host, but the fixture has no explicit commander protection or graveyard delivery proof beyond the robe and Sentinel's conditional protection.",
+    "preference_fit": "Essential to the preferred repeatable ability engine, but concentrated dependency makes the available protection and backup creature value important.",
+    "interactions": [
+      {
+        "cards": [
+          "Bright Scholar"
+        ],
+        "kind": "synergy",
+        "reason": "If Scholar is in the graveyard, Core can use its activated {T}: draw ability, tapping Core to pay the tap cost; its ETB draw is not copied."
+      },
+      {
+        "cards": [
+          "Silent Sentinel"
+        ],
+        "kind": "synergy",
+        "reason": "Sentinel can target Core with its {1} ability to grant hexproof for the turn; its other-creature ETB trigger can scry when Core enters."
+      },
+      {
+        "cards": [
+          "Library Robe"
+        ],
+        "kind": "synergy",
+        "reason": "Equipping Core grants +2/+2 and hexproof, protecting the central host from opponents' targeted effects while equipped; equip requires {2} and sorcery timing."
+      }
+    ],
+    "rules_questions": [
+      {
+        "id": "core-tap-sickness",
+        "question": "When Core gains a {T}-cost activated ability from a creature card in the graveyard, does the normal summoning-sickness restriction on tapping Core apply? The evaluation assumes it does because Core is the permanent paying the copied ability's tap cost."
+      }
+    ],
+    "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6"
+  },
+  {
+    "name": "Island",
+    "oracle_hash": "12dbd3282f95351003cd710f93c5c4d141742dbc803e017426e63e184590290e",
+    "job": "A basic blue source that casts the blue two-mana creatures and supports repeated deployment of Core.",
+    "roles": [
+      "land",
+      "mana_fixing"
+    ],
+    "characteristics": "Basic Land — Island; quantity 96. Enters untapped under the supplied basic land rules and taps for {U}; it is not a spell and has no body or non-mana mode.",
+    "clause_review": {
+      "0:0": "{T}: Add {U}. This is one unconditional blue mana when untapped; tapping it consumes the land's mana availability for the turn."
+    },
+    "states": {
+      "before_commander": {
+        "rating": "high",
+        "reason": "Supplies blue mana to cast Core and other blue cards; no other colors are required by the supplied fixture."
+      },
+      "with_commander": {
+        "rating": "high",
+        "reason": "Continues to supply blue mana for spells and recasting Core; it does not pay for Scholar's tap-to-draw ability."
+      },
+      "without_commander": {
+        "rating": "high",
+        "reason": "Remains a reliable blue source for the native creature plan even when Core is unavailable."
+      },
+      "behind": {
+        "rating": "medium",
+        "reason": "Land drops support rebuilding and casting cards, but an extra land does not itself stabilize the board or provide a threat; the unusually high fixture quantity may cause flood, depending on draw and game length."
+      }
+    },
+    "commander_dependency": "very_low",
+    "setup_complexity": "low",
+    "role_compression": "low",
+    "dead_draw_risk": "medium",
+    "plan_fit": "Provides the sole required color and supports the two-mana curve and commander redeployment; its 96-copy quantity may exceed useful land needs in typical Commander play.",
+    "mana_efficiency": "One card yields one untapped {U} each turn, an unconditional source; repeated excess land draws have low marginal value.",
+    "alternative_costs": "None.",
+    "resilience": "Basic lands are not affected by ordinary creature removal and are not dependent on Core; no land-specific protection or utility ability is present.",
+    "preference_fit": "Reliable blue access supports casting and recasting the engine, while the quantity should be evaluated in deck-structure diagnosis.",
+    "interactions": [],
+    "rules_questions": [],
+    "land": {
+      "entry_condition": "Untapped basic land; no condition supplied.",
+      "fetchability": "Basic land with the Island subtype; fetchable by effects that search for an Island or a basic land, subject to those effects' wording.",
+      "utility": "Taps for {U}; no additional non-mana use supplied.",
+      "source_reliability": "Unconditional blue source when untapped; provides no other color.",
+      "unconditional_colors": [
+        "U"
+      ],
+      "conditional_colors": []
+    },
+    "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6"
+  },
+  {
+    "name": "Library Robe",
+    "oracle_hash": "81f823b9cd49805840004a99a4095f3d9ba2f7d2a45df3ecc95d145a5957af6b",
+    "job": "Protects an equipped creature from opponents' targeted effects and makes it a larger body, especially valuable when Core hosts the graveyard engine.",
+    "roles": [
+      "commander_protection",
+      "utility"
+    ],
+    "characteristics": "Equipment for {1}{U}; it must be on the battlefield and attached. Equipping costs {2} at sorcery timing; it can be moved later for the same equip cost.",
+    "clause_review": {
+      "0:0": "Equipped creature gets +2/+2, improving combat/blocking and Core's body but not directly enabling its ability engine.",
+      "0:1": "Equipped creature has hexproof, preventing opponents from targeting it while equipped. This does not stop untargeted removal, sweepers, or effects that target the Equipment itself.",
+      "0:2": "Equip {2}; this is a sorcery-speed activation and requires an eligible creature and two mana. The initial deployment plus equip costs four mana total."
+    },
+    "states": {
+      "before_commander": {
+        "rating": "low",
+        "reason": "Without a creature to equip it to, it provides no protection or stats; the fixture has creatures, but equipment competes for early mana."
+      },
+      "with_commander": {
+        "rating": "high",
+        "reason": "On Core it supplies hexproof against targeted interaction and adds +2/+2, helping retain the engine host. It costs {1}{U} plus {2} equip and does not stop untargeted answers."
+      },
+      "without_commander": {
+        "rating": "medium",
+        "reason": "Can protect Bright Scholar or Sentinel and add stats, though this shifts protection away from Core and grants no value when there is no creature to equip."
+      },
+      "behind": {
+        "rating": "low",
+        "reason": "If no creature survives, the four-mana deployment-plus-equip investment does not stabilize the board; if Core or another creature is present, hexproof may help preserve it."
+      }
+    },
+    "commander_dependency": "medium",
+    "setup_complexity": "medium",
+    "role_compression": "medium",
+    "dead_draw_risk": "medium",
+    "plan_fit": "Matches the resilience preference by protecting the central host and improving its combat presence, but it does not establish the graveyard or win condition.",
+    "mana_efficiency": "Four mana total to cast and equip before it protects a creature; afterward it is durable value unless the Equipment or creature is removed.",
+    "alternative_costs": "Equip {2}; sorcery timing. No alternate casting cost supplied.",
+    "resilience": "If the creature is removed, the Equipment remains and can be equipped to a later creature for {2}; if the Equipment is removed, its bonuses end. Hexproof does not prevent untargeted removal or board wipes.",
+    "preference_fit": "Useful resilience for the engine host, tempered by delayed protection and the need to pay equip costs.",
+    "interactions": [
+      {
+        "cards": [
+          "Core"
+        ],
+        "kind": "synergy",
+        "reason": "Core is the primary host; equip for {2} to grant it hexproof and +2/+2, protecting it from opponent-targeted effects while equipped."
+      },
+      {
+        "cards": [
+          "Silent Sentinel"
+        ],
+        "kind": "neutral",
+        "reason": "Sentinel can provide temporary hexproof to the equipped creature, but the Robe already supplies hexproof while attached; the overlapping protection may be redundant for that turn. Sentinel's scry trigger remains separate."
+      }
+    ],
+    "rules_questions": [],
+    "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6"
+  },
+  {
+    "name": "Silent Sentinel",
+    "oracle_hash": "4c8e19285ebd4fa232c3cff68bb73d0a720a7ec2b356eebad77b67bdf0e9fb5b",
+    "job": "A 0/4 defensive creature that can give a creature temporary hexproof and turns later creature entries into card selection through scry.",
+    "roles": [
+      "commander_protection",
+      "card_selection",
+      "utility"
+    ],
+    "characteristics": "A 0/4 for {1}{U}; durable blocker but no power. The hexproof ability costs {1} each activation and can target any creature you control; summoning sickness does not prevent this non-tap activation.",
+    "clause_review": {
+      "0:0": "{1}: Target creature you control gains hexproof until end of turn. Can protect Core or another creature from opponent-targeted effects if held open and the target is legal. Does not stop untargeted removal or effects that do not target.",
+      "0:1": "Whenever another creature enters under your control, scry 1. This triggers for Core entering, and for other later creatures, but not for Sentinel entering itself. It is a triggered ability, so Core does not gain it while Sentinel is in the graveyard."
+    },
+    "states": {
+      "before_commander": {
+        "rating": "medium",
+        "reason": "Can block with toughness four and protect another creature for {1}; scry requires another creature to enter, so its value depends on subsequent creature deployment."
+      },
+      "with_commander": {
+        "rating": "high",
+        "reason": "Protects Core with an activated {1} ability and scries when Core enters. Keeping one mana open is required, and the scry does not draw a card."
+      },
+      "without_commander": {
+        "rating": "medium",
+        "reason": "Still protects other creatures and scries on their entry; its 0 power does not advance combat damage by itself."
+      },
+      "behind": {
+        "rating": "medium",
+        "reason": "A 0/4 can block smaller attackers and protect a relevant creature with mana open, but cannot remove attackers, and scry only improves selection when creatures continue to enter."
+      }
+    },
+    "commander_dependency": "low",
+    "setup_complexity": "low",
+    "role_compression": "medium",
+    "dead_draw_risk": "low",
+    "plan_fit": "Direct protection supports the commander-dependent engine; repeated creature entries add selection, while Sentinel remains useful without Core.",
+    "mana_efficiency": "Two mana for a high-toughness body; each protection activation costs {1}. Scry is free but contingent on another creature entering.",
+    "alternative_costs": "None supplied. The {1} ability has no tap cost and may be activated while Sentinel has summoning sickness.",
+    "resilience": "If Sentinel is removed, its protection and future scry triggers end; it has no supplied recursion. Hexproof protects a targeted creature for one turn only, not Sentinel unless Sentinel itself is targeted.",
+    "preference_fit": "Strong fit for preserving the repeatable engine and generating modest selection from normal creature deployment.",
+    "interactions": [
+      {
+        "cards": [
+          "Core"
+        ],
+        "kind": "synergy",
+        "reason": "Core entering triggers Sentinel's scry, and Sentinel can pay {1} to give Core hexproof for the turn against targeted effects."
+      },
+      {
+        "cards": [
+          "Library Robe"
+        ],
+        "kind": "neutral",
+        "reason": "Both can grant hexproof to a creature, creating a protection overlap while Core is equipped; Sentinel can still protect another creature or protect one before the Robe is equipped."
+      }
+    ],
+    "rules_questions": [],
+    "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6"
+  }
+]

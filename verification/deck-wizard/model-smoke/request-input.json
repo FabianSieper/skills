@@ -1,0 +1,14 @@
+{
+  "deck_source": "fixture:graveyard-engine",
+  "format": "commander",
+  "goals": [
+    "Protect and sustain the graveyard ability engine"
+  ],
+  "preferences": [
+    "repeatable abilities and resilience"
+  ],
+  "budget": {
+    "currency": "EUR"
+  },
+  "protected_cards": []
+}

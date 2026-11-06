@@ -1,0 +1,28 @@
+{
+  "format": "commander",
+  "commanders": [
+    {
+      "name": "Core",
+      "quantity": 1
+    }
+  ],
+  "cards": [
+    {
+      "name": "Island",
+      "quantity": 96
+    },
+    {
+      "name": "Silent Sentinel",
+      "quantity": 1
+    },
+    {
+      "name": "Bright Scholar",
+      "quantity": 1
+    },
+    {
+      "name": "Library Robe",
+      "quantity": 1
+    }
+  ],
+  "sideboard": []
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "existing",
+  "context_digest": "90e6c99f43f31e82d144cf9363b4bfad11ffeef82bf510d82568fdb91ef320c6",
+  "cards": [],
+  "commander_model": {
+    "primary_plan": "Supply useful activated creature abilities in the graveyard for Core, then sustain and protect that engine.",
+    "secondary_plan": "Use creatures on the battlefield when the graveyard or commander is unavailable.",
+    "win_conditions": "No adequate finisher is established in this deliberately small synthetic fixture; diagnose rather than invent.",
+    "setup_sequence": "Load the graveyard and deploy Core; this fixture lacks proven delivery and must be evaluated accordingly.",
+    "recovery_plan": "Native creatures can use their own abilities; preserve protection and draw after removal.",
+    "bottlenecks": "Graveyard delivery, commander removal, and an unestablished winning payoff.",
+    "realistic_resources": "Evaluate activation mana and tapping constraints explicitly; do not assume summoning-sick creatures can tap.",
+    "user_alignment": "User seeks repeatable ability-engine resilience.",
+    "commander_legality_evidence": "Synthetic Legendary Creature; fixture legality is given. Real pairings would require rules evidence.",
+    "commander_clauses": {
+      "Core": {
+        "0:0": "Activated abilities of creature cards in the graveyard are available on Core; triggered/static abilities are not granted by this text."
+      }
+    },
+    "interactions": [],
+    "rules_questions": [],
+    "predictions": {
+      "without_commander": "Creature permanents retain their native abilities; graveyard-only tools have no active host.",
+      "after_removal": "Need protection or redeploy the host; draw from actual creatures may remain available.",
+      "behind": "Protection without a meaningful permanent can have low immediate floor; repeatable draw may recover resources."
+    }
+  },
+  "remaining": 0,
+  "instructions": "Read references/existing-card-evaluation.md; return one complete record per card.",
+  "packet_id": "2947cc1727130cd1339876303bc9140f8df237ce9c0cb1bc85f74c97b90e8089"
+}
