@@ -1,9 +1,14 @@
 # Arbeitsstand: Deck-Wizard-Zusammenführung
 
-Aktuell (2026-11-07): Commander-Optimierung als lokaler Quellkandidat auf
-`optimize/commander-workflow` umgesetzt. 85 Python- und 13 Repository-Tests bestehen.
-Installierte Kopien bleiben auf dem vorherigen Stand. Messungen, Änderungen und
-offene Modellprüfungen: [OPTIMIZATION.md](OPTIMIZATION.md).
+Aktuell (2026-11-07): Commander-Optimierung auf `optimize/commander-workflow`
+committet und auf ausdrücklichen Nutzerwunsch per `npx skills@1.7.1` neu installiert.
+85 Python-Tests bestehen auch in der installierten Kopie; alle 769 Paketdateien
+stimmen mit der Quelle überein. Vorherige lokale Installationsänderungen sind in
+einem verifizierten Backup erhalten. Der Push scheiterte an der DNS-Auflösung von
+GitHub; die GitHub-API war ebenfalls nicht erreichbar.
+
+Installationsnachweis: [commander-installation.json](commander-installation.json).
+Messungen, Änderungen und offene Modellprüfungen: [OPTIMIZATION.md](OPTIMIZATION.md).
 
 ## Vorheriger Installationsstand
 

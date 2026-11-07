@@ -45,7 +45,8 @@ serialized transport sizes using equivalent synthetic outputs.
 Real-model recommendation and wall-time comparisons remain `not-run` until actual
 model access/profiles are available. Use identical tasks in fresh sessions and at
 least three paired repetitions, with blinded assessment of recommendation quality.
-This candidate is not a model-validated release and does not update installations.
+This candidate is not a model-validated release. Installation was subsequently
+explicitly requested and completed; see the delivery state below.
 
 ## Implemented behavior
 
@@ -108,7 +109,13 @@ are the more significant expected gains; real-model measurements remain necessar
   13 existing repository tests pass.
 - Governance, foundation/meta tooling and existing regression criteria are unchanged.
 - Real-model quality comparison, model wall time and live API integration: `not-run`.
-- Source candidate only; no installed copy, push or release was updated.
+- Source changes committed as `36badfa84085d753638e97fdddc7b729be453738`.
+- Subsequently reinstalled on explicit user request with `npx skills@1.7.1` from
+  the local checkout. All 769 source files match; the installed CLI and all 85
+  tests pass. Previous local changes and the registry were backed up and verified.
+- Push attempted, but GitHub DNS resolution and API access failed. The branch is
+  local; a successful remote publication is not claimed.
+- [Installation receipt](commander-installation.json). Model validation remains open.
 
 Fingerprint contract version 2 requires normal revalidation of old run receipts.
 Historical artifacts are retained; receipt hashes must not be manually upgraded.

@@ -1,0 +1,27 @@
+{
+  "installed_at": "2026-11-07T12:47:51.753048+00:00",
+  "source_commit": "36badfa84085d753638e97fdddc7b729be453738",
+  "source_branch": "optimize/commander-workflow",
+  "source": "skills/games/deck-wizard in this repository",
+  "installed": "~/.agents/skills/deck-wizard",
+  "installer": "npx --offline --yes skills@1.7.1 add <local-repo> --global --agent codex --skill deck-wizard --yes --json",
+  "installation_scope": "global, Codex, canonical .agents directory",
+  "backup": "verified local backup outside repository; local receipt preserves exact location",
+  "previous_local_changes_preserved": true,
+  "source_files_verified": 769,
+  "skill_sha256": "67bb7ee042759c7a03ee7d5ac53a961c0868e80bc669ed4b75d272cb5aa3340f",
+  "navigation_unchanged": true,
+  "unrelated_registry_entries_unchanged": true,
+  "source_runtime_restored": true,
+  "runtime_setup": "uv sync --offline; independent Python 3.13.16 environment",
+  "installed_cli_check": "deck-research next --help: pass",
+  "installed_regression_tests": 85,
+  "installed_test_result": "85 passed in 2.57s",
+  "session_discovery_after_restart": "not-run",
+  "real_model_quality_comparison": "not-run",
+  "push": {
+    "status": "failed",
+    "command": "git push -u origin optimize/commander-workflow",
+    "reason": "Could not resolve host: github.com; GitHub API was also unreachable"
+  }
+}
