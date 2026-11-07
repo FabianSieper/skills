@@ -1,4 +1,4 @@
 interface:
-  display_name: "MTG Deck Wizard"
-  short_description: "Decks verstehen, prüfen und gezielt verbessern"
-  default_prompt: "Verwende $deck-wizard. Arbeite in persistenten kleinen Schritten, analysiere alle aktiven Karten vor der Suche und validiere jeden ADD/CUT-Vorschlag."
+  display_name: "Commander Deck Wizard"
+  short_description: "Commander-Decks verstehen und gezielt verbessern"
+  default_prompt: "Verwende $deck-wizard für Commander. Nutze deck-research next, analysiere alle aktiven Karten vor der Suche und validiere jeden ADD/CUT-Vorschlag."

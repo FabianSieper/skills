@@ -57,8 +57,12 @@ refresh missing data before concluding a promising candidate is unsuitable.
 
 ## Interpret eligible candidates
 
-Run `packet <run> --kind candidates --size 8`. Use the same complete record schema
-as existing-card-evaluation.md, plus:
+Run `next <run>`. Use the compact per-card schema from the existing-card phase:
+`card` is its 1-based string position in this packet; the runner binds name/hash.
+Every job, characteristic, clause, four states, rating, deployment/floor assessment,
+interaction and rule question remains required. State `same_as` references require
+identical ratings and explanations. If this is a fresh context, read
+existing-card-evaluation.md for that schema. Add:
 
 ```json
 "fit": "high",
@@ -67,14 +71,21 @@ as existing-card-evaluation.md, plus:
 ```
 
 `fit`: `very_high`, `high`, `medium`, `niche`, `reject`. Only high/very_high may enter
-the final change plan. Use the packet's diagnosis and inspect only the relevant
-current role competitors. Compare real floor, role compression, costs, timing,
+the final change plan. Use the packet's diagnosis and complete role-provider index.
+Retrieve relevant current competitors with `competitors <run> --roles <role> ...`
+or `--names "Exact Card" ...`; this returns all matches with full paragraphs and
+validated assessments. Add other roles/names when an interaction requires them.
+Compare real floor, role compression, costs, timing,
 resilience and user preferences. Multiple useful jobs beat merely multiple lines
 of text. Avoid pseudo-precision such as 93.7/100.
+
+Interpret gameplay and mana costs independently of current monetary prices. The
+runner rechecks monetary eligibility and printing selection separately; a price
+refresh must not turn a saved gameplay comparison into a stale price claim.
 
 Flag each unusual interaction in `rules_questions`; do not promote a theoretical
 combo whose critical transition is unverified. Note required pieces, access to
 them, total mana, removal windows and whether the candidate works alone.
-Submit with `accept-batch`, then `complete <run> candidates` after all eligible
-records are covered. Group final comparisons by job; prevent combat/finisher
+Submit with `next <run> --packet <packet> --response <response>`; after all eligible
+records are covered it validates coverage and advances. Group final comparisons by job; prevent combat/finisher
 options from crowding out measured protection, draw or mana needs.

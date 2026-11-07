@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "deck-wizard"
 version = "0.1.0"
-description = "MTG deck building and tuning for all formats (shared from mtg-utils)"
+description = "Paper Commander deck research and tuning with the mtg-utils toolkit"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.0",

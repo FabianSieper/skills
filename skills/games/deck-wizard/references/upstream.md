@@ -15,8 +15,9 @@ Canonical local source is this repository's `skills/games/deck-wizard`.
 `references/origin.json` is generated from the repository catalog.
 The new `mtg_utils.research` coordinator reuses the existing format/name/legality
 tooling and bulk/sidecar caches. The imported `mtg_utils` modules remain the
-implementation of the existing CLIs. Upstream behavior notes are retained in
-branch-specific references; dated notes require current-source verification.
+implementation of the existing CLIs. This skill's supported workflow is now paper
+Commander only; unrelated format guides are removed from the active package.
+Historical baseline instructions remain under the repository's verification tree.
 
 Maintenance evidence, baseline instructions and tests live in
 `verification/deck-wizard` at repository root. They are deliberately not discovered

@@ -2,7 +2,11 @@
 
 Read at initialization or when an artifact fails validation. Commands run as
 `uv run --directory <skill-dir> deck-research <command> <absolute-run> ...`.
-The runner coordinates the existing toolkit; it does not generate interpretations.
+The runner coordinates the existing toolkit for paper Commander; it does not
+generate interpretations. `next <run>` advances deterministic work and returns the
+next interpretive task. `next --complete <phase>` validates a saved authored phase;
+`next --packet <packet> --response <response>` accepts rows and continues. These
+commands retain the validators of the individual operations below.
 
 ## Request
 
@@ -42,8 +46,8 @@ mutually exclusive alternatives separately; they are not one validated deck.
 If fewer justified swaps exist than requested, report the shortfall and causes.
 
 Budget means per-card and gross addition cost in one currency. Shipping and proceeds
-from cuts are excluded. Owned-copy and Arena wildcard accounting remain the
-`mark-owned`/`price-check` workflow. A monetary check does not verify wildcards.
+from cuts are excluded. Owned-copy accounting remains the `mark-owned`/`price-check`
+workflow; this skill does not budget Arena wildcards.
 `max_price_eur` is accepted as a legacy per-card alias.
 `retire_roles` is empty by default. Populate it only from an explicit user decision
 to abandon a function/strategy, recording that decision in the request. It allows
@@ -91,9 +95,14 @@ Never manually edit them into a passing state.
 - Goals/preferences invalidate understanding and downstream phases.
 - External exclusions invalidate filtering; deck interpretation/search is reusable.
 - Budget/freshness changes repeat filtering and proposal validation. Search remains
-  reusable; candidate analysis survives when the filtered pool is unchanged.
+  reusable. Each candidate analysis is keyed to that card's rules content and the
+  current deck/commander/diagnosis/preferences, independently of other candidates.
+  Added candidates need their own analysis; removed candidates drop from active
+  coverage. Changed card text/cost/type or deck context requires new interpretation.
 - Output-only changes regenerate the report.
-- Market-only refresh with identical Oracle records preserves understanding.
+- Market-only refresh preserves interpretation. Printing IDs and printed/flavor
+  aliases stay available for identity/exclusion checks but do not change rules
+  fingerprints. A cheapest-printing switch still repeats current market/final gates.
 - Missing/corrupt artifacts require repair. Final delivery rechecks actual age.
 
 The runner does not poll external services autonomously. At resume refresh deck and
@@ -105,3 +114,8 @@ Deterministic checks prove shape, coverage, counts and constraints. They cannot
 prove a model's strategic interpretation. Oracle evidence, rules reviews and a
 separate challenger cover that gap; smaller-model quality must be measured rather
 than inferred from these instructions.
+
+Fingerprint contract version 2 deliberately invalidates old version-1 receipts;
+keep their artifacts as history and revalidate through the normal phases. Never
+rewrite old receipt hashes to make a migrated run appear current. New work uses
+the per-card reuse above. Legacy full-response commands remain supported.

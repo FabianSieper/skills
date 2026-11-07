@@ -1,6 +1,7 @@
 # Aggregate roles and diagnose slot pressure
 
-For structure: run `deck-research aggregate <run>`. It writes role counts/groups,
+`next` performs structure automatically after complete existing-card coverage;
+`deck-research aggregate <run>` is also available. It writes role counts/groups,
 physical count, front-face lands, land options, curve, commander dependency and
 conditional/unconditional land sources. Role totals overlap intentionally.
 

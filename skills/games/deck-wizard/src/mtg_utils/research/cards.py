@@ -68,6 +68,18 @@ def clauses(card):
     return result
 
 
+def rules_content(card):
+    """Printing metadata remains available for resolution, outside rules identity."""
+    result = {
+        key: value
+        for key, value in card.items()
+        if key not in ("id", "printed_name", "flavor_name", "oracle_hash")
+    }
+    if result.get("card_faces"):
+        result["card_faces"] = [rules_content(face) for face in result["card_faces"]]
+    return result
+
+
 def oracle_record(card):
     for key in ("name", "type_line"):
         nonempty(card.get(key), f"card.{key}")
@@ -120,7 +132,7 @@ def oracle_record(card):
             f"Incomplete face data: {card['name']}",
         )
     result["clauses"] = clauses(result)
-    result["oracle_hash"] = digest(result)
+    result["oracle_hash"] = digest(rules_content(result))
     return result
 
 

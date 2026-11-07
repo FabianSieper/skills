@@ -10,7 +10,7 @@ Nutzerauftrag ersetzt; ihre Git-Historie bleibt erhalten.
 | `create-skill` | Neue wiederverwendbare Abläufe eingrenzen, kompakt entwerfen und testbar machen. |
 | `improve-skill` | Lernbedarf diagnostizieren, richtig zuordnen, knapp bestätigen lassen und gezielt verbessern. |
 | `coding-conventions` | Selbstdokumentierenden Code durch Namen, Struktur und notwendige Begründungen schreiben. |
-| `deck-wizard` | Magic-Decks bauen und analysieren, einschließlich Archidekt-Import, persistenter Commander-Analyse und geprüfter ADD/CUT-Paare. |
+| `deck-wizard` | Commander-Decks bauen und analysieren, mit Archidekt-Import, wiederverwendbaren Bewertungen und geprüften ADD/CUT-Paaren. |
 
 **Vorhanden:** vier Skills, gemeinsame Standards, portable Ressourcen,
 Herkunftsmanifeste, Bootstrap-Fragment, 38 Testdefinitionen und lokale Prüfhelfer.
@@ -71,3 +71,5 @@ Verhaltens-/Integrationsnachweisen. Keine autonome Veröffentlichung freigegeben
 Die lokale Zusammenführung von Deck-Wizard und Archidekt-Optimizer ist unter
 [Deck-Wizard-Prüfstand](verification/deck-wizard/VALIDATION.md) dokumentiert;
 der [Skill-Einstieg](skills/games/deck-wizard/SKILL.md) beschreibt den Ablauf.
+Die [Commander-Optimierung](verification/deck-wizard/OPTIMIZATION.md) dokumentiert
+den aktuellen Quellkandidaten, Messwerte und noch ausstehende Modellvergleiche.

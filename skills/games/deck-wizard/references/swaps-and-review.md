@@ -79,4 +79,6 @@ Write `strategic_review.json`:
 Use `mode: separate_passes` when that is what happened. Real close calls belong in
 the report as choices; unresolved contested pairs do not receive final approval.
 A commander replacement is a separate user decision, not an ordinary slot cut.
-Run `complete <run> review`, then `validate <run>`.
+Before completing review, read output-format.md and perform the available
+supplementary mana/combo/proposal audits. Reconcile any new findings, then run
+`next <run> --complete review` for current validation and report generation.

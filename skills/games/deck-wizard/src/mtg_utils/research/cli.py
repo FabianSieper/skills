@@ -55,14 +55,15 @@ from .storage import (
     require,
     write,
 )
+from .transport import packet_card
 
 
 def normalize_request(raw):
     request = dict(raw)
     request.setdefault("format", "commander")
     require(
-        get_format(request["format"]).has_commander,
-        "Persistent research currently covers Commander/Brawl; use the constructed/limited references for other formats",  # noqa: E501 - complete diagnostic or template literal
+        request["format"] == "commander",
+        "This skill covers paper Commander; use a separate workflow for other formats",
     )
     nonempty(request.get("deck_source"), "deck_source")
     for key in (
@@ -396,6 +397,122 @@ def report(run):
     }
 
 
+def lookup_cards(run, names):
+    require(names, "Choose exact active card names")
+    require(
+        run.statuses()["data"] == "complete", "Import current full card records first"
+    )
+    cards = {card["name"]: card for card in run.load("card_data.json")}
+    require(set(names) <= cards.keys(), "Card name is not active")
+    entries = run.load("active_cards.json")
+    return [
+        {
+            "entries": [row for row in entries if row["name"] == name],
+            "card": packet_card(cards[name], compact=True),
+        }
+        for name in sorted(set(names))
+    ]
+
+
+def competitors(run, *, roles=(), names=()):
+    require(roles or names, "Choose roles or exact active card names")
+    require(set(roles) <= ROLES, "Unknown competitor role")
+    require(
+        run.statuses()["structure"] == "complete",
+        "Aggregate current existing-card analyses first",
+    )
+    cards = {card["name"]: card for card in run.load("card_data.json")}
+    require(set(names) <= cards.keys(), "Competitor name is not active")
+    entries = {row["name"]: row for row in run.load("active_cards.json")}
+    return [
+        {
+            "entry": entries[row["name"]],
+            "card": packet_card(cards[row["name"]], compact=True),
+            "evaluation": row,
+        }
+        for row in run.load("deck_card_analysis.json")
+        if row["name"] in names or set(row["roles"]) & set(roles)
+    ]
+
+
+def next_operation(run, args):
+    require(
+        bool(args.packet) == bool(args.response), "Supply both --packet and --response"
+    )
+    require(
+        not (args.response and args.complete),
+        "Accept a response or complete a phase, one at a time",
+    )
+    if args.response:
+        accepted = accept_batch(run, args.packet, args.response, partial=True)
+        if accepted.get("errors"):
+            return {"status": "repair", **accepted}
+    if args.complete:
+        complete(run, args.complete)
+    advanced = []
+    for _ in STAGES:
+        status = run.status()
+        stage = status["next"]
+        if stage is None:
+            if not advanced or advanced[-1] != "report":
+                report(run)
+            return {
+                "status": "complete",
+                "advanced": advanced,
+                "report": str(run.root / "report.html"),
+            }
+        if stage in ("existing", "candidates"):
+            result = packet(
+                run, stage, args.size, compact=True, max_chars=args.max_chars
+            )
+            if result["count"]:
+                return {
+                    "status": "work",
+                    "next": stage,
+                    "read": status["read"],
+                    "advanced": advanced,
+                    **result,
+                    "task": read(result["packet"]),
+                }
+            complete(run, stage)
+        elif stage == "structure":
+            aggregate(run)
+        elif stage == "filter":
+            candidate_filter(run)
+        elif stage == "exclusions" and not run.request["external_exclusion_sources"]:
+            if not (run.root / "external_blacklist.json").exists():
+                run.save("external_blacklist.json", {"names": [], "sources": []})
+            complete(run, stage)
+        elif stage == "rules":
+            questions = rules_questions(run)
+            run.save("rules_review_queue.json", questions)
+            if questions:
+                return {
+                    "status": "work",
+                    "next": stage,
+                    "read": status["read"],
+                    "advanced": advanced,
+                    "questions": questions,
+                }
+            run.save("rules_review.json", [])
+            complete(run, stage)
+        elif stage == "final":
+            final_validation(run)
+        elif stage == "report":
+            report(run)
+        else:
+            return {
+                "status": "work",
+                "next": stage,
+                "read": status["read"],
+                "inputs": status["inputs"],
+                "outputs": status["outputs"],
+                "advanced": advanced,
+            }
+        advanced.append(stage)
+    raise ResearchError("Phase advancement did not converge")
+
+
 def parser():
     root = argparse.ArgumentParser(
         description="Persistent Commander analysis: status selects the next evidence-gated phase"  # noqa: E501 - complete diagnostic or template literal
@@ -416,6 +533,9 @@ def parser():
         "rules-queue",
         "validate",
         "report",
+        "next",
+        "competitors",
+        "cards",
     ):
         sub = commands.add_parser(command)
         sub.add_argument("run", help="Absolute per-deck working directory")
@@ -454,6 +574,19 @@ def parser():
                 "--kind", required=True, choices=("existing", "candidates")
             )
             sub.add_argument("--size", default=8, type=int)
+            sub.add_argument("--compact", action="store_true")
+            sub.add_argument("--max-chars", type=int)
+        if command == "next":
+            sub.add_argument("--packet")
+            sub.add_argument("--response")
+            sub.add_argument("--complete", choices=tuple(STAGES))
+            sub.add_argument("--size", default=8, type=int)
+            sub.add_argument("--max-chars", default=24000, type=int)
+        if command == "competitors":
+            sub.add_argument("--roles", nargs="+", default=[])
+            sub.add_argument("--names", nargs="+", default=[])
+        if command == "cards":
+            sub.add_argument("--names", nargs="+", required=True)
         if command == "accept-batch":
             sub.add_argument("--packet", required=True)
             sub.add_argument("--response", required=True)
@@ -467,6 +600,12 @@ def execute(args):
     if args.command == "init":
         return initialize(args.run, args.request)
     run = Run(args.run)
+    if args.command == "next":
+        return next_operation(run, args)
+    if args.command == "competitors":
+        return competitors(run, roles=args.roles, names=args.names)
+    if args.command == "cards":
+        return lookup_cards(run, args.names)
     if args.command == "update-request":
         run.save("request.json", normalize_request(read(args.request)))
         return Run(args.run).status()
@@ -477,7 +616,9 @@ def execute(args):
     if args.command == "import-data":
         return import_data(run, args)
     if args.command == "packet":
-        return packet(run, args.kind, args.size)
+        return packet(
+            run, args.kind, args.size, compact=args.compact, max_chars=args.max_chars
+        )
     if args.command == "accept-batch":
         return accept_batch(run, args.packet, args.response)
     if args.command == "complete":

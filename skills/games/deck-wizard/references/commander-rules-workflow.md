@@ -14,6 +14,11 @@ For each question:
 5. Give a concise answer, applicable conditions and a counterexample/limitation.
    Mark unresolved when the evidence cannot establish the result.
 
+Reuse a retrieved primary source file across questions when it remains current;
+each question still needs its own state-specific answer and applicability check.
+Repeated citations do not require repeated downloads. A similar-looking interaction
+alone is insufficient evidence that the same ruling applies.
+
 For changing forms, analyze what remains on the same object, what changes with
 copiable characteristics, and what ends after a zone change. Check retained
 abilities, already-created effects, counters, attachments and stack objects

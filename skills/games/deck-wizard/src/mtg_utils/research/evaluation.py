@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+import shlex
 from collections import Counter, defaultdict
 
 from .cards import (
@@ -12,7 +14,8 @@ from .cards import (
     protected_names,
     validate_evaluation,
 )
-from .storage import digest, nonempty, read, require, write
+from .storage import ResearchError, digest, nonempty, read, require, write
+from .transport import expand_response, packet_card, response_template
 
 
 def all_cards(run, kind):
@@ -36,25 +39,60 @@ def prior_rows(run, kind):
     return rows
 
 
-def packet(run, kind, size):
+def interpretation_context(run, kind):
+    excluded = ("candidates_filtered.json",) if kind == "candidates" else ()
+    return run.input_digest(kind, exclude=excluded)
+
+
+def evaluation_digest(context, card):
+    return digest({"context": context, "oracle_hash": card["oracle_hash"]})
+
+
+def reusable_rows(run, kind, cards):
+    by_name = {card["name"]: card for card in cards}
+    context = interpretation_context(run, kind)
+    return {
+        row["name"]: row
+        for row in prior_rows(run, kind)
+        if row.get("name") in by_name
+        and row.get("context_digest")
+        == evaluation_digest(context, by_name[row["name"]])
+    }
+
+
+def packet(run, kind, size, *, compact=False, max_chars=None):
     require(1 <= size <= 12, "Batch size must be 1-12; default 8")
+    require(
+        max_chars is None or max_chars > 0, "Packet character budget must be positive"
+    )
     run.ready(kind)
     context = run.input_digest(kind)
     cards = all_cards(run, kind)
-    previous = {
-        row["name"]: row
-        for row in prior_rows(run, kind)
-        if row.get("context_digest") == context
-    }
+    previous = reusable_rows(run, kind, cards)
     todo = [card for card in cards if card["name"] not in previous][:size]
     payload = {
         "kind": kind,
+        "response_format": "compact_v1" if compact else "full_v1",
         "context_digest": context,
-        "cards": todo,
+        "cards": [],
         "commander_model": run.load("commander_model.json"),
         "remaining": len(cards) - len(previous),
         "instructions": f"Read references/{'existing-card-evaluation' if kind == 'existing' else 'candidate-evaluation'}.md; return one complete record per card.",  # noqa: E501 - complete diagnostic or template literal
     }
+    if compact:
+        payload["request"] = run.request
+        payload["inventory"] = run.load("active_cards.json")
+        payload["card_lookup"] = (
+            f"deck-research cards {shlex.quote(str(run.root))} --names 'Exact Card'"
+        )
+        payload["oracle_location"] = (
+            "Complete Oracle paragraphs are in clauses; keys are face:paragraph. "
+            "No paragraph is omitted."
+        )
+        payload["response_identity"] = (
+            "Use card: '1', '2', ... in packet order. The runner binds name/hash. "
+            "State same_as requires identical ratings AND explanations."
+        )
     if kind == "candidates":
         payload["diagnosis"] = run.load("diagnosis.json")
         payload["role_summary"] = run.load("deck_role_summary.json")
@@ -64,80 +102,62 @@ def packet(run, kind, size):
         payload["competitor_lookup"] = {
             "file": "deck_card_analysis.json",
             "available_roles": sorted(roles),
+            "providers": run.load("role_groups.json"),
+            "command": (
+                f"deck-research competitors {shlex.quote(str(run.root))} "
+                "--roles <role> [<role> ...]"
+            ),
         }
+    context_chars = len(json.dumps(payload, ensure_ascii=False))
+    effective_limit = max_chars
+    if max_chars and context_chars >= max_chars:
+        effective_limit += context_chars
+        payload["budget_note"] = (
+            "Fixed context exceeds the budget; retain it intact "
+            "and budget card content separately."
+        )
+    selected = []
+    for card in todo:
+        payload["cards"].append(packet_card(card, compact=compact))
+        if (
+            effective_limit
+            and selected
+            and len(json.dumps(payload, ensure_ascii=False)) > effective_limit
+        ):
+            payload["cards"].pop()
+            break
+        selected.append(card)
+    todo = selected
     payload["packet_id"] = digest(payload)
     path = run.root / "packets" / f"{kind}-{payload['packet_id'][:16]}.json"
     write(path, payload)
     template = path.with_suffix(".response.json")
     if not template.exists():
-        rows = []
-        for card in todo:
-            row = dict.fromkeys(
-                (
-                    "job",
-                    "characteristics",
-                    "commander_dependency",
-                    "setup_complexity",
-                    "role_compression",
-                    "dead_draw_risk",
-                    "plan_fit",
-                    "mana_efficiency",
-                    "alternative_costs",
-                    "resilience",
-                    "preference_fit",
-                ),
-                "",
+        rows = [
+            response_template(
+                card, compact=compact, position=index, candidate=kind == "candidates"
             )
-            row.update(
-                name=card["name"],
-                oracle_hash=card["oracle_hash"],
-                roles=[],
-                clause_review=dict.fromkeys(card["clauses"], ""),
-                states={
-                    state: {"rating": "", "reason": ""}
-                    for state in (
-                        "before_commander",
-                        "with_commander",
-                        "without_commander",
-                        "behind",
-                    )
-                },
-                interactions=[],
-                rules_questions=[],
-            )
-            if has_land_face(card):
-                row["land"] = {
-                    **dict.fromkeys(
-                        (
-                            "entry_condition",
-                            "fetchability",
-                            "utility",
-                            "source_reliability",
-                        ),
-                        "",
-                    ),
-                    "unconditional_colors": [],
-                    "conditional_colors": [],
-                }
-            if kind == "candidates":
-                row.update(fit="", comparison="", function_coverage={})
-            rows.append(row)
+            for index, card in enumerate(todo)
+        ]
         write(template, rows)
     return {
         "packet": str(path),
         "response_template": str(template),
         "count": len(todo),
         "remaining": payload["remaining"],
+        "reused": len(previous),
+        "task_chars": len(json.dumps(payload, ensure_ascii=False)),
     }
 
 
-def accept_batch(run, packet_path, response_path):
+def accept_batch(run, packet_path, response_path, *, partial=False):
     payload = read(packet_path)
     packet_id = payload.pop("packet_id", None)
     require(
         digest(payload) == packet_id, "Packet content changed; generate a fresh packet"
     )
     kind = payload.get("kind")
+    compact = payload.get("response_format") == "compact_v1"
     require(kind in ("existing", "candidates"), "Unknown packet kind")
     run.ready(kind)
     context = run.input_digest(kind)
@@ -147,52 +167,96 @@ def accept_batch(run, packet_path, response_path):
     cards = {card["name"]: card for card in payload["cards"]}
     current = {card["name"]: card for card in all_cards(run, kind)}
     require(
-        all(current.get(name) == card for name, card in cards.items()),
+        all(
+            name in current and packet_card(current[name], compact=compact) == card
+            for name, card in cards.items()
+        ),
         "Packet cards changed",
     )
     rows = read(response_path)
     require(
-        isinstance(rows, list) and len(rows) == len(cards),
+        isinstance(rows, list)
+        and (0 < len(rows) <= len(cards) if partial else len(rows) == len(cards)),
         "Return exactly one evaluation per packet card",
     )
     require(
-        len({row.get("name") for row in rows}) == len(rows),
+        all(isinstance(row, dict) for row in rows), "Each evaluation must be an object"
+    )
+    identity_key = "card" if compact else "name"
+    identifiers = (
+        {str(index + 1): name for index, name in enumerate(cards)}
+        if compact
+        else {name: name for name in cards}
+    )
+    require(
+        all(isinstance(row.get(identity_key), str) for row in rows)
+        and len({row.get(identity_key) for row in rows}) == len(rows),
         "Duplicate evaluation in batch",
     )
     require(
-        {row.get("name") for row in rows} == set(cards),
+        {row[identity_key] for row in rows} <= set(identifiers)
+        and (partial or {row[identity_key] for row in rows} == set(identifiers)),
         "Batch names differ from the packet",
     )
+    interpretation = interpretation_context(run, kind)
+    valid, errors, repairs = [], [], []
     for row in rows:
-        validate_evaluation(row, cards[row["name"]], candidate=kind == "candidates")
-        row["context_digest"] = context
-    existing = {
-        row["name"]: row
-        for row in prior_rows(run, kind)
-        if row.get("context_digest") == context
-    }
-    existing.update({row["name"]: row for row in rows})
+        name = identifiers[row[identity_key]]
+        try:
+            evaluated = expand_response(row, cards[name]) if compact else dict(row)
+            validate_evaluation(evaluated, cards[name], candidate=kind == "candidates")
+        except (
+            ResearchError,
+            KeyError,
+            TypeError,
+            ValueError,
+            AttributeError,
+        ) as error:
+            if not partial:
+                raise ResearchError(str(error)) from error
+            errors.append(
+                {"card": row[identity_key], "name": name, "reason": str(error)}
+            )
+            repairs.append(row)
+            continue
+        evaluated["context_digest"] = evaluation_digest(interpretation, cards[name])
+        valid.append(evaluated)
+    existing = reusable_rows(run, kind, current.values())
+    existing.update({row["name"]: row for row in valid})
     run.save(
         analysis_name(kind), sorted(existing.values(), key=lambda row: row["name"])
     )
-    write(run.root / "analysis" / f"{packet_id}.json", rows)
-    return {"accepted": len(rows), "complete": len(existing), "expected": len(current)}
+    if valid:
+        write(run.root / "analysis" / f"{packet_id}-{digest(valid)[:12]}.json", valid)
+    result = {
+        "accepted": len(valid),
+        "complete": len(existing),
+        "expected": len(current),
+    }
+    if errors:
+        repair_path = run.root / "packets" / f"{packet_id[:16]}.repair.json"
+        write(repair_path, repairs)
+        result.update(
+            errors=errors, repair_response=str(repair_path), packet=str(packet_path)
+        )
+    return result
 
 
 def validate_coverage(run, kind):
     cards = {card["name"]: card for card in all_cards(run, kind)}
-    rows = prior_rows(run, kind)
+    saved = prior_rows(run, kind)
+    require(
+        len({row.get("name") for row in saved}) == len(saved),
+        f"{kind}: duplicate evaluations",
+    )
+    rows = list(reusable_rows(run, kind, cards.values()).values())
     require(
         len(rows) == len(cards) and {row.get("name") for row in rows} == set(cards),
         f"{kind}: every distinct active card/candidate needs exactly one evaluation",
     )
-    context = run.input_digest(kind)
     for row in rows:
-        require(
-            row.get("context_digest") == context,
-            f"Stale {kind} evaluation: {row['name']}",
-        )
         validate_evaluation(row, cards[row["name"]], candidate=kind == "candidates")
+    run.save(analysis_name(kind), sorted(rows, key=lambda row: row["name"]))
 
 
 def summarize(active, cards, analysis):

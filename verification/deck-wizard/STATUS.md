@@ -1,5 +1,12 @@
 # Arbeitsstand: Deck-Wizard-Zusammenführung
 
+Aktuell (2026-11-07): Commander-Optimierung als lokaler Quellkandidat auf
+`optimize/commander-workflow` umgesetzt. 85 Python- und 13 Repository-Tests bestehen.
+Installierte Kopien bleiben auf dem vorherigen Stand. Messungen, Änderungen und
+offene Modellprüfungen: [OPTIMIZATION.md](OPTIMIZATION.md).
+
+## Vorheriger Installationsstand
+
 Stand: lokal umgesetzt, geprüft und installiert (2026-11-06).
 Quelle: `skills/games/deck-wizard` in diesem Repository.
 

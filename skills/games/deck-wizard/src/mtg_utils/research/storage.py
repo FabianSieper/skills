@@ -73,6 +73,16 @@ def nonempty(value, label):
 
 # Each stage reads only its declared inputs. Market refreshes therefore do not
 # change the interpretation stages' fingerprints when Oracle text is unchanged.
+INTERPRETATION_KEYS = [
+    "goals",
+    "avoid",
+    "preferences",
+    "power_level",
+    "meta",
+    "variant",
+    "protected_cards",
+]
+
 STAGES = {
     "ingest": (
         [],
@@ -116,7 +126,7 @@ STAGES = {
     "existing": (
         ["understanding"],
         ["active_cards.json", "card_data.json", "commander_model.json"],
-        [],
+        INTERPRETATION_KEYS,
         ["deck_card_analysis.json"],
     ),
     "structure": (
@@ -164,7 +174,7 @@ STAGES = {
             "deck_role_summary.json",
             "deck_card_analysis.json",
         ],
-        [],
+        INTERPRETATION_KEYS,
         ["candidate_analysis.json"],
     ),
     "rules": (
@@ -272,12 +282,46 @@ class Run:
     def save(self, filename, value):
         write(self.root / filename, value)
 
-    def input_digest(self, stage):
+    def input_digest(self, stage, *, exclude=()):
         _, files, keys, _ = STAGES[stage]
+        values = {}
+        for name in files:
+            if name in exclude:
+                continue
+            value = self.load(name)
+            if name == "active_cards.json":
+                value = sorted(value, key=lambda row: (row["zone"], row["name"]))
+            elif name == "deck.json":
+                value = dict(value)
+                for zone in (
+                    "commanders",
+                    "cards",
+                    "sideboard",
+                    "owned_cards",
+                    "companion",
+                ):
+                    if isinstance(value.get(zone), list):
+                        value[zone] = sorted(value[zone], key=lambda row: row["name"])
+            elif name == "card_data.json" or (
+                stage == "candidates" and name == "candidates_filtered.json"
+            ):
+                cards = (
+                    [item["card"] for item in value]
+                    if name == "candidates_filtered.json"
+                    else value
+                )
+                value = sorted(
+                    [
+                        {"name": c["name"], "oracle_hash": c["oracle_hash"]}
+                        for c in cards
+                    ],
+                    key=lambda c: c["name"],
+                )
+            values[name] = value
         return digest(
             {
-                "contract_version": 1,
-                "files": {name: self.load(name) for name in files},
+                "contract_version": 2,
+                "files": values,
                 "request": {key: self.request.get(key) for key in keys},
             }
         )

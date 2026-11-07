@@ -5,16 +5,25 @@ card—including commanders and lands—gets one evaluation. Quantities are pres
 by code; multi-role cards do not become extra physical cards.
 
 ```text
-deck-research packet <run> --kind existing --size 8
-deck-research accept-batch <run> --packet <packet.json> --response <answers.json>
+deck-research next <run>
+deck-research next <run> --packet <packet.json> --response <answers.json>
 ```
 
-Use the returned file; the packet embeds its context fingerprint and complete
-Oracle paragraphs. Read every paragraph separately. Work through one card at a time:
+The task is returned directly, and saved at `packet`. Its context fingerprint and
+complete Oracle paragraphs are bound to the packet. In compact tasks the paragraphs
+occur once in `clauses`, keyed by face:paragraph. Read every paragraph and every
+face's characteristics; work through one card at a time.
 
-The command also returns `response_template`. Fill that JSON template so exact
-names, clause keys and Oracle hashes are preserved mechanically. Save before
-accepting it; empty template fields cannot pass validation.
+The compact task includes the full active inventory with quantities. Retrieve
+additional partners' complete saved source records with `cards <run> --names
+"Exact Card" ...`; this works before role aggregation and avoids a network lookup
+or loading the entire sidecar. Name interactions only after checking their sources.
+
+The response template uses `card: "1"`, `"2"`, etc. in packet order. The runner
+inserts canonical names and Oracle hashes from the verified packet, expands the
+response and applies the full existing validator. Save before accepting it; empty
+template fields cannot pass. The legacy `packet`/`accept-batch` commands still
+accept full records with exact `name` and `oracle_hash`.
 
 1. **Job:** which specific job does this card perform in this deck? Name its actual
    contribution, not just a generic card category.
@@ -41,8 +50,7 @@ Return a JSON list, one object per packet card:
 ```json
 [
   {
-    "name": "Exact canonical name from packet",
-    "oracle_hash": "Copy exact hash from packet",
+    "card": "1",
     "job": "Specific function in this deck",
     "roles": ["graveyard_setup", "commander_protection"],
     "characteristics": "How costs/types/body affect deployment",
@@ -67,6 +75,14 @@ Return a JSON list, one object per packet card:
   }
 ]
 ```
+
+For exactly identical ratings **and** explanations across states, write for example
+`"without_commander": {"same_as": "before_commander"}`. The saved evaluation still
+contains all four explicit ratings and reasons. Distinct timing, prerequisites or
+failure modes need separate explanations; a shared rating alone is insufficient.
+Keep evidence concise without omitting mechanisms, conditions or lost functions.
+When acceptance returns `errors` and `repair_response`, correct only those rows and
+resubmit that repair file with the same packet. Valid rows are already saved.
 
 Role vocabulary:
 `land`, `ramp`, `mana_fixing`, `cost_reduction`, `card_draw`, `card_advantage`,
@@ -97,6 +113,6 @@ and record activation/tapped constraints. A conditional source is not unconditio
 early fixing. MDFCs contribute one physical card, a land option and a spell-side
 deployment assessment; evaluate the choice rather than assuming both at once.
 
-After all packets, run `deck-research complete <run> existing`. Coverage, clause
+After all packets, `next` completes existing coverage and aggregates roles. Coverage, clause
 keys, hashes and required fields must pass. Reuse validated packets in the same
 context. If the context changed, inspect the old analysis but submit a fresh pass.

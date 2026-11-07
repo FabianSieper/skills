@@ -1,0 +1,28 @@
+{
+  "baseline_commit": "ed964cdbc3616d99250a7984b05786ffc9ce7405",
+  "scope": "offline deterministic measurements; no real-model latency or recommendation benchmark",
+  "response_transport": {
+    "source": "preserved five-card synthetic model smoke output",
+    "full_response_chars": 15844,
+    "compact_response_chars": 15393,
+    "reduction_percent": 2.85,
+    "round_trip_equal": true
+  },
+  "interpretation_reuse": {
+    "market_refresh": {
+      "evaluations_required": 0,
+      "evaluations_reused": 1
+    },
+    "one_candidate_added": {
+      "evaluations_required": 1,
+      "evaluations_reused": 1
+    }
+  },
+  "setup_reference_words": {
+    "before": 4009,
+    "after": 510,
+    "reduction_percent": 87.28
+  },
+  "model_quality": "not-run",
+  "model_wall_time": "not-run"
+}

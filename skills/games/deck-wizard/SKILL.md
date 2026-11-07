@@ -1,10 +1,9 @@
 ---
 name: deck-wizard
 description: >-
-  Build or improve Magic decks from a list, collection, opened pool or Archidekt
-  deck URL/ID. Audit active cards, understand the game plan, find role gaps and
-  produce verified ADD/CUT comparisons within budget and exclusions. Use for
-  Commander/EDH, Brawl, constructed, Sealed and Draft. Includes the former
+  Build or improve paper Commander/EDH decks from a list, collection or Archidekt
+  deck URL/ID. Understand every active card, find role gaps and produce verified
+  ADD/CUT comparisons within budget and exclusions. Includes the former
   archidekt-deck-optimizer. Website edits belong to archidekt-navigation.
 compatibility: Python 3.12+ and uv; includes the mtg_utils toolkit.
 license: 0BSD
@@ -21,48 +20,48 @@ persistent record another agent can resume.
 
 Infer the path from the request; reuse information the user already supplied.
 
-- **Existing paper Commander/Brawl, including Archidekt:** use the persistent
+- **Existing Commander, including Archidekt:** use the persistent
   workflow below. An Archidekt URL or numeric ID is an input, not a separate skill.
 - **New deck:** read [build-from-scratch](references/build-from-scratch.md). Its
-  provisional paper Commander skeleton then enters the persistent workflow.
-- **Constructed or Arena:** read [list import](references/list-import.md), then
-  [format tuning](references/format-tuning.md). Preserve sideboards, companions,
-  ownership and wildcard accounting. Apply the understanding and per-card criteria
-  below before proposing changes.
-- **Sealed/Draft:** read [limited](references/limited.md), then format tuning.
-  The opened pool bounds candidate selection.
+  provisional skeleton then enters the persistent workflow.
+- **Pasted/exported list or collection:** read [list import](references/list-import.md).
+  Other game formats require a separate skill.
 
 ## Persistent workflow
 
 Choose an absolute working directory outside the installation:
 `<project>/mtg-deck-research/work/<deck-id-or-name>/`. Save every decision there.
 Use `uv run --directory <skill-dir> deck-research ...`; `<run>` means that directory.
-For setup, existing CLIs or Arena details, read [tooling](references/tooling.md).
+Read [tooling](references/tooling.md) for first-time setup or targeted CLI lookup.
 
 1. **Start or resume.** Read `request.json` and `run_state.json` if present, then run
-   `deck-research status <run>`. For a new run, normalize the request using
+   `deck-research next <run>`. For a new run, normalize the request using
    [the data contract](references/data-model.md), then run
    `deck-research init <run> --request <request-file>`.
-2. **Perform the next incomplete phase.** Read the reference returned by `status`.
-   Save its output, run its validator, then request the next phase. Continue in
-   the same task; phase boundaries are not requests for user approval.
-3. **Use bounded packets.** `packet` supplies eight cards by default, at most twelve.
-   Read the entire packet, write one evaluation per card and use `accept-batch`.
-   Save after each batch. Use smaller packets for complex interactions. Repeated
-   basics share one evaluation with their real quantity; every distinct active
-   card is covered.
-4. **Assign interpretation to a smaller model when available.** Dispatch one packet
-   per analysis task with the current reference, request, commander model and
-   relevant existing role competitors. Give file paths, not the whole run history.
-   Use the environment's actual configured small-model ID. The coordinator checks
-   saved outputs with the runner. Use a separate challenger task for final pairs.
-   If model selection/delegation is unavailable, execute the same bounded passes
-   locally and record the actual model; never claim an independent reviewer ran.
+2. **Perform the returned phase.** Load its reference once per task/context. Save
+   interpretive outputs, then use `next <run> --complete <phase>`. The runner checks
+   them and advances deterministic work; it never invents strategic judgments.
+   Continue in the same task; phase boundaries are not approval requests.
+3. **Evaluate bounded packets.** `next` returns the task directly: at most eight
+   cards by default, twelve maximum, with a character budget. It keeps each card
+   and the commander context complete; an oversized single card is kept intact.
+   Write one compact response per card, then call `next <run> --packet <packet>
+   --response <response>`. The runner binds identities, validates and saves full
+   evaluations. Repair only returned errors. Repeated basics share one evaluation
+   with their real quantity; every distinct active card and eligible candidate
+   remains covered. Use `competitors` for complete role/name comparisons.
+4. **Keep interpretation tasks focused.** Give each task its packet and current
+   reference, without the whole run history. Use available models and record their
+   actual identity; no particular runtime or model size is required. Keep a separate
+   challenger task for final pairs when delegation is available. Otherwise perform
+   separate passes locally and label that limitation honestly.
 5. **Keep bookkeeping deterministic.** The runner handles completeness, identities,
    exclusions, counts, role aggregation, freshness, budgets and change validation.
    The model handles interpretation, strategy, rules and comparative judgment.
-6. **Deliver after current validation passes.** `validate` checks the proposal;
-   `report` rechecks it and writes JSON plus HTML. Repair failed gates. Report a
+6. **Deliver after current validation passes.** Read [output](references/output-format.md)
+   and perform its supplementary audits before completing review. `next` then
+   validates and reports; `validate`/`report` also remain available.
+   Repair failed gates. Report a
    shortfall honestly when too few justified candidates exist; never fill a quota
    with weak or unverified additions.
 
