@@ -138,8 +138,10 @@ def _resolve_name(
 def combo_search(hd: HydratedDeck, *, max_near_misses: int = 5) -> dict:
     """Search Commander Spellbook for combos in the deck.
 
-    Returns {"combos": [...], "near_misses": [...]}.
-    On API error, returns empty results.
+    Returns {"combos": [...], "near_misses": [...], "api_unavailable": bool}.
+    On API error, returns empty results with ``api_unavailable: True`` so an
+    embedded caller can record the degraded audit instead of treating it as
+    "no combos found".
 
     When the HydratedDeck has card records (``hd.has_records``), deck names are
     resolved to canonical Scryfall names before querying the API (so Arena display
@@ -187,7 +189,7 @@ def combo_search(hd: HydratedDeck, *, max_near_misses: int = 5) -> dict:
             "Warning: Commander Spellbook API unavailable, skipping combo search",
             file=sys.stderr,
         )
-        return {"combos": [], "near_misses": []}
+        return {"combos": [], "near_misses": [], "api_unavailable": True}
 
     results = data.get("results", data)
 
@@ -240,7 +242,7 @@ def combo_search(hd: HydratedDeck, *, max_near_misses: int = 5) -> dict:
     near_misses.sort(key=lambda x: x.get("popularity", 0), reverse=True)
     near_misses = near_misses[:max_near_misses]
 
-    return {"combos": combos, "near_misses": near_misses}
+    return {"combos": combos, "near_misses": near_misses, "api_unavailable": False}
 
 
 def _load_bulk_name_games(bulk_path: Path) -> dict[str, list[str]]:

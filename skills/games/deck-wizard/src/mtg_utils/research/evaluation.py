@@ -427,10 +427,22 @@ def validate_diagnosis(run):
             and set(function["providers"]) <= names,
             "Critical function needs actual active providers",
         )
+    analysis = {row["name"]: row for row in run.load("deck_card_analysis.json")}
     for row in pool:
         require(
             row.get("name") in names and row["name"] not in protected,
             "Unknown or protected cut candidate",
+        )
+        evaluated = analysis.get(row.get("name"))
+        require(
+            evaluated is not None,
+            f"Cut candidate has no card analysis: {row.get('name')}",
+        )
+        require(
+            isinstance(row.get("roles"), list)
+            and set(row["roles"]) == set(evaluated["roles"]),
+            f"cut_pool.roles must equal the analyzed roles of {row['name']}: "
+            f"{sorted(evaluated['roles'])}",
         )
         require(
             isinstance(row.get("competitors"), list)

@@ -80,6 +80,12 @@ Every path below is under `<run>`. Names are `.json` except `report.html`.
 artifacts; deterministic phases require their named command. A phase boundary does
 not end the task. Preserve stale results as prior evidence, not current conclusions.
 
+`cut_pool` rows must carry `roles` equal to the card's analyzed `roles` in
+`deck_card_analysis.json`, so swap replacement coverage is checkable before
+drafting. `check-plan <run>` reports every plan gate finding at once (exit 1 on
+failures); `refresh-images <run>` fills verified `image_url` values in candidate
+market records and re-seals discovery plus the deterministic filter.
+
 ## Reuse and invalidation
 
 Reuse MTGJSON bulk data, the toolkit's hydrated sidecars and name-list cache. Run

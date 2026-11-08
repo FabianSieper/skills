@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections import Counter
 from decimal import Decimal, InvalidOperation
 
+from mtg_utils.combo_search import SPELLBOOK_URL, combo_search
 from mtg_utils.formats import get_format
 from mtg_utils.hydrated_deck import HydratedDeck
 from mtg_utils.legality_audit import card_copy_limit, legality_audit
@@ -146,19 +147,26 @@ def candidate_filter(run, *, persist=True):
     return result, rejected
 
 
-def validate_plan(run):
+def plan_gate_findings(run):
+    """Collect every plan gate finding; an empty list means the plan passes.
+
+    Unlike validate_plan this never stops at the first problem, so
+    ``deck-research check-plan`` can show the full repair list at once.
+    """
+    findings = []
     plan = run.load("proposed_swaps.json")
     swaps, repairs = plan.get("swaps"), plan.get("repairs", [])
-    require(
-        isinstance(swaps, list) and isinstance(repairs, list),
-        "Plan requires swaps and repairs lists",
-    )
-    require(len(swaps) <= run.request["max_swaps"], "Plan exceeds max_swaps")
-    count = run.request["recommendation_count"]
-    if count is not None:
-        require(
-            len(swaps) == count,
-            f"Requested {count} swaps, got {len(swaps)}; report shortfall, never pad",
+    if not isinstance(swaps, list) or not isinstance(repairs, list):
+        return ["Plan requires swaps and repairs lists"]
+    if len(swaps) > run.request["max_swaps"]:
+        findings.append(
+            f"Plan exceeds max_swaps: {len(swaps)} > {run.request['max_swaps']}"
+        )
+    if (count := run.request["recommendation_count"]) is not None and (
+        len(swaps) != count
+    ):
+        findings.append(
+            f"Requested {count} swaps, got {len(swaps)}; report shortfall, never pad"
         )
     active = {
         row["name"] for row in run.load("active_cards.json") if row["zone"] == "cards"
@@ -171,25 +179,31 @@ def validate_plan(run):
         {row["name"] for row in run.load("active_cards.json")}
         - {row.get("cut") for row in swaps + repairs}
     ) | {row.get("add") for row in swaps + repairs}
-    for row in swaps + repairs:
+    for index, row in enumerate(swaps + repairs):
+        label = f"change {index} ({row.get('cut') or '-'} -> {row.get('add') or '-'})"
         cut, add = row.get("cut"), row.get("add")
-        require(cut or add, "Empty change")
-        if row in swaps:
-            require(cut and add, "A swap must have both add and cut")
+        if not (cut or add):
+            findings.append(f"{label}: empty change")
+        elif index < len(swaps) and not (cut and add):
+            findings.append(f"{label}: a swap must have both add and cut")
         if cut:
-            require(
-                cut in active and cut in pool,
-                f"Cut must be an analyzed mainboard cut candidate: {cut}",
-            )
-            require(cut not in protected, f"Protected card: {cut}")
-            require(cut not in used_cuts, f"Same cut used twice: {cut}")
+            if cut not in active or cut not in pool:
+                findings.append(
+                    f"{label}: cut must be an analyzed mainboard cut candidate: {cut}"
+                )
+            if cut in protected:
+                findings.append(f"{label}: protected card: {cut}")
+            if cut in used_cuts:
+                findings.append(f"{label}: same cut used twice: {cut}")
             used_cuts.add(cut)
         if add:
-            require(
-                add in candidates and candidates[add]["fit"] in ("high", "very_high"),
-                f"Add must be a high-fit analyzed candidate: {add}",
-            )
-            require(add not in used_adds, f"Same addition used twice: {add}")
+            candidate = candidates.get(add)
+            if candidate is None or candidate["fit"] not in ("high", "very_high"):
+                findings.append(
+                    f"{label}: add must be a high-fit analyzed candidate: {add}"
+                )
+            if add in used_adds:
+                findings.append(f"{label}: same addition used twice: {add}")
             used_adds.add(add)
         for key in (
             "reason",
@@ -198,26 +212,37 @@ def validate_plan(run):
             "curve_and_mana",
             "combo_impact",
         ):
-            nonempty(row.get(key), f"change.{key}")
-        require(
-            isinstance(row.get("remaining_providers"), list),
-            "Name remaining providers for the cut's job",
-        )
-        require(
-            set(row["remaining_providers"]) <= final_names,
-            "Replacement witness names a provider absent from the final deck",
-        )
+            if not row.get(key):
+                findings.append(f"{label}: missing {key}")  # noqa: PERF401
+        providers = row.get("remaining_providers")
+        if not isinstance(providers, list):
+            findings.append(f"{label}: name remaining providers for the cut's job")
+        elif not set(providers) <= final_names:
+            missing = sorted(set(providers) - final_names)
+            findings.append(
+                f"{label}: replacement witness names a provider absent from the "
+                f"final deck: {', '.join(missing)}"
+            )
     delta = sum(bool(row.get("add")) - bool(row.get("cut")) for row in repairs)
     required_delta = run.load("deck_validation.json")["size_correction"]
-    require(
-        delta == required_delta,
-        "Repairs must correct the starting deck size exactly; swaps are balanced",
-    )
-    require(
-        not repairs or required_delta != 0,
-        "Size-valid decks use balanced swaps, not unpaired repairs",
-    )
-    return plan
+    if delta != required_delta:
+        findings.append(
+            "Repairs must correct the starting deck size exactly; swaps are "
+            f"balanced (delta {delta}, required {required_delta})"
+        )
+    if repairs and required_delta == 0:
+        findings.append("Size-valid decks use balanced swaps, not unpaired repairs")
+    return findings
+
+
+def validate_plan(run):
+    findings = plan_gate_findings(run)
+    if findings:
+        raise ResearchError(
+            "Plan gate failures:\n"
+            + "\n".join(f"  - {finding}" for finding in findings)
+        )
+    return run.load("proposed_swaps.json")
 
 
 def validate_review(run):
@@ -309,6 +334,27 @@ def structure_check(before, after, floors, retired=()):
     # explicit per-pair witness and strategic review cover those narrower jobs.
 
 
+def combo_audit(hd, *, max_near_misses=5):
+    """Run the combo engine in-process for the final validation record.
+
+    Commander Spellbook is a network dependency: when it is unreachable the
+    audit degrades to an explicit marker instead of blocking the
+    deterministic validation, so ``swap_validation.json`` always states
+    whether combos were actually searched.
+    """
+    try:
+        result = combo_search(hd, max_near_misses=max_near_misses)
+    except Exception:  # noqa: BLE001 - degradation must never block final validation
+        return {
+            "status": "degraded",
+            "reason": "Commander Spellbook request failed",
+            "combos": [],
+            "near_misses": [],
+        }
+    status = "degraded" if result.get("api_unavailable") else "searched"
+    return {"status": status, "source": SPELLBOOK_URL, **result}
+
+
 def final_validation(run):  # noqa: PLR0915 - sequential gates share the proposal context
     run.ready("final")
     validate_plan(run)
@@ -340,16 +386,24 @@ def final_validation(run):  # noqa: PLR0915 - sequential gates share the proposa
         if row.get("cut"):
             rules_allow(run, row["cut"])
             cut_roles = set(evaluations_by_name[row["cut"]]["roles"])
+            pair = f"{row['cut']} -> {row.get('add') or '-'}"
             provider_roles = set()
             for provider in row["remaining_providers"]:
                 provider_roles.update(evaluations_by_name[provider]["roles"])
+                provider_coverage = set(evaluations_by_name[provider]["roles"])
                 require(
-                    bool(cut_roles & set(evaluations_by_name[provider]["roles"])),
-                    f"Replacement witness has no shared role: {provider}",
+                    bool(cut_roles & provider_coverage),
+                    f"Replacement witness has no shared role: {pair} "
+                    f"(provider {provider} covers {sorted(provider_coverage)}, "
+                    f"the cut covers {sorted(cut_roles)})",
                 )
+            uncovered = sorted(
+                (cut_roles - {"utility"} - set(retired)) - provider_roles
+            )
             require(
-                (cut_roles - {"utility"} - set(retired)) <= provider_roles,
-                "Name surviving providers for every function lost by the cut",
+                not uncovered,
+                "Name surviving providers for every function lost by the cut: "
+                f"{pair} (uncovered roles: {', '.join(uncovered)})",
             )
         single, _ = summarize(apply_change(initial, row), cards, evaluations)
         structure_check(before, single, floors, retired)
@@ -431,13 +485,13 @@ def final_validation(run):  # noqa: PLR0915 - sequential gates share the proposa
             f"Card is not eligible as commander: {commander['name']}",
         )
     rules_allow(run, "commander_model")
-    audit = legality_audit(
-        HydratedDeck.from_parsed(deck, records=list(by_name.values()))
-    )
+    final_hydrated = HydratedDeck.from_parsed(deck, records=list(by_name.values()))
+    audit = legality_audit(final_hydrated)
     require(
         audit["overall_status"] == "PASS",
         f"Final legality fails: {audit['violations']}",
     )
+    combos = combo_audit(final_hydrated)
     quantities = Counter()
     for row in current:
         quantities[row["name"]] += row["quantity"]
@@ -474,6 +528,7 @@ def final_validation(run):  # noqa: PLR0915 - sequential gates share the proposa
         "before": before,
         "after": after,
         "per_change": checks,
+        "combos": combos,
         "legality": audit,
         "additions_cost": str(total_cost),
         "budget_basis": "gross additions; shipping and proceeds from cuts excluded",

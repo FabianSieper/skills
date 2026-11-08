@@ -481,7 +481,17 @@ def main(
     *,
     pool_only: bool,
 ) -> None:
-    """Parse a deck list file and output JSON."""
+    """Parse a deck list file and output JSON.
+
+    Text grammar: a card line is "N Name" (quantity first, any whitespace);
+    a bare line without a leading quantity counts as ONE card. Optional
+    case-insensitive section headers zone the list: "Commander", "Deck",
+    "Sideboard", "Companion" (Moxfield "//" headers and CSV are
+    auto-detected too). Unrecognized lines (totals, notes, "Name xN") are
+    parsed as one card each, so remove them before parsing. Without a
+    Commander section the command zone stays empty and legality audits
+    report no_commander_selected.
+    """
     try:
         result = parse_deck(
             deck_path, format=deck_format, deck_size=deck_size, pool_only=pool_only

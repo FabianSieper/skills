@@ -43,6 +43,7 @@ above the current count expresses a shortage; validation prevents further declin
 ```json
 [
   {"name": "Potential Cut", "job": "Specific role",
+   "roles": ["Exact roles from this card's deck_card_analysis entry"],
    "competitors": ["Existing competitor"],
    "replaceability": "high: these providers cover the same conditions",
    "opportunity_cost": "This slot could address measured gap protect-1",
@@ -51,6 +52,10 @@ above the current count expresses a shortage; validation prevents further declin
    "lost_if_removed": "Full lost functionality, including less obvious clauses"}
 ]
 ```
+
+`roles` is mandatory and must equal the card's analyzed `roles` list from
+`deck_card_analysis.json`; validation enforces it. It makes the swap-phase
+provider coverage checkable before drafting `proposed_swaps.json`.
 
 Useful flags include `DEAD_WITHOUT_COMMANDER`, `WIN_MORE`, `TOO_MUCH_SETUP`,
 `OVERLAPPING_ROLE`, `ROLE_OVERSUPPLY`, `LOW_IMPACT`, `BAD_MANA_EFFICIENCY`,

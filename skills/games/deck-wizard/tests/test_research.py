@@ -1,6 +1,9 @@
 # Copyright (c) 2026. SPDX-License-Identifier: 0BSD
 """Offline regression cases using deliberately synthetic cards, never card advice."""
 
+import json
+import subprocess
+import sys
 from argparse import Namespace
 from copy import deepcopy
 
@@ -11,22 +14,28 @@ from mtg_utils.research.acquisition import classify_archidekt, deck_id
 from mtg_utils.research.cards import oracle_record, protected_names, validate_evaluation
 from mtg_utils.research.cli import (
     complete,
+    execute,
     import_candidates,
     import_data,
     ingest,
     initialize,
+    next_operation,
     normalize_request,
+    parser,
     report,
 )
 from mtg_utils.research.evaluation import (
     accept_batch,
     aggregate,
     packet,
+    validate_diagnosis,
     validate_rules,
 )
+from mtg_utils.research.images import refresh_images
 from mtg_utils.research.selection import (
     candidate_filter,
     final_validation,
+    plan_gate_findings,
     structure_check,
     validate_exclusions,
     validate_plan,
@@ -227,6 +236,7 @@ def make_run(tmp_path, through="review"):
             {
                 "name": "Old Shield",
                 "job": "Protection",
+                "roles": ["commander_protection"],
                 "competitors": [],
                 "replaceability": "Replacement can provide protection",
                 "opportunity_cost": "Cantrip",
@@ -761,3 +771,216 @@ def test_constructed_sideboard_is_separate_even_when_not_in_main_deck():
     assert result["deck_validation.json"]["total"] == 1
     assert result["deck_validation.json"]["sideboard"] == 1
     assert result["excluded_cards.json"] == []
+
+
+def _broken_plan(run):
+    run.request["recommendation_count"] = 2
+    run.request["max_swaps"] = 2
+    run.save("request.json", run.request)
+    plan = run.load("proposed_swaps.json")
+    swap = {**plan["swaps"][0], "remaining_providers": ["Old Shield"]}
+    del swap["reason"]
+    plan["swaps"] = [
+        swap,
+        {
+            **plan["swaps"][0],
+            "cut": "Battery",
+            "add": "New Shield",
+            "remaining_providers": ["New Shield"],
+        },
+    ]
+    run.save("proposed_swaps.json", plan)
+    return plan
+
+
+def test_plan_gate_findings_collects_every_problem_at_once(tmp_path):
+    run = make_run(tmp_path, "swaps")
+    _broken_plan(run)
+    findings = plan_gate_findings(run)
+    text = "\n".join(findings)
+    assert len(findings) >= 4
+    assert "change 0 (Old Shield -> New Shield)" in text
+    assert "absent from the final deck" in text
+    assert "missing reason" in text
+    assert "cut must be an analyzed mainboard cut candidate: Battery" in text
+    assert "same addition used twice: New Shield" in text
+    with pytest.raises(ResearchError) as raised:
+        validate_plan(run)
+    for fragment in (
+        "Plan gate failures",
+        "absent from the final deck",
+        "missing reason",
+    ):
+        assert fragment in str(raised.value)
+
+
+def test_check_plan_cli_reports_every_finding_with_exit_code(tmp_path):
+    run = make_run(tmp_path, "swaps")
+    process = subprocess.run(
+        [sys.executable, "-m", "mtg_utils.research.cli", "check-plan", str(run.root)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert process.returncode == 0
+    assert json.loads(process.stdout)["status"] == "PASS"
+    _broken_plan(run)
+    result = execute(parser().parse_args(["check-plan", str(run.root)]))
+    assert result["status"] == "FAIL"
+    assert len(result["findings"]) >= 4
+    process = subprocess.run(
+        [sys.executable, "-m", "mtg_utils.research.cli", "check-plan", str(run.root)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stdout)["status"] == "FAIL"
+
+
+def test_check_plan_before_swaps_is_actionable(tmp_path):
+    run = make_run(tmp_path, "rules")
+    result = execute(parser().parse_args(["check-plan", str(run.root)]))
+    assert result["status"] == "FAIL"
+    assert "proposed_swaps.json" in result["findings"][0]
+
+
+def test_next_for_review_lists_the_required_audits(tmp_path):
+    run = make_run(tmp_path, "swaps")
+    result = next_operation(
+        run,
+        Namespace(packet=None, response=None, complete=None, size=8, max_chars=24000),
+    )
+    assert result["next"] == "review"
+    audits = result["required_audits"]["before_complete_review"]
+    for tool in (
+        "check-plan",
+        "mana-audit",
+        "deck-stats",
+        "combo-search",
+        "proposal-check",
+    ):
+        assert any(tool in line for line in audits)
+
+
+def test_final_validation_records_the_combo_search(tmp_path, monkeypatch):
+    import mtg_utils.research.selection as selection_module
+
+    monkeypatch.setattr(
+        selection_module,
+        "combo_search",
+        lambda _hydrated, **_kwargs: {
+            "combos": [{"cards": ["Card A", "Card B"]}],
+            "near_misses": [],
+            "api_unavailable": False,
+        },
+    )
+    run = make_run(tmp_path)
+    result = final_validation(run)
+    assert result["status"] == "PASS"
+    assert result["combos"]["status"] == "searched"
+    assert result["combos"]["combos"] == [{"cards": ["Card A", "Card B"]}]
+    assert run.load("swap_validation.json")["combos"]["status"] == "searched"
+
+
+def test_final_validation_degrades_when_spellbook_is_unavailable(tmp_path, monkeypatch):
+    import mtg_utils.research.selection as selection_module
+
+    monkeypatch.setattr(
+        selection_module,
+        "combo_search",
+        lambda _hydrated, **_kwargs: {
+            "combos": [],
+            "near_misses": [],
+            "api_unavailable": True,
+        },
+    )
+    run = make_run(tmp_path)
+    result = final_validation(run)
+    assert result["status"] == "PASS"
+    assert result["combos"]["status"] == "degraded"
+    assert run.load("swap_validation.json")["combos"]["status"] == "degraded"
+
+
+def test_final_validation_degrades_when_the_combo_call_raises(tmp_path, monkeypatch):
+    import mtg_utils.research.selection as selection_module
+
+    def unavailable(_hydrated, **_kwargs):
+        raise RuntimeError("no network")
+
+    monkeypatch.setattr(selection_module, "combo_search", unavailable)
+    run = make_run(tmp_path)
+    result = final_validation(run)
+    assert result["status"] == "PASS"
+    assert result["combos"]["status"] == "degraded"
+    assert result["combos"]["reason"]
+
+
+def test_cut_pool_roles_must_match_the_card_analysis(tmp_path):
+    run = make_run(tmp_path)
+    pool = run.load("cut_pool.json")
+    pool[0]["roles"] = ["ramp"]
+    run.save("cut_pool.json", pool)
+    with pytest.raises(ResearchError, match="must equal the analyzed roles"):
+        validate_diagnosis(run)
+    pool = run.load("cut_pool.json")
+    del pool[0]["roles"]
+    run.save("cut_pool.json", pool)
+    with pytest.raises(ResearchError, match="must equal the analyzed roles"):
+        validate_diagnosis(run)
+
+
+def test_refresh_images_patches_missing_records_and_keeps_run_complete(
+    tmp_path, monkeypatch
+):
+    import mtg_utils.research.images as images_module
+
+    monkeypatch.setattr(
+        images_module,
+        "fetch_verified_image",
+        lambda _market: (
+            "https://cards.scryfall.io/verified.jpg",
+            "; scryfall image refresh (verified 200 image/*)",
+        ),
+    )
+    run = make_run(tmp_path)
+    raw = run.load("candidates_raw.json")
+    name = raw[0]["card"]["name"]
+    raw[0]["market"]["image_url"] = None
+    run.save("candidates_raw.json", raw)
+    result = refresh_images(run, {name})
+    assert result["updated"] == [name]
+    assert result["failed"] == {}
+    patched = run.load("candidates_raw.json")
+    record = next(item for item in patched if item["card"]["name"] == name)
+    assert record["market"]["image_url"] == "https://cards.scryfall.io/verified.jpg"
+    assert "image refresh" in record["market"]["source"]
+    # A market-record change reseals discovery/filter deterministically and
+    # preserves the interpretation (market-only); only the final gate repeats.
+    statuses = Run(run.root).status()["stages"]
+    for stage in ("discovery", "filter", "candidates", "swaps", "review"):
+        assert statuses[stage] == "complete"
+    assert statuses["final"] in ("pending", "stale")
+    assert final_validation(run)["status"] == "PASS"
+    report(run)
+    assert Run(run.root).status()["next"] is None
+
+
+def test_refresh_images_noop_when_images_are_present(tmp_path):
+    run = make_run(tmp_path)
+    raw = run.load("candidates_raw.json")
+    name = raw[0]["card"]["name"]
+    before = Run(run.root).status()
+    result = refresh_images(run, {name})
+    assert result["updated"] == []
+    assert name in result["already_present"]
+    assert Run(run.root).status() == before
+
+
+def test_refresh_images_reports_unknown_names_without_writing(tmp_path):
+    run = make_run(tmp_path)
+    state_before = (run.root / "candidates_raw.json").read_bytes()
+    result = refresh_images(run, {"NoSuch Card"})
+    assert result["not_found"] == ["NoSuch Card"]
+    assert result["updated"] == []
+    assert (run.root / "candidates_raw.json").read_bytes() == state_before

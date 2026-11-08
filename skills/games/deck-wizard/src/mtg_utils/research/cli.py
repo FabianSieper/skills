@@ -26,6 +26,7 @@ from .cards import (
     name_key,
     oracle_record,
     resolve,
+    valid_url,
 )
 from .evaluation import (
     accept_batch,
@@ -37,10 +38,12 @@ from .evaluation import (
     validate_model,
     validate_rules,
 )
+from .images import refresh_images
 from .selection import (
     candidate_filter,
     final_validation,
     money,
+    plan_gate_findings,
     validate_exclusions,
     validate_plan,
     validate_review,
@@ -344,6 +347,14 @@ def report(run):
     final_validation(run)
     final = run.load("final_recommendations.json")
     validation = run.load("swap_validation.json")
+    limitations = [validation["budget_basis"], validation["url_validation"]]
+    if validation.get("combos", {}).get("status") != "searched":
+        limitations.append(
+            "combo audit degraded: "
+            + validation.get("combos", {}).get(
+                "reason", "Commander Spellbook unavailable"
+            )
+        )
     document = {
         "deck": run.request["deck_source"],
         "goals": run.request["goals"],
@@ -354,7 +365,7 @@ def report(run):
         "after": validation["after"],
         "currency": run.request["budget"]["currency"],
         "additions_cost": validation["additions_cost"],
-        "limitations": [validation["budget_basis"], validation["url_validation"]],
+        "limitations": limitations,
     }
     run.save("report.json", document)
 
@@ -500,6 +511,32 @@ def next_operation(run, args):
             final_validation(run)
         elif stage == "report":
             report(run)
+        elif stage == "review":
+            return {
+                "status": "work",
+                "next": stage,
+                "read": status["read"],
+                "inputs": status["inputs"],
+                "outputs": status["outputs"],
+                "required_audits": {
+                    "before_complete_review": [
+                        "deck-research check-plan <run>",
+                        "mana-audit <old> --compare <new> --bulk-data <bulk>",
+                        "deck-stats <old> and deck-stats <new>",
+                        "combo-search <new> --bulk-data <bulk>",
+                        "proposal-check <old> --cuts <cuts.json> --adds <adds.json>",
+                    ],
+                    "note": (
+                        "Build the old/new deck JSON with parse-deck from the run's "
+                        "active cards plus the proposal before auditing. Resolve "
+                        "every finding before next --complete review. Final "
+                        "validation embeds the combo engine and records it in "
+                        "swap_validation.json (combos key); a Spellbook outage is "
+                        "recorded as degraded, never blocking."
+                    ),
+                },
+                "advanced": advanced,
+            }
         else:
             return {
                 "status": "work",
@@ -531,6 +568,8 @@ def parser():
         "import-candidates",
         "filter",
         "rules-queue",
+        "check-plan",
+        "refresh-images",
         "validate",
         "report",
         "next",
@@ -587,6 +626,16 @@ def parser():
             sub.add_argument("--names", nargs="+", default=[])
         if command == "cards":
             sub.add_argument("--names", nargs="+", required=True)
+        if command == "refresh-images":
+            group = sub.add_mutually_exclusive_group(required=True)
+            group.add_argument(
+                "--names", help="Comma-separated exact card names to refresh"
+            )
+            group.add_argument(
+                "--all",
+                action="store_true",
+                help="Refresh every raw candidate without a valid image",
+            )
         if command == "accept-batch":
             sub.add_argument("--packet", required=True)
             sub.add_argument("--response", required=True)
@@ -638,6 +687,27 @@ def execute(args):
             "questions": len(questions),
             "path": str(run.root / "rules_review_queue.json"),
         }
+    if args.command == "check-plan":
+        if not (run.root / "proposed_swaps.json").exists():
+            return {
+                "status": "FAIL",
+                "findings": [
+                    "check-plan needs the swaps stage: write proposed_swaps.json first"
+                ],
+            }
+        findings = plan_gate_findings(run)
+        return {"status": "PASS" if not findings else "FAIL", "findings": findings}
+    if args.command == "refresh-images":
+        raw = run.load("candidates_raw.json")
+        if args.all:
+            names = {
+                item["card"]["name"]
+                for item in raw
+                if not valid_url(item["market"].get("image_url"))
+            }
+        else:
+            names = {name.strip() for name in args.names.split(",") if name.strip()}
+        return refresh_images(run, names)
     if args.command == "validate":
         result = final_validation(run)
         return {
@@ -649,15 +719,18 @@ def execute(args):
 
 
 def main():
+    args = parser().parse_args()
     try:
-        result = execute(parser().parse_args())
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        result = execute(args)
     except (ResearchError, OSError, KeyError, TypeError, ValueError) as error:
         print(
             json.dumps({"status": "BLOCKED", "reason": str(error)}, ensure_ascii=False),
             file=sys.stderr,
         )
         raise SystemExit(1) from error
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.command == "check-plan" and result.get("status") == "FAIL":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
