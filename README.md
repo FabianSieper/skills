@@ -50,5 +50,6 @@ repository-relative. Do not install that authoring skill globally in isolation.
 
 ## Available skills
 
+- `terminal-clarity` – Clear terminal conversations using compact explanations, aligned comparisons and native text diagrams; no required renderers.
 - `website-automation-builder` (project-local) – Required authoring workflow for website skills; follows the strict state/flow/navigation concept using munim-computer-use and the focused Cardmarket-style skill shape.
 - `cardmarket-automation` – Focused MTG search, detail, seller, artwork and own-stock reads through munim-computer-use. Requires the callable `munim-computer-use_*` tools; no fallback and no durable offer writes.
