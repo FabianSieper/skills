@@ -28,6 +28,12 @@
       "category": "games",
       "path": "skills/games/deck-wizard",
       "review_class": "normal"
+    },
+    {
+      "id": "terminal-clarity",
+      "category": "communication",
+      "path": "skills/communication/terminal-clarity",
+      "review_class": "normal"
     }
   ],
   "shared_resources": [

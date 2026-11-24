@@ -11,8 +11,9 @@ Nutzerauftrag ersetzt; ihre Git-Historie bleibt erhalten.
 | `improve-skill` | Lernbedarf diagnostizieren, richtig zuordnen, knapp bestätigen lassen und gezielt verbessern. |
 | `coding-conventions` | Selbstdokumentierenden Code durch Namen, Struktur und notwendige Begründungen schreiben. |
 | `deck-wizard` | Commander-Decks bauen und analysieren, mit Archidekt-Import, wiederverwendbaren Bewertungen und geprüften ADD/CUT-Paaren. |
+| `terminal-clarity` | Terminal-Antworten mit kompakten Erklärungen, ausgerichteten Vergleichen und nativen Textdiagrammen verständlich gestalten. |
 
-**Vorhanden:** vier Skills, gemeinsame Standards, portable Ressourcen,
+**Vorhanden:** fünf Skills, gemeinsame Standards, portable Ressourcen,
 Herkunftsmanifeste, Bootstrap-Fragment, 38 Testdefinitionen und lokale Prüfhelfer.
 **Noch offen:** `skillctl`, vertrauenswürdige Registry/Resolver, technische
 Zustandsübergänge, installierte Adapter, Modellrunner, Rechte-Trennung und
@@ -32,7 +33,7 @@ prüfen. Danach die gewünschten Skills gezielt installieren:
 ```bash
 npx skills@1.7.1 add FabianSieper/skills -g \
   -a codex -a github-copilot -a opencode \
-  --skill create-skill --skill improve-skill --skill coding-conventions --skill deck-wizard
+  --skill create-skill --skill improve-skill --skill coding-conventions --skill deck-wizard --skill terminal-clarity
 ```
 
 Lokale und direkte GitHub-Paketinstallation mit CLI 1.7.1 wurden isoliert geprüft.
